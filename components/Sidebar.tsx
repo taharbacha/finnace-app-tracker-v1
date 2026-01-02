@@ -44,8 +44,12 @@ const Sidebar: React.FC = () => {
                 : 'text-slate-400 hover:bg-slate-800 hover:text-slate-100'}
             `}
           >
-            <item.icon size={20} className={({isActive}: any) => isActive ? 'text-white' : 'group-hover:scale-110 transition-transform'} />
-            <span className="font-bold text-sm tracking-tight">{item.label}</span>
+            {({ isActive }) => (
+              <>
+                <item.icon size={20} className={isActive ? 'text-white' : 'group-hover:scale-110 transition-transform'} />
+                <span className="font-bold text-sm tracking-tight">{item.label}</span>
+              </>
+            )}
           </NavLink>
         ))}
       </nav>

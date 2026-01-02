@@ -17,11 +17,11 @@ const EditableCell: React.FC<EditableCellProps> = ({
   className = '' 
 }) => {
   const [isEditing, setIsEditing] = useState(false);
-  const [localValue, setLocalValue] = useState(value);
+  const [localValue, setLocalValue] = useState<string>(String(value ?? ''));
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    setLocalValue(value);
+    setLocalValue(String(value ?? ''));
   }, [value]);
 
   useEffect(() => {
@@ -33,7 +33,7 @@ const EditableCell: React.FC<EditableCellProps> = ({
 
   const handleBlur = () => {
     setIsEditing(false);
-    if (localValue !== value) {
+    if (localValue !== String(value ?? '')) {
       onSave(type === 'number' ? Number(localValue) : localValue);
     }
   };
@@ -43,7 +43,7 @@ const EditableCell: React.FC<EditableCellProps> = ({
       handleBlur();
     }
     if (e.key === 'Escape') {
-      setLocalValue(value);
+      setLocalValue(String(value ?? ''));
       setIsEditing(false);
     }
   };
