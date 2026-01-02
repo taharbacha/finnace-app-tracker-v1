@@ -11,6 +11,6 @@
     "lucide-react": "0.460.0"
   },
   "scripts": {
-    "build": "echo 'No build step required for ESM projects'"
+    "build": "echo 'No build step required'"
   }
 }
