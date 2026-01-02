@@ -33,19 +33,19 @@
       window.process = { env: {} };
     </script>
     <script type="importmap">
-{
-  "imports": {
-    "react": "https://esm.sh/react@19.0.0",
-    "react-dom": "https://esm.sh/react-dom@19.0.0",
-    "react-dom/client": "https://esm.sh/react-dom@19.0.0/client",
-    "react-router-dom": "https://esm.sh/react-router-dom@6.28.0?external=react,react-dom",
-    "recharts": "https://esm.sh/recharts@2.15.0?external=react,react-dom",
-    "lucide-react": "https://esm.sh/lucide-react@0.460.0?external=react",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
-    "react/": "https://esm.sh/react@^19.2.3/"
-  }
-}
-</script>
+    {
+      "imports": {
+        "react": "https://esm.sh/react@19.0.0",
+        "react/": "https://esm.sh/react@19.0.0/",
+        "react-dom": "https://esm.sh/react-dom@19.0.0",
+        "react-dom/": "https://esm.sh/react-dom@19.0.0/",
+        "react-dom/client": "https://esm.sh/react-dom@19.0.0/client",
+        "react-router-dom": "https://esm.sh/react-router-dom@6.28.0?deps=react@19.0.0,react-dom@19.0.0",
+        "recharts": "https://esm.sh/recharts@2.15.0?deps=react@19.0.0,react-dom@19.0.0",
+        "lucide-react": "https://esm.sh/lucide-react@0.460.0?deps=react@19.0.0"
+      }
+    }
+    </script>
   </head>
   <body>
     <div id="root"></div>
