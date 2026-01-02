@@ -4,28 +4,42 @@ import EditableCell from '../components/EditableCell.tsx';
 import StatCard from '../components/StatCard.tsx';
 import { OFFRE_TYPE_OPTIONS, OFFRE_CATEGORY_OPTIONS } from '../constants.ts';
 import { OffreType, OffreCategory } from '../types.ts';
-import { Plus, TrendingUp, TrendingDown, Download, Upload, Trash2, Search, Zap } from 'lucide-react';
+import { Plus, TrendingUp, TrendingDown, Download, Upload, Trash2, Search, Zap, Calendar } from 'lucide-react';
 
 const Offres: React.FC = () => {
   const { offres, updateOffre, addOffre, deleteOffre, importOffres } = useAppStore();
   const [searchTerm, setSearchTerm] = useState('');
+  const [dateStart, setDateStart] = useState('');
+  const [dateEnd, setDateEnd] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const data = useMemo(() => {
-    return offres.filter(item => 
-      item.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.category.toLowerCase().includes(searchTerm.toLowerCase())
-    ).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [offres, searchTerm]);
+  const filteredData = useMemo(() => {
+    return offres.filter(item => {
+      const matchesSearch = item.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          item.category.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      const itemDate = item.date;
+      const matchesStart = !dateStart || itemDate >= dateStart;
+      const matchesEnd = !dateEnd || itemDate <= dateEnd;
+
+      return matchesSearch && matchesStart && matchesEnd;
+    }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [offres, searchTerm, dateStart, dateEnd]);
 
   const stats = useMemo(() => {
-    const rev = offres.filter(o => o.type === OffreType.REVENUE).reduce((acc, curr) => acc + Number(curr.montant), 0);
-    const exp = offres.filter(o => o.type === OffreType.EXPENSE).reduce((acc, curr) => acc + Number(curr.montant), 0);
+    const rev = filteredData.filter(o => o.type === OffreType.REVENUE).reduce((acc, curr) => acc + Number(curr.montant), 0);
+    const exp = filteredData.filter(o => o.type === OffreType.EXPENSE).reduce((acc, curr) => acc + Number(curr.montant), 0);
     return { rev, exp, net: rev - exp };
-  }, [offres]);
+  }, [filteredData]);
 
   const formatPrice = (val: number) => {
     return val.toLocaleString('fr-DZ') + ' DA';
+  };
+
+  const resetFilters = () => {
+    setSearchTerm('');
+    setDateStart('');
+    setDateEnd('');
   };
 
   const handleImportCSV = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -70,9 +84,9 @@ const Offres: React.FC = () => {
   };
 
   const exportCSV = () => {
-    if (offres.length === 0) return;
+    if (filteredData.length === 0) return;
     const headers = ["date", "type", "category", "description", "montant"];
-    const rows = offres.map(item => [
+    const rows = filteredData.map(item => [
       item.date,
       item.type,
       item.category,
@@ -133,14 +147,14 @@ const Offres: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <StatCard label="Total Revenus" value={formatPrice(stats.rev)} icon={TrendingUp} color="text-emerald-600" bg="bg-emerald-50" />
-        <StatCard label="Total Dépenses" value={formatPrice(stats.exp)} icon={TrendingDown} color="text-orange-600" bg="bg-orange-50" />
-        <StatCard label="Bilan Flux" value={formatPrice(stats.net)} icon={Zap} color="text-slate-600" bg="bg-slate-50" />
+        <StatCard label="Revenus (Période)" value={formatPrice(stats.rev)} icon={TrendingUp} color="text-emerald-600" bg="bg-emerald-50" />
+        <StatCard label="Dépenses (Période)" value={formatPrice(stats.exp)} icon={TrendingDown} color="text-orange-600" bg="bg-orange-50" />
+        <StatCard label="Bilan (Période)" value={formatPrice(stats.net)} icon={Zap} color="text-slate-600" bg="bg-slate-50" />
       </div>
 
       <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
-        <div className="p-4 border-b border-slate-100 bg-slate-50/50">
-          <div className="relative">
+        <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex flex-col lg:flex-row lg:items-center gap-4">
+          <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
             <input 
               type="text" 
@@ -149,6 +163,33 @@ const Offres: React.FC = () => {
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 transition-all text-sm"
             />
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3 py-1.5 shadow-sm">
+              <Calendar size={14} className="text-slate-400" />
+              <input 
+                type="date" 
+                value={dateStart} 
+                onChange={(e) => setDateStart(e.target.value)}
+                className="text-xs outline-none bg-transparent font-medium text-slate-700"
+              />
+              <span className="text-slate-300">à</span>
+              <input 
+                type="date" 
+                value={dateEnd} 
+                onChange={(e) => setDateEnd(e.target.value)}
+                className="text-xs outline-none bg-transparent font-medium text-slate-700"
+              />
+            </div>
+            {(searchTerm || dateStart || dateEnd) && (
+              <button 
+                onClick={resetFilters}
+                className="text-xs font-bold text-blue-600 hover:text-blue-700 transition-colors"
+              >
+                Réinitialiser
+              </button>
+            )}
           </div>
         </div>
 
@@ -165,7 +206,7 @@ const Offres: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {data.map((item) => (
+              {filteredData.map((item) => (
                 <tr key={item.id} className="hover:bg-slate-50/50 transition-colors group">
                   <td className="p-2">
                     <EditableCell type="date" value={item.date} onSave={(v) => updateOffre(item.id, 'date', v)} className="text-slate-500 font-medium" />
@@ -216,9 +257,9 @@ const Offres: React.FC = () => {
                   </td>
                 </tr>
               ))}
-              {data.length === 0 && (
+              {filteredData.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="p-12 text-center text-slate-400">Aucun mouvement enregistré.</td>
+                  <td colSpan={6} className="p-12 text-center text-slate-400">Aucun mouvement trouvé pour cette période.</td>
                 </tr>
               )}
             </tbody>

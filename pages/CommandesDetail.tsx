@@ -4,30 +4,44 @@ import EditableCell from '../components/EditableCell.tsx';
 import StatCard from '../components/StatCard.tsx';
 import { EXTERN_STATUS_OPTIONS } from '../constants.ts';
 import { ExternStatus } from '../types.ts';
-import { Plus, Download, Upload, Trash2, Search, Filter, ShoppingBag, Banknote, History } from 'lucide-react';
+import { Plus, Download, Upload, Trash2, Search, Filter, ShoppingBag, Banknote, History, Calendar } from 'lucide-react';
 
 const CommandesDetail: React.FC = () => {
   const { getCalculatedExtern, updateExtern, addExtern, deleteExtern, importExtern } = useAppStore();
   const allData = getCalculatedExtern();
   const [searchTerm, setSearchTerm] = useState('');
+  const [dateStart, setDateStart] = useState('');
+  const [dateEnd, setDateEnd] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const data = useMemo(() => {
-    return allData.filter(item => 
-      item.client_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.reference.toLowerCase().includes(searchTerm.toLowerCase())
-    ).sort((a, b) => new Date(b.date_created).getTime() - new Date(a.date_created).getTime());
-  }, [allData, searchTerm]);
+  const filteredData = useMemo(() => {
+    return allData.filter(item => {
+      const matchesSearch = item.client_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          item.reference.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      const itemDate = item.date_created;
+      const matchesStart = !dateStart || itemDate >= dateStart;
+      const matchesEnd = !dateEnd || itemDate <= dateEnd;
+      
+      return matchesSearch && matchesStart && matchesEnd;
+    }).sort((a, b) => new Date(b.date_created).getTime() - new Date(a.date_created).getTime());
+  }, [allData, searchTerm, dateStart, dateEnd]);
 
   const stats = useMemo(() => {
-    const totalProfit = allData.reduce((acc, curr) => acc + curr.profit_reel, 0);
-    const deliveredCount = allData.filter(d => d.status === ExternStatus.LIVREE).length;
-    const pendingCount = allData.filter(d => d.status === ExternStatus.EN_PRODUCTION).length;
+    const totalProfit = filteredData.reduce((acc, curr) => acc + curr.profit_reel, 0);
+    const deliveredCount = filteredData.filter(d => d.status === ExternStatus.LIVREE).length;
+    const pendingCount = filteredData.filter(d => d.status === ExternStatus.EN_PRODUCTION).length;
     return { totalProfit, deliveredCount, pendingCount };
-  }, [allData]);
+  }, [filteredData]);
 
   const formatPrice = (val: number) => {
     return val.toLocaleString('fr-DZ') + ' DA';
+  };
+
+  const resetFilters = () => {
+    setSearchTerm('');
+    setDateStart('');
+    setDateEnd('');
   };
 
   const handleImportCSV = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -79,9 +93,9 @@ const CommandesDetail: React.FC = () => {
   };
 
   const exportCSV = () => {
-    if (data.length === 0) return;
+    if (filteredData.length === 0) return;
     const headers = ["reference", "client_name", "client_phone", "date_created", "prix_achat_article", "prix_impression", "prix_vente", "status", "stock_note"];
-    const rows = data.map(item => [
+    const rows = filteredData.map(item => [
       item.reference,
       item.client_name,
       item.client_phone,
@@ -146,13 +160,13 @@ const CommandesDetail: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <StatCard label="Profit Réel" value={formatPrice(stats.totalProfit)} icon={Banknote} color="text-emerald-600" bg="bg-emerald-50" />
-        <StatCard label="Livraisons" value={stats.deliveredCount} icon={ShoppingBag} color="text-blue-600" bg="bg-blue-50" />
-        <StatCard label="En Attente" value={stats.pendingCount} icon={History} color="text-orange-500" bg="bg-orange-50" />
+        <StatCard label="Profit Réel (Période)" value={formatPrice(stats.totalProfit)} icon={Banknote} color="text-emerald-600" bg="bg-emerald-50" />
+        <StatCard label="Livraisons (Période)" value={stats.deliveredCount} icon={ShoppingBag} color="text-blue-600" bg="bg-blue-50" />
+        <StatCard label="En Attente (Période)" value={stats.pendingCount} icon={History} color="text-orange-500" bg="bg-orange-50" />
       </div>
 
       <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
-        <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex items-center gap-4">
+        <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex flex-col lg:flex-row lg:items-center gap-4">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
             <input 
@@ -162,6 +176,33 @@ const CommandesDetail: React.FC = () => {
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 transition-all text-sm"
             />
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3 py-1.5 shadow-sm">
+              <Calendar size={14} className="text-slate-400" />
+              <input 
+                type="date" 
+                value={dateStart} 
+                onChange={(e) => setDateStart(e.target.value)}
+                className="text-xs outline-none bg-transparent font-medium text-slate-700"
+              />
+              <span className="text-slate-300">à</span>
+              <input 
+                type="date" 
+                value={dateEnd} 
+                onChange={(e) => setDateEnd(e.target.value)}
+                className="text-xs outline-none bg-transparent font-medium text-slate-700"
+              />
+            </div>
+            {(searchTerm || dateStart || dateEnd) && (
+              <button 
+                onClick={resetFilters}
+                className="text-xs font-bold text-blue-600 hover:text-blue-700 transition-colors"
+              >
+                Réinitialiser
+              </button>
+            )}
           </div>
         </div>
 
@@ -181,7 +222,7 @@ const CommandesDetail: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {data.map((item) => (
+              {filteredData.map((item) => (
                 <tr key={item.id} className="hover:bg-slate-50/50 transition-colors group">
                   <td className="p-2 font-mono text-xs font-black text-slate-400">
                     <EditableCell value={item.reference} onSave={(v) => updateExtern(item.id, 'reference', v)} className="text-slate-400" />
@@ -230,9 +271,9 @@ const CommandesDetail: React.FC = () => {
                   </td>
                 </tr>
               ))}
-              {data.length === 0 && (
+              {filteredData.length === 0 && (
                 <tr>
-                  <td colSpan={9} className="p-12 text-center text-slate-400">Aucune donnée trouvée.</td>
+                  <td colSpan={9} className="p-12 text-center text-slate-400">Aucune donnée trouvée pour cette période.</td>
                 </tr>
               )}
             </tbody>
