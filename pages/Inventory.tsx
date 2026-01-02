@@ -2,7 +2,7 @@
 import React, { useState, useMemo } from 'react';
 import { useAppStore } from '../store.tsx';
 import EditableCell from '../components/EditableCell.tsx';
-import { Plus, Trash2, Search, Package, AlertTriangle, Layers } from 'lucide-react';
+import { Plus, Search, Package, AlertTriangle, Layers, Trash2 } from 'lucide-react';
 
 const Inventory: React.FC = () => {
   const { inventory, updateInventory, addInventory, deleteInventory } = useAppStore();
@@ -18,6 +18,14 @@ const Inventory: React.FC = () => {
   const lowStockCount = useMemo(() => 
     inventory.filter(i => i.quantity <= i.min_stock).length, 
   [inventory]);
+
+  const handleDelete = (e: React.MouseEvent, id: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (window.confirm('Voulez-vous supprimer définitivement cet article du stock ?')) {
+      deleteInventory(id);
+    }
+  };
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
@@ -97,7 +105,12 @@ const Inventory: React.FC = () => {
                   <td className="p-2 font-bold text-slate-600 text-right"><EditableCell type="number" value={item.unit_cost} onSave={v => updateInventory(item.id, 'unit_cost', v)} className="text-right" /></td>
                   <td className="p-2"><EditableCell value={item.supplier} onSave={v => updateInventory(item.id, 'supplier', v)} className="text-slate-500 italic text-xs" /></td>
                   <td className="p-2 text-center">
-                    <button onClick={() => confirm('Supprimer cet article ?') && deleteInventory(item.id)} className="p-3 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-2xl transition-all">
+                    <button 
+                      type="button"
+                      onClick={(e) => handleDelete(e, item.id)}
+                      className="p-2 text-slate-300 hover:text-red-500 transition-all rounded-lg hover:bg-red-50"
+                      title="Supprimer l'article"
+                    >
                       <Trash2 size={16} />
                     </button>
                   </td>

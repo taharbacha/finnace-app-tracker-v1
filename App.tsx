@@ -7,6 +7,7 @@ import CommandesGros from './pages/CommandesGros.tsx';
 import CommandesDetail from './pages/CommandesDetail.tsx';
 import Inventory from './pages/Inventory.tsx';
 import Offres from './pages/Offres.tsx';
+import Charges from './pages/Charges.tsx';
 import LoginPage from './pages/LoginPage.tsx';
 import { AppProvider, useAppStore } from './store.tsx';
 
@@ -18,10 +19,10 @@ const ProtectedLayout: React.FC<{ children: React.ReactNode }> = ({ children }) 
   }
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-screen bg-[#F8FAFC]">
       <Sidebar />
       <main className="flex-1 p-8 overflow-y-auto">
-        <div className="max-w-7xl mx-auto">
+        <div className="max-w-[1600px] mx-auto">
           {children}
         </div>
       </main>
@@ -37,6 +38,7 @@ const AppRoutes: React.FC = () => {
       <Route path="/gros" element={<ProtectedLayout><CommandesGros /></ProtectedLayout>} />
       <Route path="/detail" element={<ProtectedLayout><CommandesDetail /></ProtectedLayout>} />
       <Route path="/inventory" element={<ProtectedLayout><Inventory /></ProtectedLayout>} />
+      <Route path="/charges" element={<ProtectedLayout><Charges /></ProtectedLayout>} />
       <Route path="/offres" element={<ProtectedLayout><Offres /></ProtectedLayout>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

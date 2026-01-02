@@ -41,7 +41,10 @@ export const INITIAL_EXTERN: CommandeExtern[] = [
     prix_impression: 300,
     prix_vente: 3500,
     status: ExternStatus.LIVREE,
-    stock_note: ''
+    stock_note: '',
+    // Added missing mandatory properties for CommandeExtern
+    vendeur_name: 'Vendeur Principal',
+    vendeur_benefice: 0
   }
 ];
 

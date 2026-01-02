@@ -1,10 +1,11 @@
+
 import React, { useRef, useState, useMemo } from 'react';
 import { useAppStore } from '../store.tsx';
 import EditableCell from '../components/EditableCell.tsx';
 import StatCard from '../components/StatCard.tsx';
 import { OFFRE_TYPE_OPTIONS, OFFRE_CATEGORY_OPTIONS } from '../constants.ts';
 import { OffreType, OffreCategory } from '../types.ts';
-import { Plus, TrendingUp, TrendingDown, Download, Upload, Trash2, Search, Zap, Calendar } from 'lucide-react';
+import { Plus, TrendingUp, TrendingDown, Download, Upload, Search, Zap, Calendar, Trash2 } from 'lucide-react';
 
 const Offres: React.FC = () => {
   const { offres, updateOffre, addOffre, deleteOffre, importOffres } = useAppStore();
@@ -36,10 +37,12 @@ const Offres: React.FC = () => {
     return val.toLocaleString('fr-DZ') + ' DA';
   };
 
-  const resetFilters = () => {
-    setSearchTerm('');
-    setDateStart('');
-    setDateEnd('');
+  const handleDelete = (e: React.MouseEvent, id: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (window.confirm('Voulez-vous supprimer ce mouvement d\'offre/frais ?')) {
+      deleteOffre(id);
+    }
   };
 
   const handleImportCSV = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -164,33 +167,6 @@ const Offres: React.FC = () => {
               className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 transition-all text-sm"
             />
           </div>
-
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3 py-1.5 shadow-sm">
-              <Calendar size={14} className="text-slate-400" />
-              <input 
-                type="date" 
-                value={dateStart} 
-                onChange={(e) => setDateStart(e.target.value)}
-                className="text-xs outline-none bg-transparent font-medium text-slate-700"
-              />
-              <span className="text-slate-300">à</span>
-              <input 
-                type="date" 
-                value={dateEnd} 
-                onChange={(e) => setDateEnd(e.target.value)}
-                className="text-xs outline-none bg-transparent font-medium text-slate-700"
-              />
-            </div>
-            {(searchTerm || dateStart || dateEnd) && (
-              <button 
-                onClick={resetFilters}
-                className="text-xs font-bold text-blue-600 hover:text-blue-700 transition-colors"
-              >
-                Réinitialiser
-              </button>
-            )}
-          </div>
         </div>
 
         <div className="overflow-x-auto">
@@ -249,8 +225,9 @@ const Offres: React.FC = () => {
                   <td className="p-2 text-center">
                     <button 
                       type="button"
-                      onClick={() => { if(confirm('Supprimer cet enregistrement ?')) deleteOffre(item.id); }}
+                      onClick={(e) => handleDelete(e, item.id)}
                       className="p-2 text-slate-300 hover:text-red-500 transition-all rounded-lg hover:bg-red-50"
+                      title="Supprimer la ligne"
                     >
                       <Trash2 size={16} />
                     </button>

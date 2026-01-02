@@ -1,4 +1,5 @@
 
+
 export enum GrosStatus {
   EN_PRODUCTION = 'en_production',
   EN_LIVRAISON = 'en_livraison',
@@ -37,6 +38,14 @@ export interface InventoryItem {
   supplier: string;
 }
 
+export interface Charge {
+  id: string;
+  date: string;
+  label: string;
+  montant: number;
+  note: string;
+}
+
 export interface CommandeGros {
   id: string;
   reference: string;
@@ -63,8 +72,11 @@ export interface CommandeExtern {
   prix_vente: number;
   status: ExternStatus;
   stock_note: string;
+  vendeur_name: string;
+  vendeur_benefice: number;
 }
 
+// Added the missing Offre interface to resolve type errors in store and constants
 export interface Offre {
   id: string;
   date: string;
@@ -92,5 +104,6 @@ export interface DashboardData {
   profit_attendu: number;
   pertes: number;
   net_offres: number;
+  total_charges: number;
   profit_net_final: number;
 }

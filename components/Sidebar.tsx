@@ -14,7 +14,9 @@ import {
   CloudOff,
   RefreshCw,
   CheckCircle2,
-  Package
+  Package,
+  Wallet,
+  Globe
 } from 'lucide-react';
 
 const Sidebar: React.FC = () => {
@@ -22,8 +24,9 @@ const Sidebar: React.FC = () => {
   const navItems = [
     { to: '/', label: 'Tableau de bord', icon: LayoutDashboard },
     { to: '/gros', label: 'Commandes GROS', icon: Truck },
-    { to: '/detail', label: 'Commandes Détail', icon: ShoppingBag },
+    { to: '/detail', label: 'Commandes sitweb', icon: Globe },
     { to: '/inventory', label: 'Stock & Inventaire', icon: Package },
+    { to: '/charges', label: 'Les Charges', icon: Wallet },
     { to: '/offres', label: 'Offres & Frais', icon: TrendingUp },
   ];
 
