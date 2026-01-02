@@ -1,0 +1,86 @@
+
+export enum GrosStatus {
+  EN_PRODUCTION = 'en_production',
+  EN_LIVRAISON = 'en_livraison',
+  LIVREE_NON_ENCAISSE = 'livree_non_encaisse',
+  LIVREE_ENCAISSE = 'livree_encaisse',
+  RETOUR = 'retour'
+}
+
+export enum ExternStatus {
+  EN_PRODUCTION = 'en_production',
+  LIVREE = 'livree',
+  RETOUR = 'retour'
+}
+
+export enum OffreType {
+  REVENUE = 'revenue',
+  EXPENSE = 'expense'
+}
+
+export enum OffreCategory {
+  ADS = 'ads',
+  CREATIVE = 'creative',
+  PACKAGING = 'packaging',
+  TRANSPORT = 'transport',
+  MANUAL = 'manual',
+  OTHER = 'other'
+}
+
+export interface CommandeGros {
+  id: string;
+  reference: string;
+  client_name: string;
+  client_phone: string;
+  date_created: string;
+  prix_achat_article: number;
+  impression: boolean;
+  prix_impression: number;
+  prix_vente: number;
+  status: GrosStatus;
+  stock_note: string;
+}
+
+export interface CommandeExtern {
+  id: string;
+  reference: string;
+  client_name: string;
+  client_phone: string;
+  date_created: string;
+  prix_achat_article: number;
+  impression: boolean;
+  prix_impression: number;
+  prix_vente: number;
+  status: ExternStatus;
+  stock_note: string;
+}
+
+export interface Offre {
+  id: string;
+  date: string;
+  type: OffreType;
+  montant: number;
+  category: OffreCategory;
+  description: string;
+}
+
+export interface CalculatedGros extends CommandeGros {
+  cost: number;
+  profit_encaisse: number;
+  profit_attendu: number;
+  perte: number;
+}
+
+export interface CalculatedExtern extends CommandeExtern {
+  cost: number;
+  profit_reel: number;
+  perte: number;
+}
+
+export interface DashboardData {
+  encaisse_reel: number;
+  profit_attendu: number;
+  pertes: number;
+  net_offres: number;
+  profit_net_final: number;
+}
