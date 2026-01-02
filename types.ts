@@ -27,6 +27,16 @@ export enum OffreCategory {
   OTHER = 'other'
 }
 
+export interface InventoryItem {
+  id: string;
+  name: string;
+  sku: string;
+  quantity: number;
+  min_stock: number;
+  unit_cost: number;
+  supplier: string;
+}
+
 export interface CommandeGros {
   id: string;
   reference: string;

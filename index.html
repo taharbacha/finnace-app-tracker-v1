@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -25,10 +26,24 @@
       ::-webkit-scrollbar-thumb:hover {
         background: #94a3b8;
       }
+      @keyframes pulse-slow {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+      }
+      .animate-pulse-slow {
+        animation: pulse-slow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+      }
     </style>
     <script>
-      // Hardcoded environment variable for the internal use
-      window.process = { env: { APP_PASSWORD: 'merchdz_private_2025' } };
+      // Enhanced shim to capture common Supabase environment variable names
+      window.process = { 
+        env: { 
+          APP_PASSWORD: 'merchdz_private_2025',
+          // Try standard names, then specific provider names
+          SUPABASE_URL: window.process?.env?.SUPABASE_URL || window.process?.env?.SUPABASE_DATABASE_URL || '', 
+          SUPABASE_ANON_KEY: window.process?.env?.SUPABASE_ANON_KEY || ''
+        } 
+      };
     </script>
   <script type="importmap">
 {
@@ -39,6 +54,7 @@
     "react-router-dom": "https://esm.sh/react-router-dom@^7.11.0",
     "lucide-react": "https://esm.sh/lucide-react@^0.562.0",
     "recharts": "https://esm.sh/recharts@^3.6.0",
+    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2",
     "vite": "https://esm.sh/vite@^7.3.0",
     "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2"
   }

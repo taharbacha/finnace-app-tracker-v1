@@ -1,9 +1,11 @@
+
 import React from 'react';
 import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Sidebar from './components/Sidebar.tsx';
 import Dashboard from './pages/Dashboard.tsx';
 import CommandesGros from './pages/CommandesGros.tsx';
 import CommandesDetail from './pages/CommandesDetail.tsx';
+import Inventory from './pages/Inventory.tsx';
 import Offres from './pages/Offres.tsx';
 import LoginPage from './pages/LoginPage.tsx';
 import { AppProvider, useAppStore } from './store.tsx';
@@ -34,6 +36,7 @@ const AppRoutes: React.FC = () => {
       <Route path="/" element={<ProtectedLayout><Dashboard /></ProtectedLayout>} />
       <Route path="/gros" element={<ProtectedLayout><CommandesGros /></ProtectedLayout>} />
       <Route path="/detail" element={<ProtectedLayout><CommandesDetail /></ProtectedLayout>} />
+      <Route path="/inventory" element={<ProtectedLayout><Inventory /></ProtectedLayout>} />
       <Route path="/offres" element={<ProtectedLayout><Offres /></ProtectedLayout>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
