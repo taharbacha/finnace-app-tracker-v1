@@ -1,10 +1,9 @@
-
 import React, { useRef, useState, useMemo } from 'react';
-import { useAppStore } from '../store';
-import EditableCell from '../components/EditableCell';
-import StatCard from '../components/StatCard';
-import { EXTERN_STATUS_OPTIONS } from '../constants';
-import { ExternStatus } from '../types';
+import { useAppStore } from '../store.tsx';
+import EditableCell from '../components/EditableCell.tsx';
+import StatCard from '../components/StatCard.tsx';
+import { EXTERN_STATUS_OPTIONS } from '../constants.ts';
+import { ExternStatus } from '../types.ts';
 import { Plus, Download, Upload, Trash2, Search, Filter, ShoppingBag, Banknote, History } from 'lucide-react';
 
 const CommandesDetail: React.FC = () => {

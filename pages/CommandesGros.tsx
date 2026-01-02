@@ -1,10 +1,9 @@
-
 import React, { useRef, useState, useMemo } from 'react';
-import { useAppStore } from '../store';
-import EditableCell from '../components/EditableCell';
-import StatCard from '../components/StatCard';
-import { GROS_STATUS_OPTIONS } from '../constants';
-import { GrosStatus } from '../types';
+import { useAppStore } from '../store.tsx';
+import EditableCell from '../components/EditableCell.tsx';
+import StatCard from '../components/StatCard.tsx';
+import { GROS_STATUS_OPTIONS } from '../constants.ts';
+import { GrosStatus } from '../types.ts';
 import { Plus, Download, Upload, Trash2, Search, Filter, Truck, Banknote, AlertCircle } from 'lucide-react';
 
 const CommandesGros: React.FC = () => {

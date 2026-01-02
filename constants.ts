@@ -1,5 +1,4 @@
-
-import { GrosStatus, ExternStatus, OffreType, OffreCategory, CommandeGros, CommandeExtern, Offre } from './types';
+import { GrosStatus, ExternStatus, OffreType, OffreCategory, CommandeGros, CommandeExtern, Offre } from './types.ts';
 
 export const INITIAL_GROS: CommandeGros[] = [
   {

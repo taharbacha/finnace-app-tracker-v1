@@ -1,11 +1,10 @@
-
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { 
   CommandeGros, CommandeExtern, Offre, 
   CalculatedGros, CalculatedExtern, DashboardData,
   GrosStatus, ExternStatus, OffreType
-} from './types';
-import { INITIAL_GROS, INITIAL_EXTERN, INITIAL_OFFRES } from './constants';
+} from './types.ts';
+import { INITIAL_GROS, INITIAL_EXTERN, INITIAL_OFFRES } from './constants.ts';
 
 interface AppState {
   gros: CommandeGros[];
@@ -33,11 +32,6 @@ interface AppState {
 
 const AppContext = createContext<AppState | undefined>(undefined);
 
-/**
- * PRODUCTION SECURITY:
- * Safely check for the environment variable. 
- * 'typeof process' check prevents ReferenceError in browser.
- */
 const getAdminPassword = (): string => {
   try {
     // @ts-ignore

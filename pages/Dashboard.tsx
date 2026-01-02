@@ -1,8 +1,7 @@
-
 import React, { useMemo } from 'react';
-import { useAppStore } from '../store';
+import { useAppStore } from '../store.tsx';
 import { 
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, AreaChart, Area, Legend
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, AreaChart, Area, Legend, Cell
 } from 'recharts';
 import { 
   Clock, 
@@ -10,10 +9,9 @@ import {
   ArrowRightLeft, 
   TrendingUp,
   Banknote,
-  Calendar,
-  Layers
+  Calendar
 } from 'lucide-react';
-import { GrosStatus, ExternStatus, OffreType, OffreCategory } from '../types';
+import { GrosStatus, ExternStatus, OffreType } from '../types.ts';
 
 const Dashboard: React.FC = () => {
   const { getDashboardData, gros, extern, offres, getCalculatedGros, getCalculatedExtern } = useAppStore();
@@ -31,14 +29,6 @@ const Dashboard: React.FC = () => {
   const formatCurrency = (val: number) => {
     return new Intl.NumberFormat('fr-DZ', { style: 'currency', currency: 'DZD', maximumFractionDigits: 0 }).format(val);
   };
-
-  const categoryData = useMemo(() => {
-    const cats: Record<string, number> = {};
-    offres.filter(o => o.type === OffreType.EXPENSE).forEach(o => {
-      cats[o.category] = (cats[o.category] || 0) + Number(o.montant);
-    });
-    return Object.entries(cats).map(([name, value]) => ({ name: name.toUpperCase(), value }));
-  }, [offres]);
 
   const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#64748b'];
 
@@ -86,8 +76,8 @@ const Dashboard: React.FC = () => {
     <div className="space-y-8 animate-in fade-in duration-500 pb-12">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-3xl font-black text-slate-800 tracking-tight">Tableau de Bord Financier</h2>
-          <p className="text-slate-500 font-medium">Suivi de la performance opérationnelle en temps réel.</p>
+          <h2 className="text-3xl font-black text-slate-800 tracking-tight">Tableau de Bord</h2>
+          <p className="text-slate-500 font-medium">Performance financière en temps réel.</p>
         </div>
         <div className="bg-white px-5 py-3 rounded-2xl border border-slate-200 flex items-center gap-3 text-sm font-bold text-slate-600 shadow-sm self-start">
           <Calendar size={18} className="text-blue-500" />
@@ -109,13 +99,7 @@ const Dashboard: React.FC = () => {
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
         <div className="xl:col-span-2 bg-white p-8 rounded-3xl border border-slate-100 shadow-sm">
-          <div className="flex items-center justify-between mb-8">
-            <div>
-              <h4 className="font-bold text-slate-800 text-lg">Performance Journalière</h4>
-              <p className="text-sm text-slate-500">Bénéfices nets vs Charges globales</p>
-            </div>
-          </div>
-          
+          <h4 className="font-bold text-slate-800 text-lg mb-8">Flux de Profit Journalier</h4>
           <div className="h-[350px]">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={timeSeriesData}>
@@ -123,10 +107,6 @@ const Dashboard: React.FC = () => {
                   <linearGradient id="colorProfit" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#10b981" stopOpacity={0.2}/>
                     <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
-                  </linearGradient>
-                  <linearGradient id="colorExpense" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#fb923c" stopOpacity={0.2}/>
-                    <stop offset="95%" stopColor="#fb923c" stopOpacity={0}/>
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
@@ -136,69 +116,38 @@ const Dashboard: React.FC = () => {
                   tickLine={false} 
                   tick={{fill: '#94a3b8', fontSize: 11, fontWeight: 600}} 
                   dy={10}
-                  tickFormatter={(val) => new Date(val).toLocaleDateString('fr-DZ', { day: '2-digit', month: 'short' })}
                 />
                 <YAxis axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 11, fontWeight: 600}} />
                 <Tooltip 
-                  contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)', fontSize: '12px' }}
-                  formatter={(value: number) => formatCurrency(value)}
+                  contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
+                  formatter={(val: number) => formatCurrency(val)}
                 />
-                <Legend verticalAlign="top" height={36}/>
-                <Area name="Profit Net" type="monotone" dataKey="profit" stroke="#10b981" strokeWidth={4} fillOpacity={1} fill="url(#colorProfit)" />
-                <Area name="Frais/Dépenses" type="monotone" dataKey="expenses" stroke="#fb923c" strokeWidth={4} fillOpacity={1} fill="url(#colorExpense)" />
+                <Area type="monotone" dataKey="profit" stroke="#10b981" fillOpacity={1} fill="url(#colorProfit)" strokeWidth={3} />
               </AreaChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        <div className="space-y-8">
-          <div className="bg-gradient-to-br from-blue-600 to-indigo-700 p-8 rounded-3xl shadow-lg shadow-blue-200 text-white relative overflow-hidden">
-            <Layers className="absolute -right-4 -bottom-4 text-white/10 w-32 h-32" />
-            <div className="relative z-10">
-              <span className="inline-flex items-center gap-1 px-3 py-1 bg-white/20 rounded-full text-[10px] font-black uppercase tracking-widest mb-4">
-                Bilan Final Estimé
-              </span>
-              <p className="text-blue-100 text-sm font-medium mb-1">Profit Net Global</p>
-              <h3 className="text-4xl font-black mb-2">
-                {formatCurrency(data.profit_net_final)}
-              </h3>
-              <p className="text-xs text-blue-200 italic opacity-80 leading-relaxed">
-                Inclut l'encaissé, l'attendu, les revenus annexes et déduit toutes les pertes et frais de fonctionnement.
-              </p>
+        <div className="bg-slate-900 text-white p-8 rounded-3xl shadow-xl shadow-slate-200 relative overflow-hidden">
+          <div className="relative z-10 flex flex-col h-full justify-between">
+            <div>
+              <p className="text-blue-400 text-xs font-black uppercase tracking-widest mb-4">Total Net Calculé</p>
+              <h4 className="text-4xl font-black mb-2 tracking-tighter">{formatCurrency(data.profit_net_final)}</h4>
+              <p className="text-slate-400 text-sm font-medium">Bénéfice net final après déduction des pertes et frais opérationnels.</p>
+            </div>
+            
+            <div className="mt-8 space-y-4">
+              <div className="flex items-center justify-between p-4 bg-slate-800/50 rounded-2xl border border-slate-700">
+                <span className="text-xs font-bold text-slate-400">COMMANDES</span>
+                <span className="text-sm font-black text-white">{gros.length + extern.length}</span>
+              </div>
+              <div className="flex items-center justify-between p-4 bg-slate-800/50 rounded-2xl border border-slate-700">
+                <span className="text-xs font-bold text-slate-400">FRAIS RÉCURRENTS</span>
+                <span className="text-sm font-black text-orange-400">-{formatCurrency(offres.filter(o => o.type === 'expense').reduce((acc, curr) => acc + curr.montant, 0))}</span>
+              </div>
             </div>
           </div>
-
-          <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm">
-             <h4 className="font-bold text-slate-800 text-sm mb-6 uppercase tracking-widest">Répartition des Frais</h4>
-             <div className="h-[200px]">
-               <ResponsiveContainer width="100%" height="100%">
-                 <PieChart>
-                   <Pie
-                     data={categoryData}
-                     cx="50%"
-                     cy="50%"
-                     innerRadius={60}
-                     outerRadius={80}
-                     paddingAngle={5}
-                     dataKey="value"
-                   >
-                     {categoryData.map((entry, index) => (
-                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                     ))}
-                   </Pie>
-                   <Tooltip />
-                 </PieChart>
-               </ResponsiveContainer>
-             </div>
-             <div className="mt-4 grid grid-cols-2 gap-2">
-                {categoryData.map((cat, i) => (
-                  <div key={i} className="flex items-center gap-2 text-[10px] font-bold text-slate-500">
-                    <div className="w-2 h-2 rounded-full" style={{backgroundColor: COLORS[i % COLORS.length]}}></div>
-                    <span className="truncate">{cat.name}</span>
-                  </div>
-                ))}
-             </div>
-          </div>
+          <TrendingUp size={120} className="absolute -bottom-8 -right-8 text-white/5 rotate-12" />
         </div>
       </div>
     </div>

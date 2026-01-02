@@ -1,6 +1,5 @@
-
 import React from 'react';
-import { GrosStatus, ExternStatus } from '../types';
+import { GrosStatus, ExternStatus } from '../types.ts';
 
 interface StatusBadgeProps {
   status: string;

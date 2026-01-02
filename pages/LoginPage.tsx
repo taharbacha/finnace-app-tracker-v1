@@ -1,7 +1,6 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAppStore } from '../store';
+import { useAppStore } from '../store.tsx';
 import { Lock, AlertCircle } from 'lucide-react';
 
 const LoginPage: React.FC = () => {

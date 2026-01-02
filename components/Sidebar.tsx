@@ -1,7 +1,6 @@
-
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { useAppStore } from '../store';
+import { useAppStore } from '../store.tsx';
 import { 
   LayoutDashboard, 
   Truck, 

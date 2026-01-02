@@ -1,13 +1,12 @@
-
 import React from 'react';
 import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import Sidebar from './components/Sidebar';
-import Dashboard from './pages/Dashboard';
-import CommandesGros from './pages/CommandesGros';
-import CommandesDetail from './pages/CommandesDetail';
-import Offres from './pages/Offres';
-import LoginPage from './pages/LoginPage';
-import { AppProvider, useAppStore } from './store';
+import Sidebar from './components/Sidebar.tsx';
+import Dashboard from './pages/Dashboard.tsx';
+import CommandesGros from './pages/CommandesGros.tsx';
+import CommandesDetail from './pages/CommandesDetail.tsx';
+import Offres from './pages/Offres.tsx';
+import LoginPage from './pages/LoginPage.tsx';
+import { AppProvider, useAppStore } from './store.tsx';
 
 const ProtectedLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated } = useAppStore();

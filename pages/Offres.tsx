@@ -1,10 +1,9 @@
-
 import React, { useRef, useState, useMemo } from 'react';
-import { useAppStore } from '../store';
-import EditableCell from '../components/EditableCell';
-import StatCard from '../components/StatCard';
-import { OFFRE_TYPE_OPTIONS, OFFRE_CATEGORY_OPTIONS } from '../constants';
-import { OffreType, OffreCategory } from '../types';
+import { useAppStore } from '../store.tsx';
+import EditableCell from '../components/EditableCell.tsx';
+import StatCard from '../components/StatCard.tsx';
+import { OFFRE_TYPE_OPTIONS, OFFRE_CATEGORY_OPTIONS } from '../constants.ts';
+import { OffreType, OffreCategory } from '../types.ts';
 import { Plus, TrendingUp, TrendingDown, Download, Upload, Trash2, Search, Zap } from 'lucide-react';
 
 const Offres: React.FC = () => {

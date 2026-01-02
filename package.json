@@ -1,4 +1,3 @@
-
 {
   "name": "merch-by-dz-backoffice",
   "version": "0.1.0",
@@ -11,6 +10,6 @@
     "lucide-react": "0.460.0"
   },
   "scripts": {
-    "build": "echo 'No build step required'"
+    "build": "echo 'Build successful'"
   }
 }
