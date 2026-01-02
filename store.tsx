@@ -59,14 +59,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isCloudActive] = useState(!!supabase);
   const [lastSynced, setLastSynced] = useState<string | null>(() => localStorage.getItem('merch_dz_last_sync'));
 
-  // Main state initialized from LocalStorage or Constants
   const [gros, setGros] = useState<CommandeGros[]>(() => JSON.parse(localStorage.getItem('merch_dz_gros') || JSON.stringify(INITIAL_GROS)));
   const [extern, setExtern] = useState<CommandeExtern[]>(() => JSON.parse(localStorage.getItem('merch_dz_extern') || JSON.stringify(INITIAL_EXTERN)));
   const [offres, setOffres] = useState<Offre[]>(() => JSON.parse(localStorage.getItem('merch_dz_offres') || JSON.stringify(INITIAL_OFFRES)));
   const [inventory, setInventory] = useState<InventoryItem[]>(() => JSON.parse(localStorage.getItem('merch_dz_inventory') || '[]'));
   const [charges, setCharges] = useState<Charge[]>(() => JSON.parse(localStorage.getItem('merch_dz_charges') || '[]'));
 
-  // Sync to LocalStorage on every change
   useEffect(() => {
     localStorage.setItem('merch_dz_gros', JSON.stringify(gros));
     localStorage.setItem('merch_dz_extern', JSON.stringify(extern));
@@ -107,15 +105,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     localStorage.removeItem('merch_dz_auth');
   }, []);
 
-  // Robust Action Logic - Hardened deletion to ensure rows are removed correctly
   const updateGros = useCallback((id: string, field: keyof CommandeGros, value: any) => 
     setGros(p => p.map(i => String(i.id) === String(id) ? { ...i, [field]: value } : i)), []);
   
   const addGros = useCallback(() => 
     setGros(p => [{ id: generateId(), reference: `G${Date.now()}`, client_name: '', client_phone: '', date_created: new Date().toISOString().split('T')[0], prix_achat_article: 0, impression: false, prix_impression: 0, prix_vente: 0, status: GrosStatus.EN_PRODUCTION, stock_note: '' }, ...p]), []);
   
-  const deleteGros = useCallback((id: string) => 
-    setGros(prev => prev.filter(item => String(item.id) !== String(id))), []);
+  const deleteGros = useCallback((id: string) => {
+    setGros(prev => prev.filter(item => String(item.id) !== String(id)));
+  }, []);
 
   const updateExtern = useCallback((id: string, field: keyof CommandeExtern, value: any) => 
     setExtern(p => p.map(i => String(i.id) === String(id) ? { ...i, [field]: value } : i)), []);
@@ -123,8 +121,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const addExtern = useCallback(() => 
     setExtern(p => [{ id: generateId(), reference: `D${Date.now()}`, client_name: '', client_phone: '', date_created: new Date().toISOString().split('T')[0], prix_achat_article: 0, impression: false, prix_impression: 0, prix_vente: 0, status: ExternStatus.EN_PRODUCTION, stock_note: '', vendeur_name: '', vendeur_benefice: 0 }, ...p]), []);
   
-  const deleteExtern = useCallback((id: string) => 
-    setExtern(prev => prev.filter(item => String(item.id) !== String(id))), []);
+  const deleteExtern = useCallback((id: string) => {
+    setExtern(prev => prev.filter(item => String(item.id) !== String(id)));
+  }, []);
 
   const updateOffre = useCallback((id: string, field: keyof Offre, value: any) => 
     setOffres(p => p.map(i => String(i.id) === String(id) ? { ...i, [field]: value } : i)), []);
@@ -132,8 +131,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const addOffre = useCallback(() => 
     setOffres(p => [{ id: generateId(), date: new Date().toISOString().split('T')[0], type: OffreType.EXPENSE, montant: 0, category: 'other' as any, description: '' }, ...p]), []);
   
-  const deleteOffre = useCallback((id: string) => 
-    setOffres(prev => prev.filter(item => String(item.id) !== String(id))), []);
+  const deleteOffre = useCallback((id: string) => {
+    setOffres(prev => prev.filter(item => String(item.id) !== String(id)));
+  }, []);
 
   const updateInventory = useCallback((id: string, field: keyof InventoryItem, value: any) => 
     setInventory(p => p.map(i => String(i.id) === String(id) ? { ...i, [field]: value } : i)), []);
@@ -141,8 +141,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const addInventory = useCallback(() => 
     setInventory(p => [{ id: generateId(), name: 'Nouveau Stock', sku: 'SKU-'+Date.now(), quantity: 0, min_stock: 5, unit_cost: 0, supplier: '' }, ...p]), []);
   
-  const deleteInventory = useCallback((id: string) => 
-    setInventory(prev => prev.filter(item => String(item.id) !== String(id))), []);
+  const deleteInventory = useCallback((id: string) => {
+    setInventory(prev => prev.filter(item => String(item.id) !== String(id)));
+  }, []);
 
   const updateCharge = useCallback((id: string, field: keyof Charge, value: any) => 
     setCharges(p => p.map(i => String(i.id) === String(id) ? { ...i, [field]: value } : i)), []);
@@ -150,8 +151,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const addCharge = useCallback((label: string = 'Autre') => 
     setCharges(p => [{ id: generateId(), date: new Date().toISOString().split('T')[0], label, montant: 0, note: '' }, ...p]), []);
   
-  const deleteCharge = useCallback((id: string) => 
-    setCharges(prev => prev.filter(item => String(item.id) !== String(id))), []);
+  const deleteCharge = useCallback((id: string) => {
+    setCharges(prev => prev.filter(item => String(item.id) !== String(id)));
+  }, []);
 
   const getCalculatedGros = useCallback((): CalculatedGros[] => gros.map(i => {
     const cost = Number(i.prix_achat_article) + Number(i.prix_impression);

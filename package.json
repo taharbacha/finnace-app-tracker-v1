@@ -1,3 +1,4 @@
+
 {
   "name": "merch-by-dz-backoffice",
   "version": "0.1.0",
@@ -10,7 +11,8 @@
     "recharts": "^2.15.0",
     "lucide-react": "^0.460.0",
     "clsx": "^2.1.1",
-    "tailwind-merge": "^2.5.5"
+    "tailwind-merge": "^2.5.5",
+    "@supabase/supabase-js": "^2.48.1"
   },
   "devDependencies": {
     "@types/react": "^19.0.0",
