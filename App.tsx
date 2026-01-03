@@ -5,19 +5,14 @@ import Sidebar from './components/Sidebar.tsx';
 import Dashboard from './pages/Dashboard.tsx';
 import CommandesGros from './pages/CommandesGros.tsx';
 import CommandesDetail from './pages/CommandesDetail.tsx';
+import MarketingClient from './pages/MarketingClient.tsx';
+import MarketingSpend from './pages/MarketingSpend.tsx';
 import Inventory from './pages/Inventory.tsx';
 import Offres from './pages/Offres.tsx';
 import Charges from './pages/Charges.tsx';
-import LoginPage from './pages/LoginPage.tsx';
-import { AppProvider, useAppStore } from './store.tsx';
+import { AppProvider } from './store.tsx';
 
-const ProtectedLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { isAuthenticated } = useAppStore();
-
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
-
+const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return (
     <div className="flex min-h-screen bg-[#F8FAFC]">
       <Sidebar />
@@ -33,13 +28,14 @@ const ProtectedLayout: React.FC<{ children: React.ReactNode }> = ({ children }) 
 const AppRoutes: React.FC = () => {
   return (
     <Routes>
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/" element={<ProtectedLayout><Dashboard /></ProtectedLayout>} />
-      <Route path="/gros" element={<ProtectedLayout><CommandesGros /></ProtectedLayout>} />
-      <Route path="/detail" element={<ProtectedLayout><CommandesDetail /></ProtectedLayout>} />
-      <Route path="/inventory" element={<ProtectedLayout><Inventory /></ProtectedLayout>} />
-      <Route path="/charges" element={<ProtectedLayout><Charges /></ProtectedLayout>} />
-      <Route path="/offres" element={<ProtectedLayout><Offres /></ProtectedLayout>} />
+      <Route path="/" element={<AppLayout><Dashboard /></AppLayout>} />
+      <Route path="/gros" element={<AppLayout><CommandesGros /></AppLayout>} />
+      <Route path="/detail" element={<AppLayout><CommandesDetail /></AppLayout>} />
+      <Route path="/marketing" element={<AppLayout><MarketingClient /></AppLayout>} />
+      <Route path="/marketing-spend" element={<AppLayout><MarketingSpend /></AppLayout>} />
+      <Route path="/inventory" element={<AppLayout><Inventory /></AppLayout>} />
+      <Route path="/charges" element={<AppLayout><Charges /></AppLayout>} />
+      <Route path="/offres" element={<AppLayout><Offres /></AppLayout>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

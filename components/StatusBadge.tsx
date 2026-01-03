@@ -1,5 +1,7 @@
+
 import React from 'react';
-import { GrosStatus, ExternStatus } from '../types.ts';
+// Fixed import: ExternStatus does not exist in types.ts
+import { GrosStatus, SitewebStatus } from '../types.ts';
 
 interface StatusBadgeProps {
   status: string;
@@ -11,7 +13,7 @@ const statusConfig: Record<string, { label: string; color: string }> = {
   [GrosStatus.LIVREE_NON_ENCAISSE]: { label: 'Livré (Non Encaissé)', color: 'bg-purple-100 text-purple-700' },
   [GrosStatus.LIVREE_ENCAISSE]: { label: 'Livré (Encaissé)', color: 'bg-emerald-100 text-emerald-700' },
   [GrosStatus.RETOUR]: { label: 'Retour', color: 'bg-red-100 text-red-700' },
-  [ExternStatus.LIVREE]: { label: 'Livré', color: 'bg-emerald-100 text-emerald-700' },
+  // Fix: Removed duplicate key ExternStatus.LIVREE_ENCAISSE which shares the same string value 'livree_encaisse' as GrosStatus.LIVREE_ENCAISSE
 };
 
 const StatusBadge: React.FC<StatusBadgeProps> = ({ status }) => {

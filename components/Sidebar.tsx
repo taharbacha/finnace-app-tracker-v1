@@ -5,29 +5,29 @@ import { useAppStore } from '../store.tsx';
 import { 
   LayoutDashboard, 
   Truck, 
-  ShoppingBag, 
   TrendingUp,
-  User,
-  LogOut,
-  ShieldCheck,
-  Cloud,
   CloudOff,
   RefreshCw,
   CheckCircle2,
   Package,
   Wallet,
-  Globe
+  Globe,
+  UserCheck,
+  Megaphone,
+  Cloud
 } from 'lucide-react';
 
 const Sidebar: React.FC = () => {
-  const { logout, isSyncing, isCloudActive, syncData, lastSynced } = useAppStore();
+  const { isSyncing, isCloudActive, syncData, lastSynced } = useAppStore();
   const navItems = [
     { to: '/', label: 'Tableau de bord', icon: LayoutDashboard },
     { to: '/gros', label: 'Commandes GROS', icon: Truck },
     { to: '/detail', label: 'Commandes sitweb', icon: Globe },
+    { to: '/marketing', label: 'Marketing Clients', icon: UserCheck },
+    { to: '/marketing-spend', label: 'Marketing Spend', icon: Megaphone },
     { to: '/inventory', label: 'Stock & Inventaire', icon: Package },
     { to: '/charges', label: 'Les Charges', icon: Wallet },
-    { to: '/offres', label: 'Offres & Frais', icon: TrendingUp },
+    { to: '/offres', label: 'Les Offres', icon: TrendingUp },
   ];
 
   return (
@@ -40,7 +40,7 @@ const Sidebar: React.FC = () => {
         </div>
       </div>
 
-      <nav className="flex-1 px-4 py-4 space-y-1.5">
+      <nav className="flex-1 px-4 py-4 space-y-1.5 overflow-y-auto">
         <p className="px-4 text-[10px] font-black text-slate-600 uppercase tracking-widest mb-4">Menu Principal</p>
         {navItems.map((item) => (
           <NavLink
@@ -90,15 +90,9 @@ const Sidebar: React.FC = () => {
            )}
         </div>
       </div>
-
-      <div className="p-4 mx-4 mb-8 bg-slate-800/50 rounded-3xl border border-slate-800">
-        <button 
-          onClick={() => { if(confirm('Confirmer la déconnexion ?')) logout(); }}
-          className="w-full flex items-center justify-center gap-2 px-4 py-3 text-slate-400 hover:text-red-400 hover:bg-red-400/10 rounded-2xl transition-all font-bold text-xs"
-        >
-          <LogOut size={16} />
-          <span>Quitter</span>
-        </button>
+      
+      <div className="p-4 mx-4 mb-8 bg-slate-800/5 rounded-3xl border border-slate-800/20 flex items-center justify-center">
+         <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Opérations Ouvertes</p>
       </div>
     </aside>
   );

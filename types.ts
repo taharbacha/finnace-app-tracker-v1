@@ -1,5 +1,4 @@
 
-
 export enum GrosStatus {
   EN_PRODUCTION = 'en_production',
   EN_LIVRAISON = 'en_livraison',
@@ -8,10 +7,17 @@ export enum GrosStatus {
   RETOUR = 'retour'
 }
 
-export enum ExternStatus {
-  EN_PRODUCTION = 'en_production',
-  LIVREE = 'livree',
+export enum SitewebStatus {
+  LIVREE = 'livrée',
+  LIVREE_NON_ENCAISSEE = 'livrée_non_encaissée',
+  EN_LIVRAISON = 'en_livraison',
   RETOUR = 'retour'
+}
+
+export enum MarketingStatus {
+  EN_COURS = 'en_cours',
+  TERMINE = 'termine',
+  ANNULE = 'annule'
 }
 
 export enum OffreType {
@@ -20,12 +26,32 @@ export enum OffreType {
 }
 
 export enum OffreCategory {
-  ADS = 'ads',
   CREATIVE = 'creative',
-  PACKAGING = 'packaging',
-  TRANSPORT = 'transport',
-  MANUAL = 'manual',
+  SUBSCRIPTIONS = 'subscriptions',
   OTHER = 'other'
+}
+
+export enum MarketingSpendSource {
+  GROS = 'gros',
+  SITEWEB = 'siteweb',
+  OFFRES = 'offres',
+  MARKETING_CLIENT = 'marketing_client'
+}
+
+export enum MarketingSpendType {
+  ADS = 'ads',
+  INFLUENCER = 'influencer',
+  OTHER = 'other'
+}
+
+export interface MarketingSpend {
+  id: string;
+  date_start: string;
+  date_end: string;
+  source: MarketingSpendSource;
+  type: MarketingSpendType;
+  amount: number;
+  note: string;
 }
 
 export interface InventoryItem {
@@ -60,23 +86,29 @@ export interface CommandeGros {
   stock_note: string;
 }
 
-export interface CommandeExtern {
+export interface CommandeSiteweb {
   id: string;
   reference: string;
-  client_name: string;
-  client_phone: string;
   date_created: string;
-  prix_achat_article: number;
-  impression: boolean;
-  prix_impression: number;
+  cout_article: number;
+  cout_impression: number;
   prix_vente: number;
-  status: ExternStatus;
+  status: SitewebStatus;
   stock_note: string;
   vendeur_name: string;
   vendeur_benefice: number;
 }
 
-// Added the missing Offre interface to resolve type errors in store and constants
+export interface MarketingService {
+  id: string;
+  client_name: string;
+  service_description: string;
+  date: string;
+  revenue: number;
+  client_charges: number;
+  status: MarketingStatus;
+}
+
 export interface Offre {
   id: string;
   date: string;
@@ -93,10 +125,12 @@ export interface CalculatedGros extends CommandeGros {
   perte: number;
 }
 
-export interface CalculatedExtern extends CommandeExtern {
-  cost: number;
-  profit_reel: number;
-  perte: number;
+export interface CalculatedSiteweb extends CommandeSiteweb {
+  profit_net: number;
+}
+
+export interface CalculatedMarketing extends MarketingService {
+  net_profit: number;
 }
 
 export interface DashboardData {
@@ -105,5 +139,6 @@ export interface DashboardData {
   pertes: number;
   net_offres: number;
   total_charges: number;
+  total_marketing_spend: number;
   profit_net_final: number;
 }

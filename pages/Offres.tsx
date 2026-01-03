@@ -40,7 +40,7 @@ const Offres: React.FC = () => {
   const handleDelete = (e: React.MouseEvent, id: string) => {
     e.preventDefault();
     e.stopPropagation();
-    if (window.confirm('Voulez-vous supprimer ce mouvement d\'offre/frais ?')) {
+    if (window.confirm('Voulez-vous supprimer ce mouvement d\'offre ?')) {
       deleteOffre(id);
     }
   };
@@ -104,7 +104,7 @@ const Offres: React.FC = () => {
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", "offres_et_frais.csv");
+    link.setAttribute("download", "les_offres.csv");
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -114,8 +114,8 @@ const Offres: React.FC = () => {
     <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800">Offres & Frais Globaux</h2>
-          <p className="text-slate-500 text-sm">Gestion des revenus et dépenses opérationnelles indirectes.</p>
+          <h2 className="text-2xl font-black text-slate-800 tracking-tight">Les Offres</h2>
+          <p className="text-slate-500 text-sm font-medium">Suivi exclusif des revenus et dépenses liés aux abonnements plans.</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <input 
@@ -142,29 +142,29 @@ const Offres: React.FC = () => {
           <button 
             type="button"
             onClick={addOffre}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl text-sm font-bold hover:bg-blue-700 shadow-md transition-all"
+            className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-2xl text-sm font-black hover:bg-blue-700 shadow-xl shadow-blue-500/20 active:scale-95 transition-all"
           >
-            <Plus size={16} /> Nouveau Flux
+            <Plus size={18} /> Nouveau Flux
           </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <StatCard label="Revenus (Période)" value={formatPrice(stats.rev)} icon={TrendingUp} color="text-emerald-600" bg="bg-emerald-50" />
-        <StatCard label="Dépenses (Période)" value={formatPrice(stats.exp)} icon={TrendingDown} color="text-orange-600" bg="bg-orange-50" />
-        <StatCard label="Bilan (Période)" value={formatPrice(stats.net)} icon={Zap} color="text-slate-600" bg="bg-slate-50" />
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+        <StatCard label="Revenus Plans" value={formatPrice(stats.rev)} icon={TrendingUp} color="text-emerald-600" bg="bg-emerald-50" />
+        <StatCard label="Dépenses Directes" value={formatPrice(stats.exp)} icon={TrendingDown} color="text-orange-600" bg="bg-orange-50" />
+        <StatCard label="Bilan Offres" value={formatPrice(stats.net)} icon={Zap} color="text-slate-600" bg="bg-slate-50" />
       </div>
 
-      <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
-        <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex flex-col lg:flex-row lg:items-center gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+      <div className="bg-white border border-slate-100 rounded-[2rem] shadow-sm overflow-hidden">
+        <div className="p-6 border-b border-slate-50 bg-slate-50/30">
+          <div className="relative max-w-xl">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
             <input 
               type="text" 
               placeholder="Filtrer par description ou catégorie..." 
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 transition-all text-sm"
+              className="w-full pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-2xl outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all text-sm font-medium"
             />
           </div>
         </div>
@@ -172,7 +172,7 @@ const Offres: React.FC = () => {
         <div className="overflow-x-auto">
           <table className="w-full text-sm text-left border-collapse">
             <thead>
-              <tr className="bg-slate-50/80 border-b border-slate-200">
+              <tr className="bg-slate-50 border-b border-slate-200">
                 <th className="p-4 font-bold text-slate-500 uppercase tracking-tighter text-[10px]">Date</th>
                 <th className="p-4 font-bold text-slate-500 uppercase tracking-tighter text-[10px]">Type</th>
                 <th className="p-4 font-bold text-slate-500 uppercase tracking-tighter text-[10px]">Catégorie</th>
@@ -204,7 +204,7 @@ const Offres: React.FC = () => {
                     <select 
                       value={item.category} 
                       onChange={(e) => updateOffre(item.id, 'category', e.target.value)}
-                      className="text-[10px] p-1.5 border-none bg-slate-100 rounded-lg text-slate-600 font-bold uppercase tracking-tight"
+                      className="text-[10px] p-1.5 border-none bg-slate-100 rounded-lg text-slate-600 font-black uppercase tracking-tight"
                     >
                       {OFFRE_CATEGORY_OPTIONS.map(opt => (
                         <option key={opt} value={opt}>{opt.toUpperCase()}</option>
@@ -236,7 +236,7 @@ const Offres: React.FC = () => {
               ))}
               {filteredData.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="p-12 text-center text-slate-400">Aucun mouvement trouvé pour cette période.</td>
+                  <td colSpan={6} className="p-12 text-center text-slate-400 font-bold uppercase tracking-widest text-xs">Aucun mouvement trouvé</td>
                 </tr>
               )}
             </tbody>

@@ -1,4 +1,5 @@
-import { GrosStatus, ExternStatus, OffreType, OffreCategory, CommandeGros, CommandeExtern, Offre } from './types.ts';
+
+import { GrosStatus, SitewebStatus, OffreType, OffreCategory, MarketingSpendSource, MarketingSpendType, CommandeGros, CommandeSiteweb, Offre } from './types.ts';
 
 export const INITIAL_GROS: CommandeGros[] = [
   {
@@ -13,38 +14,21 @@ export const INITIAL_GROS: CommandeGros[] = [
     prix_vente: 2500,
     status: GrosStatus.LIVREE_ENCAISSE,
     stock_note: 'Validated'
-  },
-  {
-    id: '2',
-    reference: 'G2',
-    client_name: 'Wholesale Oran',
-    client_phone: '0661223344',
-    date_created: '2023-10-05',
-    prix_achat_article: 1200,
-    impression: false,
-    prix_impression: 0,
-    prix_vente: 2000,
-    status: GrosStatus.EN_LIVRAISON,
-    stock_note: ''
   }
 ];
 
-export const INITIAL_EXTERN: CommandeExtern[] = [
+export const INITIAL_EXTERN: CommandeSiteweb[] = [
   {
     id: 'e1',
-    reference: 'D1',
-    client_name: 'Ahmed Benali',
-    client_phone: '0770998877',
+    reference: '101',
     date_created: '2023-10-10',
-    prix_achat_article: 1800,
-    impression: true,
-    prix_impression: 300,
+    cout_article: 1500,
+    cout_impression: 300,
     prix_vente: 3500,
-    status: ExternStatus.LIVREE,
+    status: SitewebStatus.LIVREE,
     stock_note: '',
-    // Added missing mandatory properties for CommandeExtern
-    vendeur_name: 'Vendeur Principal',
-    vendeur_benefice: 0
+    vendeur_name: 'V-X',
+    vendeur_benefice: 500
   }
 ];
 
@@ -52,22 +36,16 @@ export const INITIAL_OFFRES: Offre[] = [
   {
     id: 'o1',
     date: '2023-10-01',
-    type: OffreType.EXPENSE,
-    montant: 50000,
-    category: OffreCategory.ADS,
-    description: 'Facebook Ads October Campaign'
-  },
-  {
-    id: 'o2',
-    date: '2023-10-02',
-    type: OffreType.EXPENSE,
-    montant: 15000,
-    category: OffreCategory.PACKAGING,
-    description: 'Cartons and bags supply'
+    type: OffreType.REVENUE,
+    montant: 12000,
+    category: OffreCategory.SUBSCRIPTIONS,
+    description: 'Abonnement Plan Pro - Client A'
   }
 ];
 
 export const GROS_STATUS_OPTIONS = Object.values(GrosStatus);
-export const EXTERN_STATUS_OPTIONS = Object.values(ExternStatus);
+export const EXTERN_STATUS_OPTIONS = Object.values(SitewebStatus) as string[];
 export const OFFRE_TYPE_OPTIONS = Object.values(OffreType);
 export const OFFRE_CATEGORY_OPTIONS = Object.values(OffreCategory);
+export const MARKETING_SPEND_SOURCE_OPTIONS = Object.values(MarketingSpendSource);
+export const MARKETING_SPEND_TYPE_OPTIONS = Object.values(MarketingSpendType);
