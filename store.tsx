@@ -41,38 +41,38 @@ interface AppState {
   login: (password: string) => boolean;
   logout: () => void;
   setDashboardDateRange: (start: string, end: string) => void;
-  updateGros: (id: string, field: keyof CommandeGros, value: any) => void;
-  addGros: () => void;
-  deleteGros: (id: string) => void;
+  updateGros: (id: string, field: keyof CommandeGros, value: any) => Promise<void>;
+  addGros: () => Promise<void>;
+  deleteGros: (id: string) => Promise<void>;
   importGros: (data: any[]) => void;
-  updateSiteweb: (id: string, field: keyof CommandeSiteweb, value: any) => void;
-  addSiteweb: () => void;
-  duplicateSiteweb: (id: string) => void;
-  deleteSiteweb: (id: string) => void;
+  updateSiteweb: (id: string, field: keyof CommandeSiteweb, value: any) => Promise<void>;
+  addSiteweb: () => Promise<void>;
+  duplicateSiteweb: (id: string) => Promise<void>;
+  deleteSiteweb: (id: string) => Promise<void>;
   importSiteweb: (data: any[]) => void;
   getCalculatedGros: () => CalculatedGros[];
   getCalculatedSiteweb: () => CalculatedSiteweb[];
   getCalculatedMarketing: () => CalculatedMarketing[];
   getDashboardData: (startDate?: string, endDate?: string) => DashboardData;
   syncData: () => Promise<void>;
-  updateOffre: (id: string, field: keyof Offre, value: any) => void;
-  addOffre: () => void;
-  deleteOffre: (id: string) => void;
+  updateOffre: (id: string, field: keyof Offre, value: any) => Promise<void>;
+  addOffre: () => Promise<void>;
+  deleteOffre: (id: string) => Promise<void>;
   importOffres: (data: any[]) => void;
-  updateInventory: (id: string, field: keyof InventoryItem, value: any) => void;
-  addInventory: () => void;
-  deleteInventory: (id: string) => void;
+  updateInventory: (id: string, field: keyof InventoryItem, value: any) => Promise<void>;
+  addInventory: () => Promise<void>;
+  deleteInventory: (id: string) => Promise<void>;
   importInventory: (data: any[]) => void;
-  updateCharge: (id: string, field: keyof Charge, value: any) => void;
-  addCharge: (label?: string) => void;
-  deleteCharge: (id: string) => void;
+  updateCharge: (id: string, field: keyof Charge, value: any) => Promise<void>;
+  addCharge: (label?: string) => Promise<void>;
+  deleteCharge: (id: string) => Promise<void>;
   importCharges: (data: any[]) => void;
-  updateMarketing: (id: string, field: keyof MarketingService, value: any) => void;
-  addMarketing: () => void;
-  deleteMarketing: (id: string) => void;
-  updateMarketingSpend: (id: string, field: keyof MarketingSpend, value: any) => void;
-  addMarketingSpend: () => void;
-  deleteMarketingSpend: (id: string) => void;
+  updateMarketing: (id: string, field: keyof MarketingService, value: any) => Promise<void>;
+  addMarketing: () => Promise<void>;
+  deleteMarketing: (id: string) => Promise<void>;
+  updateMarketingSpend: (id: string, field: keyof MarketingSpend, value: any) => Promise<void>;
+  addMarketingSpend: () => Promise<void>;
+  deleteMarketingSpend: (id: string) => Promise<void>;
 }
 
 const AppContext = createContext<AppState | undefined>(undefined);
@@ -180,87 +180,231 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const login = useCallback(() => true, []);
   const logout = useCallback(() => {}, []);
 
-  const updateGros = useCallback((id: string, field: keyof CommandeGros, value: any) => 
-    setGros(p => p.map(i => String(i.id) === String(id) ? { ...i, [field]: value } : i)), []);
-
-  const addGros = useCallback(() => {
-    setGros(prevGros => {
-      const refs = prevGros.map(i => {
-        const match = i.reference.match(/^G(\d+)$/);
-        return match ? parseInt(match[1], 10) : 0;
-      });
-      const maxRefNum = Math.max(0, ...refs);
-      const nextReference = `G${maxRefNum + 1}`;
-      return [{ 
-        id: generateId(), 
-        reference: nextReference, 
-        client_name: '', client_phone: '', 
-        date_created: new Date().toISOString().split('T')[0], 
-        prix_achat_article: 0, impression: false, prix_impression: 0, prix_vente: 0, 
-        status: GrosStatus.EN_PRODUCTION, stock_note: '' 
-      }, ...prevGros];
-    });
+  // WRITE Support for Commandes GROS
+  const updateGros = useCallback(async (id: string, field: keyof CommandeGros, value: any) => {
+    setGros(p => p.map(i => String(i.id) === String(id) ? { ...i, [field]: value } : i));
+    if (supabase) {
+      const { error } = await supabase.from('commandes_gros').update({ [field]: value }).eq('id', id);
+      if (error) console.error("Supabase updateGros error:", error);
+    }
   }, []);
 
-  const deleteGros = useCallback((id: string) => setGros(prev => prev.filter(item => String(item.id) !== String(id))), []);
-  const importGros = useCallback((data: any[]) => setGros(prev => [...data.map(i => ({...i, id: generateId()})), ...prev]), []);
+  const addGros = useCallback(async () => {
+    const refs = gros.map(i => {
+      const match = i.reference.match(/^G(\d+)$/);
+      return match ? parseInt(match[1], 10) : 0;
+    });
+    const maxRefNum = Math.max(0, ...refs);
+    const nextReference = `G${maxRefNum + 1}`;
+    const newRecord: Partial<CommandeGros> = { 
+      id: generateId(), reference: nextReference, client_name: '', client_phone: '', 
+      date_created: new Date().toISOString().split('T')[0], prix_achat_article: 0, 
+      impression: false, prix_impression: 0, prix_vente: 0, status: GrosStatus.EN_PRODUCTION, stock_note: '' 
+    };
+    if (supabase) {
+      const { data, error } = await supabase.from('commandes_gros').insert([newRecord]).select();
+      if (!error && data) setGros(prev => [data[0], ...prev]);
+      else setGros(prev => [newRecord as CommandeGros, ...prev]);
+    } else {
+      setGros(prev => [newRecord as CommandeGros, ...prev]);
+    }
+  }, [gros]);
 
-  const updateSiteweb = useCallback((id: string, field: keyof CommandeSiteweb, value: any) => 
-    setSiteweb(p => p.map(i => String(i.id) === String(id) ? { ...i, [field]: value } : i)), []);
-  
-  const addSiteweb = useCallback(() => 
-    setSiteweb(p => [{ id: generateId(), reference: String(Date.now()).slice(-6), date_created: new Date().toISOString().split('T')[0], cout_article: 0, cout_impression: 0, prix_vente: 0, status: SitewebStatus.EN_LIVRAISON, stock_note: '', vendeur_name: 'V-X', vendeur_benefice: 0 }, ...p]), []);
-  
-  const duplicateSiteweb = useCallback((id: string) => {
+  const deleteGros = useCallback(async (id: string) => {
+    if (supabase) await supabase.from('commandes_gros').delete().eq('id', id);
+    setGros(prev => prev.filter(item => String(item.id) !== String(id)));
+  }, []);
+
+  // WRITE Support for Commandes SITEWEB
+  const updateSiteweb = useCallback(async (id: string, field: keyof CommandeSiteweb, value: any) => {
+    setSiteweb(p => p.map(i => String(i.id) === String(id) ? { ...i, [field]: value } : i));
+    if (supabase) {
+      const { error } = await supabase.from('commandes_siteweb').update({ [field]: value }).eq('id', id);
+      if (error) console.error("Supabase updateSiteweb error:", error);
+    }
+  }, []);
+
+  const addSiteweb = useCallback(async () => {
+    const newRecord: Partial<CommandeSiteweb> = { 
+      id: generateId(), reference: String(Date.now()).slice(-6), 
+      date_created: new Date().toISOString().split('T')[0], cout_article: 0, cout_impression: 0, 
+      prix_vente: 0, status: SitewebStatus.EN_LIVRAISON, stock_note: '', 
+      vendeur_name: 'V-X', vendeur_benefice: 0 
+    };
+    if (supabase) {
+      const { data, error } = await supabase.from('commandes_siteweb').insert([newRecord]).select();
+      if (!error && data) setSiteweb(prev => [data[0], ...prev]);
+      else setSiteweb(prev => [newRecord as CommandeSiteweb, ...prev]);
+    } else {
+      setSiteweb(prev => [newRecord as CommandeSiteweb, ...prev]);
+    }
+  }, []);
+
+  const duplicateSiteweb = useCallback(async (id: string) => {
     const target = siteweb.find(i => String(i.id) === String(id));
-    if (target) setSiteweb(p => [{ ...target, id: generateId(), reference: target.reference + '-copy' }, ...p]);
+    if (target) {
+      const newRecord = { ...target, id: generateId(), reference: target.reference + '-copy' };
+      if (supabase) {
+        const { data, error } = await supabase.from('commandes_siteweb').insert([newRecord]).select();
+        if (!error && data) setSiteweb(prev => [data[0], ...prev]);
+      } else {
+        setSiteweb(p => [newRecord, ...p]);
+      }
+    }
   }, [siteweb]);
-  
-  const deleteSiteweb = useCallback((id: string) => setSiteweb(prev => prev.filter(item => String(item.id) !== String(id))), []);
+
+  const deleteSiteweb = useCallback(async (id: string) => {
+    if (supabase) await supabase.from('commandes_siteweb').delete().eq('id', id);
+    setSiteweb(prev => prev.filter(item => String(item.id) !== String(id)));
+  }, []);
+
+  // WRITE Support for OFFRES
+  const updateOffre = useCallback(async (id: string, field: keyof Offre, value: any) => {
+    setOffres(p => p.map(i => String(i.id) === String(id) ? { ...i, [field]: value } : i));
+    if (supabase) {
+      const { error } = await supabase.from('offres').update({ [field]: value }).eq('id', id);
+      if (error) console.error("Supabase updateOffre error:", error);
+    }
+  }, []);
+
+  const addOffre = useCallback(async () => {
+    const newRecord: Partial<Offre> = { 
+      id: generateId(), date: new Date().toISOString().split('T')[0], 
+      type: OffreType.EXPENSE, montant: 0, category: OffreCategory.OTHER, description: '' 
+    };
+    if (supabase) {
+      const { data, error } = await supabase.from('offres').insert([newRecord]).select();
+      if (!error && data) setOffres(prev => [data[0], ...prev]);
+      else setOffres(prev => [newRecord as Offre, ...prev]);
+    } else {
+      setOffres(prev => [newRecord as Offre, ...prev]);
+    }
+  }, []);
+
+  const deleteOffre = useCallback(async (id: string) => {
+    if (supabase) await supabase.from('offres').delete().eq('id', id);
+    setOffres(prev => prev.filter(item => String(item.id) !== String(id)));
+  }, []);
+
+  // WRITE Support for INVENTORY
+  const updateInventory = useCallback(async (id: string, field: keyof InventoryItem, value: any) => {
+    setInventory(p => p.map(i => String(i.id) === String(id) ? { ...i, [field]: value } : i));
+    if (supabase) {
+      const { error } = await supabase.from('inventory').update({ [field]: value }).eq('id', id);
+      if (error) console.error("Supabase updateInventory error:", error);
+    }
+  }, []);
+
+  const addInventory = useCallback(async () => {
+    const newRecord: Partial<InventoryItem> = { 
+      id: generateId(), name: 'Nouveau Stock', sku: 'SKU-' + Date.now(), 
+      quantity: 0, min_stock: 5, unit_cost: 0, supplier: '' 
+    };
+    if (supabase) {
+      const { data, error } = await supabase.from('inventory').insert([newRecord]).select();
+      if (!error && data) setInventory(prev => [data[0], ...prev]);
+      else setInventory(prev => [newRecord as InventoryItem, ...prev]);
+    } else {
+      setInventory(prev => [newRecord as InventoryItem, ...prev]);
+    }
+  }, []);
+
+  const deleteInventory = useCallback(async (id: string) => {
+    if (supabase) await supabase.from('inventory').delete().eq('id', id);
+    setInventory(prev => prev.filter(item => String(item.id) !== String(id)));
+  }, []);
+
+  // WRITE Support for CHARGES
+  const updateCharge = useCallback(async (id: string, field: keyof Charge, value: any) => {
+    setCharges(p => p.map(i => String(i.id) === String(id) ? { ...i, [field]: value } : i));
+    if (supabase) {
+      const { error } = await supabase.from('charges').update({ [field]: value }).eq('id', id);
+      if (error) console.error("Supabase updateCharge error:", error);
+    }
+  }, []);
+
+  const addCharge = useCallback(async (label: string = 'Autre') => {
+    const newRecord: Partial<Charge> = { 
+      id: generateId(), date: new Date().toISOString().split('T')[0], 
+      label, montant: 0, note: '' 
+    };
+    if (supabase) {
+      const { data, error } = await supabase.from('charges').insert([newRecord]).select();
+      if (!error && data) setCharges(prev => [data[0], ...prev]);
+      else setCharges(prev => [newRecord as Charge, ...prev]);
+    } else {
+      setCharges(prev => [newRecord as Charge, ...prev]);
+    }
+  }, []);
+
+  const deleteCharge = useCallback(async (id: string) => {
+    if (supabase) await supabase.from('charges').delete().eq('id', id);
+    setCharges(prev => prev.filter(item => String(item.id) !== String(id)));
+  }, []);
+
+  // WRITE Support for MARKETING
+  const updateMarketing = useCallback(async (id: string, field: keyof MarketingService, value: any) => {
+    setMarketingServices(p => p.map(i => String(i.id) === String(id) ? { ...i, [field]: value } : i));
+    if (supabase) {
+      const { error } = await supabase.from('marketing_services').update({ [field]: value }).eq('id', id);
+      if (error) console.error("Supabase updateMarketing error:", error);
+    }
+  }, []);
+
+  const addMarketing = useCallback(async () => {
+    const newRecord: Partial<MarketingService> = { 
+      id: generateId(), client_name: 'Nouveau Client', service_description: '', 
+      date: new Date().toISOString().split('T')[0], revenue: 0, client_charges: 0, 
+      status: MarketingStatus.EN_COURS 
+    };
+    if (supabase) {
+      const { data, error } = await supabase.from('marketing_services').insert([newRecord]).select();
+      if (!error && data) setMarketingServices(prev => [data[0], ...prev]);
+      else setMarketingServices(prev => [newRecord as MarketingService, ...prev]);
+    } else {
+      setMarketingServices(prev => [newRecord as MarketingService, ...prev]);
+    }
+  }, []);
+
+  const deleteMarketing = useCallback(async (id: string) => {
+    if (supabase) await supabase.from('marketing_services').delete().eq('id', id);
+    setMarketingServices(prev => prev.filter(i => String(i.id) !== String(id)));
+  }, []);
+
+  // WRITE Support for MARKETING SPEND
+  const updateMarketingSpend = useCallback(async (id: string, field: keyof MarketingSpend, value: any) => {
+    setMarketingSpends(p => p.map(i => String(i.id) === String(id) ? { ...i, [field]: value } : i));
+    if (supabase) {
+      const { error } = await supabase.from('marketing_spends').update({ [field]: value }).eq('id', id);
+      if (error) console.error("Supabase updateMarketingSpend error:", error);
+    }
+  }, []);
+
+  const addMarketingSpend = useCallback(async () => {
+    const newRecord: Partial<MarketingSpend> = { 
+      id: generateId(), date_start: new Date().toISOString().split('T')[0], 
+      date_end: new Date().toISOString().split('T')[0], source: MarketingSpendSource.GROS, 
+      type: MarketingSpendType.ADS, amount: 0, note: '' 
+    };
+    if (supabase) {
+      const { data, error } = await supabase.from('marketing_spends').insert([newRecord]).select();
+      if (!error && data) setMarketingSpends(prev => [data[0], ...prev]);
+      else setMarketingSpends(prev => [newRecord as MarketingSpend, ...prev]);
+    } else {
+      setMarketingSpends(prev => [newRecord as MarketingSpend, ...prev]);
+    }
+  }, []);
+
+  const deleteMarketingSpend = useCallback(async (id: string) => {
+    if (supabase) await supabase.from('marketing_spends').delete().eq('id', id);
+    setMarketingSpends(prev => prev.filter(i => String(i.id) !== String(id)));
+  }, []);
+
+  const importGros = useCallback((data: any[]) => setGros(prev => [...data.map(i => ({...i, id: generateId()})), ...prev]), []);
   const importSiteweb = useCallback((data: any[]) => setSiteweb(prev => [...data.map(i => ({...i, id: generateId()})), ...prev]), []);
-
-  const updateOffre = useCallback((id: string, field: keyof Offre, value: any) => 
-    setOffres(p => p.map(i => String(i.id) === String(id) ? { ...i, [field]: value } : i)), []);
-
-  const addOffre = useCallback(() => 
-    setOffres(p => [{ id: generateId(), date: new Date().toISOString().split('T')[0], type: OffreType.EXPENSE, montant: 0, category: OffreCategory.OTHER, description: '' }, ...p]), []);
-  
-  const deleteOffre = useCallback((id: string) => setOffres(prev => prev.filter(item => String(item.id) !== String(id))), []);
   const importOffres = useCallback((data: any[]) => setOffres(prev => [...data.map(i => ({...i, id: generateId()})), ...prev]), []);
-
-  const updateInventory = useCallback((id: string, field: keyof InventoryItem, value: any) => 
-    setInventory(p => p.map(i => String(i.id) === String(id) ? { ...i, [field]: value } : i)), []);
-  
-  const addInventory = useCallback(() => 
-    setInventory(p => [{ id: generateId(), name: 'Nouveau Stock', sku: 'SKU-'+Date.now(), quantity: 0, min_stock: 5, unit_cost: 0, supplier: '' }, ...p]), []);
-  
-  const deleteInventory = useCallback((id: string) => setInventory(prev => prev.filter(item => String(item.id) !== String(id))), []);
   const importInventory = useCallback((data: any[]) => setInventory(prev => [...data.map(i => ({...i, id: generateId()})), ...prev]), []);
-
-  const updateCharge = useCallback((id: string, field: keyof Charge, value: any) => 
-    setCharges(p => p.map(i => String(i.id) === String(id) ? { ...i, [field]: value } : i)), []);
-  
-  const addCharge = useCallback((label: string = 'Autre') => 
-    setCharges(p => [{ id: generateId(), date: new Date().toISOString().split('T')[0], label, montant: 0, note: '' }, ...p]), []);
-  
-  const deleteCharge = useCallback((id: string) => setCharges(prev => prev.filter(item => String(item.id) !== String(id))), []);
   const importCharges = useCallback((data: any[]) => setCharges(prev => [...data.map(i => ({...i, id: generateId()})), ...prev]), []);
-
-  const updateMarketing = useCallback((id: string, field: keyof MarketingService, value: any) => 
-    setMarketingServices(p => p.map(i => String(i.id) === String(id) ? { ...i, [field]: value } : i)), []);
-  
-  const addMarketing = useCallback(() => 
-    setMarketingServices(p => [{ id: generateId(), client_name: 'Nouveau Client', service_description: '', date: new Date().toISOString().split('T')[0], revenue: 0, client_charges: 0, status: MarketingStatus.EN_COURS }, ...p]), []);
-  
-  const deleteMarketing = useCallback((id: string) => setMarketingServices(prev => prev.filter(i => String(i.id) !== String(id))), []);
-
-  const updateMarketingSpend = useCallback((id: string, field: keyof MarketingSpend, value: any) => 
-    setMarketingSpends(p => p.map(i => String(i.id) === String(id) ? { ...i, [field]: value } : i)), []);
-  
-  const addMarketingSpend = useCallback(() => 
-    setMarketingSpends(p => [{ id: generateId(), date_start: new Date().toISOString().split('T')[0], date_end: new Date().toISOString().split('T')[0], source: MarketingSpendSource.GROS, type: MarketingSpendType.ADS, amount: 0, note: '' }, ...p]), []);
-  
-  const deleteMarketingSpend = useCallback((id: string) => setMarketingSpends(prev => prev.filter(i => String(i.id) !== String(id))), []);
 
   const getCalculatedGros = useCallback((): CalculatedGros[] => gros.map(i => {
     const cost = Number(i.prix_achat_article) + Number(i.prix_impression);
@@ -280,34 +424,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const getDashboardData = useCallback((startDate?: string, endDate?: string): DashboardData => {
     const cGrosFull = getCalculatedGros();
     const cSitewebFull = getCalculatedSiteweb();
-
     const filterByDate = (dateStr: string) => {
       if (startDate && dateStr < startDate) return false;
       if (endDate && dateStr > endDate) return false;
       return true;
     };
-
     const cGros = cGrosFull.filter(item => filterByDate(item.date_created));
     const cSiteweb = cSitewebFull.filter(item => filterByDate(item.date_created));
     const currentOffres = offres.filter(item => filterByDate(item.date));
     const currentCharges = charges.filter(item => filterByDate(item.date));
     const currentMarketingSpends = marketingSpends.filter(item => filterByDate(item.date_start));
-
     const encaisse = cGros.reduce((a, c) => a + c.profit_encaisse, 0) + cSiteweb.filter(o => o.status === SitewebStatus.LIVREE).reduce((a, c) => a + c.profit_net, 0);
     const attendu = cGros.reduce((a, c) => a + c.profit_attendu, 0) + cSiteweb.filter(o => o.status === SitewebStatus.EN_LIVRAISON || o.status === SitewebStatus.LIVREE_NON_ENCAISSEE).reduce((a, c) => a + c.profit_net, 0);
     const pertes = cGros.reduce((a, c) => a + c.perte, 0) + cSiteweb.filter(o => o.status === SitewebStatus.RETOUR).reduce((a, c) => a + (Number(c.cout_article) + Number(c.cout_impression)), 0);
     const net_offres = currentOffres.reduce((a, c) => c.type === OffreType.REVENUE ? a + Number(c.montant) : a - Number(c.montant), 0);
     const total_charges = currentCharges.reduce((a, c) => a + Number(c.montant), 0);
     const total_marketing_spend = currentMarketingSpends.reduce((a, c) => a + Number(c.amount), 0);
-    
     return { 
-      encaisse_reel: encaisse, 
-      profit_attendu: attendu, 
-      pertes, 
-      net_offres, 
-      total_charges, 
-      total_marketing_spend, 
-      profit_net_final: encaisse + attendu + net_offres - pertes - total_charges - total_marketing_spend 
+      encaisse_reel: encaisse, profit_attendu: attendu, pertes, net_offres, 
+      total_charges, total_marketing_spend, profit_net_final: encaisse + attendu + net_offres - pertes - total_charges - total_marketing_spend 
     };
   }, [getCalculatedGros, getCalculatedSiteweb, offres, charges, marketingSpends]);
 
