@@ -103,22 +103,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isAuthenticated] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isCloudActive] = useState(!!supabase);
-  const [lastSynced, setLastSynced] = useState<string | null>(() => localStorage.getItem('merch_dz_last_sync'));
+  const [lastSynced, setLastSynced] = useState<string | null>(null);
+  const [isInitialLoaded, setIsInitialLoaded] = useState(false);
 
-  const [gros, setGros] = useState<CommandeGros[]>(() => JSON.parse(localStorage.getItem('merch_dz_gros') || JSON.stringify(INITIAL_GROS)));
-  const [siteweb, setSiteweb] = useState<CommandeSiteweb[]>(() => JSON.parse(localStorage.getItem('merch_dz_siteweb') || JSON.stringify(INITIAL_EXTERN)));
-  const [offres, setOffres] = useState<Offre[]>(() => JSON.parse(localStorage.getItem('merch_dz_offres') || JSON.stringify(INITIAL_OFFRES)));
-  const [inventory, setInventory] = useState<InventoryItem[]>(() => JSON.parse(localStorage.getItem('merch_dz_inventory') || '[]'));
-  const [charges, setCharges] = useState<Charge[]>(() => JSON.parse(localStorage.getItem('merch_dz_charges') || '[]'));
-  const [marketingServices, setMarketingServices] = useState<MarketingService[]>(() => JSON.parse(localStorage.getItem('merch_dz_marketing') || '[]'));
-  const [marketingSpends, setMarketingSpends] = useState<MarketingSpend[]>(() => JSON.parse(localStorage.getItem('merch_dz_marketing_spends') || '[]'));
+  const [gros, setGros] = useState<CommandeGros[]>([]);
+  const [siteweb, setSiteweb] = useState<CommandeSiteweb[]>([]);
+  const [offres, setOffres] = useState<Offre[]>([]);
+  const [inventory, setInventory] = useState<InventoryItem[]>([]);
+  const [charges, setCharges] = useState<Charge[]>([]);
+  const [marketingServices, setMarketingServices] = useState<MarketingService[]>([]);
+  const [marketingSpends, setMarketingSpends] = useState<MarketingSpend[]>([]);
   
-  const [dashboardDateStart, setDashboardDateStart] = useState<string>(() => localStorage.getItem('merch_dz_dash_start') || '');
-  const [dashboardDateEnd, setDashboardDateEnd] = useState<string>(() => localStorage.getItem('merch_dz_dash_end') || '');
+  const [dashboardDateStart, setDashboardDateStart] = useState<string>('');
+  const [dashboardDateEnd, setDashboardDateEnd] = useState<string>('');
 
   useEffect(() => {
     const fetchAllData = async () => {
-      if (!supabase) return;
+      if (!supabase) {
+        setIsInitialLoaded(true);
+        return;
+      }
       setIsSyncing(true);
       try {
         const [ { data: g }, { data: s }, { data: o }, { data: i }, { data: c }, { data: m }, { data: ms } ] = await Promise.all([
@@ -132,20 +136,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         ]);
         if (g) setGros(g); if (s) setSiteweb(s); if (o) setOffres(o); if (i) setInventory(i); if (c) setCharges(c); if (m) setMarketingServices(m); if (ms) setMarketingSpends(ms);
         setLastSynced(new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }));
-      } catch (e) { console.error(e); } finally { setIsSyncing(false); }
+      } catch (e) { 
+        console.error(e); 
+      } finally { 
+        setIsSyncing(false); 
+        setIsInitialLoaded(true);
+      }
     };
     fetchAllData();
   }, []);
-
-  useEffect(() => {
-    localStorage.setItem('merch_dz_gros', JSON.stringify(gros));
-    localStorage.setItem('merch_dz_siteweb', JSON.stringify(siteweb));
-    localStorage.setItem('merch_dz_offres', JSON.stringify(offres));
-    localStorage.setItem('merch_dz_inventory', JSON.stringify(inventory));
-    localStorage.setItem('merch_dz_charges', JSON.stringify(charges));
-    localStorage.setItem('merch_dz_marketing', JSON.stringify(marketingServices));
-    localStorage.setItem('merch_dz_marketing_spends', JSON.stringify(marketingSpends));
-  }, [gros, siteweb, offres, inventory, charges, marketingServices, marketingSpends]);
 
   const setDashboardDateRange = useCallback((start: string, end: string) => {
     setDashboardDateStart(start);
@@ -167,7 +166,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       ]);
       const now = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
       setLastSynced(now);
-      localStorage.setItem('merch_dz_last_sync', now);
     } catch (e) { console.error(e); } finally { setIsSyncing(false); }
   }, [gros, siteweb, offres, inventory, charges, marketingServices, marketingSpends]);
 
@@ -417,7 +415,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       updateCharge, addCharge, deleteCharge, importCharges, updateMarketing, addMarketing, deleteMarketing,
       updateMarketingSpend, addMarketingSpend, deleteMarketingSpend, getCalculatedGros, getCalculatedSiteweb, getCalculatedMarketing, getDashboardData, syncData
     }}>
-      {children}
+      {isInitialLoaded ? children : null}
     </AppContext.Provider>
   );
 };
