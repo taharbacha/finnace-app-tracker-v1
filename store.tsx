@@ -8,8 +8,20 @@ import {
 } from './types.ts';
 import { INITIAL_GROS, INITIAL_EXTERN, INITIAL_OFFRES } from './constants.ts';
 
-const SUPABASE_URL = (window as any).process?.env?.SUPABASE_URL || '';
-const SUPABASE_KEY = (window as any).process?.env?.SUPABASE_ANON_KEY || '';
+// Using a robust check for environment variables across different runtimes
+const getEnvVar = (name: string) => {
+  // Try Vite's import.meta.env first
+  if (typeof import.meta !== 'undefined' && import.meta.env) {
+    const viteName = `VITE_${name}`;
+    if (import.meta.env[viteName]) return import.meta.env[viteName];
+    if (import.meta.env[name]) return import.meta.env[name];
+  }
+  // Fallback to process.env (shimmed in index.html)
+  return (window as any).process?.env?.[name] || '';
+};
+
+const SUPABASE_URL = getEnvVar('SUPABASE_URL');
+const SUPABASE_KEY = getEnvVar('SUPABASE_ANON_KEY');
 const supabase = (SUPABASE_URL && SUPABASE_KEY) ? createClient(SUPABASE_URL, SUPABASE_KEY) : null;
 
 interface AppState {
@@ -81,9 +93,52 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [marketingServices, setMarketingServices] = useState<MarketingService[]>(() => JSON.parse(localStorage.getItem('merch_dz_marketing') || '[]'));
   const [marketingSpends, setMarketingSpends] = useState<MarketingSpend[]>(() => JSON.parse(localStorage.getItem('merch_dz_marketing_spends') || '[]'));
   
-  // Persistence for Dashboard Date Filters
   const [dashboardDateStart, setDashboardDateStart] = useState<string>(() => localStorage.getItem('merch_dz_dash_start') || '');
   const [dashboardDateEnd, setDashboardDateEnd] = useState<string>(() => localStorage.getItem('merch_dz_dash_end') || '');
+
+  // Fetch data from Supabase on mount
+  useEffect(() => {
+    const fetchAllData = async () => {
+      if (!supabase) return;
+      setIsSyncing(true);
+      try {
+        const [
+          { data: grosData },
+          { data: sitewebData },
+          { data: offresData },
+          { data: inventoryData },
+          { data: chargesData },
+          { data: marketingServicesData },
+          { data: marketingSpendsData }
+        ] = await Promise.all([
+          supabase.from('commandes_gros').select('*'),
+          supabase.from('commandes_siteweb').select('*'),
+          supabase.from('offres').select('*'),
+          supabase.from('inventory').select('*'),
+          supabase.from('charges').select('*'),
+          supabase.from('marketing_services').select('*'),
+          supabase.from('marketing_spends').select('*')
+        ]);
+
+        if (grosData && grosData.length > 0) setGros(grosData);
+        if (sitewebData && sitewebData.length > 0) setSiteweb(sitewebData);
+        if (offresData && offresData.length > 0) setOffres(offresData);
+        if (inventoryData && inventoryData.length > 0) setInventory(inventoryData);
+        if (chargesData && chargesData.length > 0) setCharges(chargesData);
+        if (marketingServicesData && marketingServicesData.length > 0) setMarketingServices(marketingServicesData);
+        if (marketingSpendsData && marketingSpendsData.length > 0) setMarketingSpends(marketingSpendsData);
+
+        const now = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+        setLastSynced(now);
+      } catch (e) {
+        console.error("Initial Fetch Failed", e);
+      } finally {
+        setIsSyncing(false);
+      }
+    };
+
+    fetchAllData();
+  }, []);
 
   useEffect(() => {
     localStorage.setItem('merch_dz_gros', JSON.stringify(gros));
@@ -107,13 +162,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setIsSyncing(true);
     try {
       await Promise.all([
-        supabase.from('gros_orders').upsert({ id: 'current_state', data: gros }),
-        supabase.from('siteweb_orders').upsert({ id: 'current_state', data: siteweb }),
-        supabase.from('offres_frais').upsert({ id: 'current_state', data: offres }),
-        supabase.from('inventory').upsert({ id: 'current_state', data: inventory }),
-        supabase.from('les_charges').upsert({ id: 'current_state', data: charges }),
-        supabase.from('marketing_services').upsert({ id: 'current_state', data: marketingServices }),
-        supabase.from('marketing_spends').upsert({ id: 'current_state', data: marketingSpends })
+        supabase.from('commandes_gros').upsert(gros),
+        supabase.from('commandes_siteweb').upsert(siteweb),
+        supabase.from('offres').upsert(offres),
+        supabase.from('inventory').upsert(inventory),
+        supabase.from('charges').upsert(charges),
+        supabase.from('marketing_services').upsert(marketingServices),
+        supabase.from('marketing_spends').upsert(marketingSpends)
       ]);
       const now = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
       setLastSynced(now);
@@ -226,7 +281,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const cGrosFull = getCalculatedGros();
     const cSitewebFull = getCalculatedSiteweb();
 
-    // Internal filtering logic for the Dashboard
     const filterByDate = (dateStr: string) => {
       if (startDate && dateStr < startDate) return false;
       if (endDate && dateStr > endDate) return false;
