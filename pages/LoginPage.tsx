@@ -5,6 +5,7 @@ import { Lock, AlertCircle } from 'lucide-react';
 
 const LoginPage: React.FC = () => {
   const [password, setPassword] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(false);
   const { login, isAuthenticated } = useAppStore();
   const navigate = useNavigate();
@@ -16,14 +17,25 @@ const LoginPage: React.FC = () => {
     }
   }, [isAuthenticated, navigate]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const success = login(password);
-    if (success) {
-      navigate('/', { replace: true });
-    } else {
+    if (isSubmitting) return;
+
+    setIsSubmitting(true);
+    setError(false);
+
+    try {
+      const success = await login(password);
+      if (success) {
+        navigate('/', { replace: true });
+      } else {
+        setError(true);
+        setPassword('');
+      }
+    } catch (err) {
       setError(true);
-      setPassword('');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -49,7 +61,8 @@ const LoginPage: React.FC = () => {
                   setPassword(e.target.value);
                   setError(false);
                 }}
-                className={`w-full pl-12 pr-4 py-4 bg-slate-50 border ${error ? 'border-red-300 focus:ring-red-100' : 'border-slate-200 focus:ring-blue-100'} rounded-2xl outline-none focus:ring-4 focus:border-blue-400 transition-all text-slate-800 font-medium`}
+                disabled={isSubmitting}
+                className={`w-full pl-12 pr-4 py-4 bg-slate-50 border ${error ? 'border-red-300 focus:ring-red-100' : 'border-slate-200 focus:ring-blue-100'} rounded-2xl outline-none focus:ring-4 focus:border-blue-400 transition-all text-slate-800 font-medium disabled:opacity-50`}
                 placeholder="••••••••••••"
                 required
               />
@@ -64,9 +77,10 @@ const LoginPage: React.FC = () => {
 
           <button
             type="submit"
-            className="w-full py-4 bg-blue-600 text-white rounded-2xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 active:scale-[0.98]"
+            disabled={isSubmitting}
+            className="w-full py-4 bg-blue-600 text-white rounded-2xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 active:scale-[0.98] disabled:bg-slate-400"
           >
-            Accéder au Back-Office
+            {isSubmitting ? 'Vérification...' : 'Accéder au Back-Office'}
           </button>
         </form>
 

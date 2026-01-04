@@ -8,6 +8,17 @@ import {
 import { INITIAL_GROS, INITIAL_EXTERN, INITIAL_OFFRES } from './constants.ts';
 
 /**
+ * UTILITY: SHA-256 Hashing
+ */
+async function hashPassword(password: string): Promise<string> {
+  const msgUint8 = new TextEncoder().encode(password);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  return hashHex;
+}
+
+/**
  * PURE CALCULATION HELPERS
  * Strictly mapped to existing database schema columns
  */
@@ -60,7 +71,7 @@ interface AppState {
   isSyncing: boolean;
   isCloudActive: boolean;
   lastSynced: string | null;
-  login: (password: string) => boolean;
+  login: (password: string) => Promise<boolean>;
   logout: () => void;
   setDashboardDateRange: (start: string, end: string) => void;
   updateGros: (id: string, field: keyof CommandeGros, value: any) => Promise<void>;
@@ -100,7 +111,7 @@ interface AppState {
 const AppContext = createContext<AppState | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [isAuthenticated] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isCloudActive] = useState(!!supabase);
   const [lastSynced, setLastSynced] = useState<string | null>(null);
@@ -144,6 +155,36 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     };
     fetchAllData();
+  }, []);
+
+  const login = useCallback(async (password: string) => {
+    if (!supabase) return false;
+    try {
+      const inputHash = await hashPassword(password);
+      const { data, error } = await supabase
+        .from('app_settings')
+        .select('password_hash')
+        .eq('id', 'auth')
+        .single();
+
+      if (error || !data) {
+        console.error("Auth verification failed: Settings not found or Supabase error.");
+        return false;
+      }
+
+      if (data.password_hash === inputHash) {
+        setIsAuthenticated(true);
+        return true;
+      }
+      return false;
+    } catch (err) {
+      console.error("Login process error:", err);
+      return false;
+    }
+  }, []);
+
+  const logout = useCallback(() => {
+    setIsAuthenticated(false);
   }, []);
 
   const setDashboardDateRange = useCallback((start: string, end: string) => {
@@ -409,7 +450,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   return (
     <AppContext.Provider value={{ 
       gros, siteweb, offres, inventory, charges, marketingServices, marketingSpends, dashboardDateStart, dashboardDateEnd, setDashboardDateRange,
-      isAuthenticated, login: () => true, logout: () => {}, isSyncing, isCloudActive, lastSynced,
+      isAuthenticated, login, logout, isSyncing, isCloudActive, lastSynced,
       updateGros, addGros, deleteGros, importGros, updateSiteweb, addSiteweb, duplicateSiteweb, deleteSiteweb, importSiteweb,
       updateOffre, addOffre, deleteOffre, importOffres, updateInventory, addInventory, deleteInventory, importInventory,
       updateCharge, addCharge, deleteCharge, importCharges, updateMarketing, addMarketing, deleteMarketing,

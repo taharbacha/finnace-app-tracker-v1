@@ -1,9 +1,46 @@
-
 import React, { useMemo } from 'react';
 import { useAppStore } from '../store.tsx';
-import { CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Cell, XAxis, YAxis } from 'recharts';
-import { Clock, Banknote, Calendar, Wallet, TrendingUp, Megaphone, RotateCcw } from 'lucide-react';
+import { 
+  CartesianGrid, 
+  Tooltip, 
+  ResponsiveContainer, 
+  BarChart, 
+  Bar, 
+  Cell, 
+  XAxis, 
+  YAxis, 
+  AreaChart, 
+  Area, 
+  Line, 
+  ComposedChart,
+  Legend 
+} from 'recharts';
+import { Clock, Banknote, Calendar, Wallet, TrendingUp, Megaphone, RotateCcw, BarChart3 } from 'lucide-react';
 import { OffreType, MarketingSpendSource, MarketingStatus, GrosStatus, SitewebStatus } from '../types.ts';
+
+// Fixed: Moved ChartCard outside Dashboard and used React.FC to properly handle children prop and avoid missing prop errors in strict TS environments
+interface ChartCardProps {
+  title: string;
+  children: React.ReactNode;
+  icon: any;
+  colorClass: string;
+}
+
+const ChartCard: React.FC<ChartCardProps> = ({ title, children, icon: Icon, colorClass }) => (
+  <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm flex flex-col h-[380px]">
+    <div className="flex items-center gap-3 mb-6">
+      <div className={`p-2 rounded-xl ${colorClass.replace('text', 'bg').replace('600', '50')}`}>
+        <Icon className={colorClass} size={18} />
+      </div>
+      <h4 className="font-bold text-slate-800 text-sm tracking-tight">{title}</h4>
+    </div>
+    <div className="flex-1 min-h-0">
+      <ResponsiveContainer width="100%" height="100%">
+        {children as any}
+      </ResponsiveContainer>
+    </div>
+  </div>
+);
 
 const Dashboard: React.FC = () => {
   const { 
@@ -22,14 +59,71 @@ const Dashboard: React.FC = () => {
   
   const formatCurrency = (val: number) => val.toLocaleString('fr-DZ') + ' DA';
 
-  // Analysis by revenue pillar, respecting global date filter
-  const pillarStats = useMemo(() => {
-    const filterByDate = (dateStr: string) => {
-      if (dashboardDateStart && dateStr < dashboardDateStart) return false;
-      if (dashboardDateEnd && dateStr > dashboardDateEnd) return false;
-      return true;
-    };
+  // Date Filter Helper
+  const filterByDate = (dateStr: string) => {
+    if (dashboardDateStart && dateStr < dashboardDateStart) return false;
+    if (dashboardDateEnd && dateStr > dashboardDateEnd) return false;
+    return true;
+  };
 
+  // 1. Time Series Data Processing
+  const timeSeriesData = useMemo(() => {
+    const dailyMap: Record<string, { 
+      date: string, 
+      grosProfit: number, 
+      retailProfit: number, 
+      offresNet: number, 
+      marketingProfit: number,
+      marketingSpend: number 
+    }> = {};
+
+    // Process Gros
+    getCalculatedGros().forEach(item => {
+      if (!filterByDate(item.date_created)) return;
+      const d = item.date_created;
+      if (!dailyMap[d]) dailyMap[d] = { date: d, grosProfit: 0, retailProfit: 0, offresNet: 0, marketingProfit: 0, marketingSpend: 0 };
+      const profit = item.status === GrosStatus.RETOUR ? -item.cost : (item.prix_vente - item.cost);
+      dailyMap[d].grosProfit += profit;
+    });
+
+    // Process Retail
+    getCalculatedSiteweb().forEach(item => {
+      if (!filterByDate(item.date_created)) return;
+      const d = item.date_created;
+      if (!dailyMap[d]) dailyMap[d] = { date: d, grosProfit: 0, retailProfit: 0, offresNet: 0, marketingProfit: 0, marketingSpend: 0 };
+      dailyMap[d].retailProfit += item.profit_net;
+    });
+
+    // Process Offres
+    offres.forEach(item => {
+      if (!filterByDate(item.date)) return;
+      const d = item.date;
+      if (!dailyMap[d]) dailyMap[d] = { date: d, grosProfit: 0, retailProfit: 0, offresNet: 0, marketingProfit: 0, marketingSpend: 0 };
+      const amt = Number(item.montant);
+      dailyMap[d].offresNet += item.type === OffreType.REVENUE ? amt : -amt;
+    });
+
+    // Process Marketing Services
+    getCalculatedMarketing().forEach(item => {
+      if (!filterByDate(item.date)) return;
+      const d = item.date;
+      if (!dailyMap[d]) dailyMap[d] = { date: d, grosProfit: 0, retailProfit: 0, offresNet: 0, marketingProfit: 0, marketingSpend: 0 };
+      dailyMap[d].marketingProfit += item.net_profit;
+    });
+
+    // Process Marketing Spends
+    marketingSpends.forEach(item => {
+      if (!filterByDate(item.date_start)) return;
+      const d = item.date_start;
+      if (!dailyMap[d]) dailyMap[d] = { date: d, grosProfit: 0, retailProfit: 0, offresNet: 0, marketingProfit: 0, marketingSpend: 0 };
+      dailyMap[d].marketingSpend += Number(item.amount);
+    });
+
+    return Object.values(dailyMap).sort((a, b) => a.date.localeCompare(b.date));
+  }, [getCalculatedGros, getCalculatedSiteweb, getCalculatedMarketing, offres, marketingSpends, dashboardDateStart, dashboardDateEnd]);
+
+  // Pillar Stats (Current grouping)
+  const pillarStats = useMemo(() => {
     // 1. Gros
     const grosFiltered = getCalculatedGros().filter(item => filterByDate(item.date_created));
     const grosRev = grosFiltered.filter(i => i.status !== GrosStatus.RETOUR).reduce((a, c) => a + c.prix_vente, 0);
@@ -50,6 +144,7 @@ const Dashboard: React.FC = () => {
 
     // 4. Marketing Client (Services)
     const clientFiltered = getCalculatedMarketing().filter(item => filterByDate(item.date));
+    // Fixed: Corrected scope of variables used in reduce callback (changed 'm' to 'c' to match the current reducer element)
     const clientRev = clientFiltered.filter(m => m.status === MarketingStatus.TERMINE).reduce((a, c) => a + Number(c.revenue), 0);
     const clientExp = clientFiltered.filter(m => m.status === MarketingStatus.TERMINE).reduce((a, c) => a + Number(c.client_charges), 0);
     const clientMarketing = marketingSpends.filter(s => s.source === MarketingSpendSource.MARKETING_CLIENT && filterByDate(s.date_start)).reduce((a, c) => a + Number(c.amount), 0);
@@ -198,6 +293,78 @@ const Dashboard: React.FC = () => {
             </div>
           </div>
           <TrendingUp size={150} className="absolute -bottom-10 -right-10 text-white/5 rotate-12" />
+        </div>
+      </div>
+
+      {/* NEW SECTION: TIME SERIES ANALYTICS */}
+      <div className="space-y-6">
+        <div className="flex items-center gap-3">
+          <BarChart3 className="text-slate-400" size={24} />
+          <h3 className="text-xl font-black text-slate-800 tracking-tight">Analyses Temporelles</h3>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* GROS PROFIT EVOLUTION */}
+          <ChartCard title="Évolution Profit GROS" icon={TrendingUp} colorClass="text-emerald-600">
+            <AreaChart data={timeSeriesData}>
+              <defs>
+                <linearGradient id="colorGros" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.1}/>
+                  <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+              <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fontSize: 9, fill: '#94a3b8'}} />
+              <YAxis axisLine={false} tickLine={false} tick={{fontSize: 9, fill: '#94a3b8'}} />
+              <Tooltip contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
+              <Area type="monotone" dataKey="grosProfit" stroke="#10b981" fillOpacity={1} fill="url(#colorGros)" strokeWidth={3} />
+            </AreaChart>
+          </ChartCard>
+
+          {/* RETAIL PROFIT EVOLUTION */}
+          <ChartCard title="Évolution Profit SITEWEB" icon={TrendingUp} colorClass="text-blue-600">
+            <AreaChart data={timeSeriesData}>
+              <defs>
+                <linearGradient id="colorRetail" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.1}/>
+                  <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+              <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fontSize: 9, fill: '#94a3b8'}} />
+              <YAxis axisLine={false} tickLine={false} tick={{fontSize: 9, fill: '#94a3b8'}} />
+              <Tooltip contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
+              <Area type="monotone" dataKey="retailProfit" stroke="#3b82f6" fillOpacity={1} fill="url(#colorRetail)" strokeWidth={3} />
+            </AreaChart>
+          </ChartCard>
+
+          {/* OFFRES NET TREND */}
+          <ChartCard title="Tendance Flux OFFRES" icon={TrendingUp} colorClass="text-orange-600">
+            <BarChart data={timeSeriesData}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+              <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fontSize: 9, fill: '#94a3b8'}} />
+              <YAxis axisLine={false} tickLine={false} tick={{fontSize: 9, fill: '#94a3b8'}} />
+              <Tooltip contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
+              <Bar dataKey="offresNet" radius={[4, 4, 0, 0]} barSize={15}>
+                {timeSeriesData.map((entry, index) => (
+                  <Cell key={`cell-o-${index}`} fill={entry.offresNet >= 0 ? '#f97316' : '#ef4444'} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ChartCard>
+
+          {/* MARKETING PERFORMANCE VS SPEND */}
+          <ChartCard title="Marketing: Services vs Ads Spend" icon={Megaphone} colorClass="text-purple-600">
+            <ComposedChart data={timeSeriesData}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+              <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fontSize: 9, fill: '#94a3b8'}} />
+              <YAxis axisLine={false} tickLine={false} tick={{fontSize: 9, fill: '#94a3b8'}} />
+              <Tooltip contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
+              <Legend verticalAlign="top" height={36} iconType="circle" wrapperStyle={{fontSize: '10px', fontWeight: 'bold'}} />
+              <Area name="Profit Services" type="monotone" dataKey="marketingProfit" fill="#a855f7" stroke="#a855f7" fillOpacity={0.1} strokeWidth={2} />
+              <Line name="Dépenses Marketing" type="monotone" dataKey="marketingSpend" stroke="#ef4444" strokeWidth={2} dot={{r: 3}} />
+            </ComposedChart>
+          </ChartCard>
         </div>
       </div>
     </div>
