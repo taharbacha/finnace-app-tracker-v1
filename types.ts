@@ -44,6 +44,13 @@ export enum MarketingSpendType {
   OTHER = 'other'
 }
 
+export interface ChatMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  text: string;
+  timestamp: number;
+}
+
 export interface MarketingSpend {
   id: string;
   date_start: string;

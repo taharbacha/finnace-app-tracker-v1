@@ -4,19 +4,14 @@ import { createClient } from '@supabase/supabase-js';
 import { 
   CommandeGros, CommandeSiteweb, Offre, InventoryItem, Charge, MarketingService, MarketingSpend,
   CalculatedGros, CalculatedSiteweb, CalculatedMarketing, DashboardData,
-  GrosStatus, SitewebStatus, OffreType, OffreCategory, MarketingStatus, MarketingSpendSource, MarketingSpendType
+  GrosStatus, SitewebStatus, OffreType, OffreCategory, MarketingStatus, MarketingSpendSource, MarketingSpendType,
+  ChatMessage
 } from './types.ts';
 
 /**
  * ARCHITECTURE SPECIFICATION: Business Logic Layer
- * ------------------------------------------------
- * All financial calculations are centralized here to ensure 
- * consistency between the Data Grid views and the Dashboard.
  */
 
-/**
- * SHA-256 Hashing for secure auth verification
- */
 async function hashPassword(password: string): Promise<string> {
   const msgUint8 = new TextEncoder().encode(password);
   const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
@@ -24,10 +19,6 @@ async function hashPassword(password: string): Promise<string> {
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
-/**
- * BUSINESS LOGIC: Wholesale (GROS)
- * Formula: Revenue - (Product Cost + Printing Cost)
- */
 const computeGrosCalculatedFields = (item: CommandeGros) => {
   const total_cout = Number(item.prix_achat_article || 0) + Number(item.prix_impression || 0);
   const total_revenu = Number(item.prix_vente || 0);
@@ -36,10 +27,6 @@ const computeGrosCalculatedFields = (item: CommandeGros) => {
   return { ...item, total_cout, total_revenu, benefice_net, marge_percent };
 };
 
-/**
- * BUSINESS LOGIC: Retail (SITEWEB)
- * Formula: Revenue - (Product + Printing + Vendor Commission)
- */
 const computeSitewebCalculatedFields = (item: CommandeSiteweb) => {
   const total_cout = Number(item.cout_article || 0) + Number(item.cout_impression || 0);
   const total_revenu = Number(item.prix_vente || 0);
@@ -73,6 +60,7 @@ interface AppState {
   charges: Charge[];
   marketingServices: MarketingService[];
   marketingSpends: MarketingSpend[];
+  chatHistory: ChatMessage[];
   dashboardDateStart: string;
   dashboardDateEnd: string;
   isAuthenticated: boolean;
@@ -114,6 +102,8 @@ interface AppState {
   updateMarketingSpend: (id: string, field: keyof MarketingSpend, value: any) => Promise<void>;
   addMarketingSpend: () => Promise<void>;
   deleteMarketingSpend: (id: string) => Promise<void>;
+  addChatMessage: (role: 'user' | 'assistant', text: string) => void;
+  clearChat: () => void;
 }
 
 const AppContext = createContext<AppState | undefined>(undefined);
@@ -132,6 +122,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [charges, setCharges] = useState<Charge[]>([]);
   const [marketingServices, setMarketingServices] = useState<MarketingService[]>([]);
   const [marketingSpends, setMarketingSpends] = useState<MarketingSpend[]>([]);
+  const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
   
   const [dashboardDateStart, setDashboardDateStart] = useState<string>('');
   const [dashboardDateEnd, setDashboardDateEnd] = useState<string>('');
@@ -446,7 +437,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, []);
 
-  // UI SELECTORS
+  const addChatMessage = useCallback((role: 'user' | 'assistant', text: string) => {
+    setChatHistory(p => [...p, { id: crypto.randomUUID(), role, text, timestamp: Date.now() }]);
+  }, []);
+
+  const clearChat = useCallback(() => {
+    setChatHistory([]);
+  }, []);
+
   const getCalculatedGros = useCallback((): CalculatedGros[] => gros.map(i => {
     const calc = computeGrosCalculatedFields(i);
     return { 
@@ -465,10 +463,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return { ...i, net_profit: i.status === MarketingStatus.TERMINE ? calc.benefice_net : 0 };
   }), [marketingServices]);
 
-  /**
-   * CENTRALIZED AGGREGATOR: getDashboardData
-   * This is the core engine for the entire application financial reporting.
-   */
   const getDashboardData = useCallback((startDate?: string, endDate?: string): DashboardData => {
     const cg = getCalculatedGros(); const cs = getCalculatedSiteweb();
     const filter = (d: string) => (!startDate || d >= startDate) && (!endDate || d <= endDate);
@@ -479,19 +473,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const fc = charges.filter(i => filter(i.date)); 
     const fm = marketingSpends.filter(i => filter(i.date_start));
     
-    // Calculate REAL CASH (Encaisse)
     const enc = fcg.reduce((a, c) => a + c.profit_encaisse, 0) + fcs.filter(o => o.status === SitewebStatus.LIVREE).reduce((a, c) => a + c.profit_net, 0);
-    
-    // Calculate PENDING (Attendu)
     const att = fcg.reduce((a, c) => a + c.profit_attendu, 0) + fcs.filter(o => o.status === SitewebStatus.EN_LIVRAISON || o.status === SitewebStatus.LIVREE_NON_ENCAISSEE).reduce((a, c) => a + c.profit_net, 0);
-    
-    // Calculate LOSSES (Pertes)
     const per = fcg.reduce((a, c) => a + c.perte, 0) + fcs.filter(o => o.status === SitewebStatus.RETOUR).reduce((a, c) => a + (Number(c.cout_article) + Number(c.cout_impression)), 0);
-    
-    // Calculate MISC (Offres)
     const no = fo.reduce((a, c) => c.type === OffreType.REVENUE ? a + Number(c.montant) : a - Number(c.montant), 0);
-    
-    // Calculate EXPENSES (Charges + Marketing Spend)
     const tc = fc.reduce((a, c) => a + Number(c.montant), 0); 
     const tm = fm.reduce((a, c) => a + Number(c.amount), 0);
     
@@ -508,12 +493,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   return (
     <AppContext.Provider value={{ 
-      gros, siteweb, offres, inventory, charges, marketingServices, marketingSpends, dashboardDateStart, dashboardDateEnd, setDashboardDateRange,
+      gros, siteweb, offres, inventory, charges, marketingServices, marketingSpends, chatHistory, dashboardDateStart, dashboardDateEnd, setDashboardDateRange,
       isAuthenticated, login, logout, isSyncing, isCloudActive, lastSynced,
       updateGros, addGros, deleteGros, importGros, updateSiteweb, addSiteweb, duplicateSiteweb, deleteSiteweb, importSiteweb,
       updateOffre, addOffre, deleteOffre, importOffres, updateInventory, addInventory, deleteInventory, importInventory,
       updateCharge, addCharge, deleteCharge, importCharges, updateMarketing, addMarketing, deleteMarketing,
-      updateMarketingSpend, addMarketingSpend, deleteMarketingSpend, getCalculatedGros, getCalculatedSiteweb, getCalculatedMarketing, getDashboardData, syncData
+      updateMarketingSpend, addMarketingSpend, deleteMarketingSpend, getCalculatedGros, getCalculatedSiteweb, getCalculatedMarketing, getDashboardData, syncData,
+      addChatMessage, clearChat
     }}>
       {isInitialLoaded ? children : null}
     </AppContext.Provider>
