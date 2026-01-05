@@ -2,6 +2,8 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useAppStore } from '../store.tsx';
 import { Send, Bot, User, Loader2, Sparkles, Trash2, Info, ShieldCheck } from 'lucide-react';
+// Fix: Import GoogleGenAI as per guidelines
+import { GoogleGenAI } from "@google/genai";
 
 const AIAssistant: React.FC = () => {
   const { 
@@ -9,6 +11,7 @@ const AIAssistant: React.FC = () => {
     inventory, 
     charges, 
     getCalculatedGros, 
+    // Fix: Properties now correctly exist on AppState
     chatHistory,
     addChatMessage,
     clearChat
@@ -68,39 +71,31 @@ const AIAssistant: React.FC = () => {
         1. NO WRITE ACCESS: You cannot create, update, or delete any record. Explain this politely if asked.
         2. DATA DRIVEN: Only use provided context for financial answers.
         3. TONE: Objective, expert, and strategic.
-        4. MODEL: moonshotai/kimi-k2:free (OpenRouter).
         
         ${businessContext}
       `;
 
-      // Call internal proxy instead of OpenRouter directly
-      const response = await fetch("/api/ai", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          "model": "moonshotai/kimi-k2:free",
-          "messages": [
-            { "role": "system", "content": systemInstruction },
-            ...chatHistory.map(m => ({ role: m.role, content: m.text })),
-            { "role": "user", "content": userMessage }
-          ]
-        })
+      // Fix: Use Gemini API directly as per instructions. Select gemini-3-flash-preview for basic text task.
+      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      const response = await ai.models.generateContent({
+        model: 'gemini-3-flash-preview',
+        contents: [
+          ...chatHistory.map(m => ({
+            role: m.role === 'assistant' ? 'model' : 'user',
+            parts: [{ text: m.text }]
+          })),
+          { role: 'user', parts: [{ text: userMessage }] }
+        ],
+        config: {
+          systemInstruction: systemInstruction
+        }
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to connect to AI proxy");
-      }
-      
-      const data = await response.json();
-      const aiResponse = data.choices[0]?.message?.content || "Désolé, je n'ai pas pu générer d'analyse.";
-      
+      const aiResponse = response.text || "Désolé, je n'ai pas pu générer d'analyse.";
       addChatMessage('assistant', aiResponse);
     } catch (error) {
       console.error("AI Assistant Error:", error);
-      addChatMessage('assistant', "Erreur de communication avec le serveur AI. Vérifiez la configuration.");
+      addChatMessage('assistant', "Erreur de communication avec le serveur AI. Veuillez vérifier votre connexion.");
     } finally {
       setIsLoading(false);
     }
@@ -119,11 +114,11 @@ const AIAssistant: React.FC = () => {
         <div>
           <h2 className="text-3xl font-black text-slate-800 tracking-tight flex items-center gap-3">
             <Bot className="text-blue-600" size={28} />
-            Analyste IA (Kimi K2)
+            Analyste IA (Gemini)
           </h2>
           <p className="text-slate-500 font-medium flex items-center gap-2">
             <ShieldCheck size={14} className="text-emerald-500" />
-            Proxy Sécurisé • Lecture Seule
+            Intelligence Native • Lecture Seule
           </p>
         </div>
         <button 

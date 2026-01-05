@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAppStore } from '../store.tsx';
@@ -13,8 +14,7 @@ import {
   Globe,
   UserCheck,
   Megaphone,
-  Cloud,
-  Sparkles
+  Cloud
 } from 'lucide-react';
 
 const Sidebar: React.FC = () => {
@@ -34,7 +34,6 @@ const Sidebar: React.FC = () => {
     { to: '/marketing', label: 'Marketing Clients', icon: UserCheck },
     { to: '/marketing-spend', label: 'Marketing Spend', icon: Megaphone },
     { to: '/inventory', label: 'Stock & Inventaire', icon: Package },
-    { to: '/ai-assistant', label: 'AI Assistant', icon: Sparkles },
   ];
 
   const renderNavLink = (item: any) => (

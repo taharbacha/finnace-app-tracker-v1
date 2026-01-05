@@ -1,4 +1,5 @@
 
+
 export enum GrosStatus {
   EN_PRODUCTION = 'en_production',
   EN_LIVRAISON = 'en_livraison',
@@ -42,13 +43,6 @@ export enum MarketingSpendType {
   ADS = 'ads',
   INFLUENCER = 'influencer',
   OTHER = 'other'
-}
-
-export interface ChatMessage {
-  id: string;
-  role: 'user' | 'assistant';
-  text: string;
-  timestamp: number;
 }
 
 export interface MarketingSpend {
@@ -148,4 +142,11 @@ export interface DashboardData {
   total_charges: number;
   total_marketing_spend: number;
   profit_net_final: number;
+}
+
+// Added ChatMessage interface
+export interface ChatMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  text: string;
 }

@@ -60,13 +60,16 @@ interface AppState {
   charges: Charge[];
   marketingServices: MarketingService[];
   marketingSpends: MarketingSpend[];
-  chatHistory: ChatMessage[];
   dashboardDateStart: string;
   dashboardDateEnd: string;
   isAuthenticated: boolean;
   isSyncing: boolean;
   isCloudActive: boolean;
   lastSynced: string | null;
+  // Added chat properties
+  chatHistory: ChatMessage[];
+  addChatMessage: (role: 'user' | 'assistant', text: string) => void;
+  clearChat: () => void;
   login: (password: string) => Promise<boolean>;
   logout: () => void;
   setDashboardDateRange: (start: string, end: string) => void;
@@ -102,8 +105,6 @@ interface AppState {
   updateMarketingSpend: (id: string, field: keyof MarketingSpend, value: any) => Promise<void>;
   addMarketingSpend: () => Promise<void>;
   deleteMarketingSpend: (id: string) => Promise<void>;
-  addChatMessage: (role: 'user' | 'assistant', text: string) => void;
-  clearChat: () => void;
 }
 
 const AppContext = createContext<AppState | undefined>(undefined);
@@ -122,8 +123,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [charges, setCharges] = useState<Charge[]>([]);
   const [marketingServices, setMarketingServices] = useState<MarketingService[]>([]);
   const [marketingSpends, setMarketingSpends] = useState<MarketingSpend[]>([]);
-  const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
   
+  // Added chat history state
+  const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
+
   const [dashboardDateStart, setDashboardDateStart] = useState<string>('');
   const [dashboardDateEnd, setDashboardDateEnd] = useState<string>('');
 
@@ -195,6 +198,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const setDashboardDateRange = useCallback((start: string, end: string) => {
     setDashboardDateStart(start);
     setDashboardDateEnd(end);
+  }, []);
+
+  // Added chat history management functions
+  const addChatMessage = useCallback((role: 'user' | 'assistant', text: string) => {
+    setChatHistory(prev => [...prev, { id: crypto.randomUUID(), role, text }]);
+  }, []);
+
+  const clearChat = useCallback(() => {
+    setChatHistory([]);
   }, []);
 
   const syncData = useCallback(async () => {
@@ -437,14 +449,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, []);
 
-  const addChatMessage = useCallback((role: 'user' | 'assistant', text: string) => {
-    setChatHistory(p => [...p, { id: crypto.randomUUID(), role, text, timestamp: Date.now() }]);
-  }, []);
-
-  const clearChat = useCallback(() => {
-    setChatHistory([]);
-  }, []);
-
   const getCalculatedGros = useCallback((): CalculatedGros[] => gros.map(i => {
     const calc = computeGrosCalculatedFields(i);
     return { 
@@ -493,13 +497,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   return (
     <AppContext.Provider value={{ 
-      gros, siteweb, offres, inventory, charges, marketingServices, marketingSpends, chatHistory, dashboardDateStart, dashboardDateEnd, setDashboardDateRange,
+      gros, siteweb, offres, inventory, charges, marketingServices, marketingSpends, dashboardDateStart, dashboardDateEnd, setDashboardDateRange,
       isAuthenticated, login, logout, isSyncing, isCloudActive, lastSynced,
+      chatHistory, addChatMessage, clearChat,
       updateGros, addGros, deleteGros, importGros, updateSiteweb, addSiteweb, duplicateSiteweb, deleteSiteweb, importSiteweb,
       updateOffre, addOffre, deleteOffre, importOffres, updateInventory, addInventory, deleteInventory, importInventory,
       updateCharge, addCharge, deleteCharge, importCharges, updateMarketing, addMarketing, deleteMarketing,
-      updateMarketingSpend, addMarketingSpend, deleteMarketingSpend, getCalculatedGros, getCalculatedSiteweb, getCalculatedMarketing, getDashboardData, syncData,
-      addChatMessage, clearChat
+      updateMarketingSpend, addMarketingSpend, deleteMarketingSpend, getCalculatedGros, getCalculatedSiteweb, getCalculatedMarketing, getDashboardData, syncData
     }}>
       {isInitialLoaded ? children : null}
     </AppContext.Provider>

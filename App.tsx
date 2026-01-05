@@ -10,7 +10,6 @@ import MarketingSpend from './pages/MarketingSpend.tsx';
 import Inventory from './pages/Inventory.tsx';
 import Offres from './pages/Offres.tsx';
 import Charges from './pages/Charges.tsx';
-import AIAssistant from './pages/AIAssistant.tsx';
 import { AppProvider } from './store.tsx';
 
 const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -37,7 +36,6 @@ const AppRoutes: React.FC = () => {
       <Route path="/inventory" element={<AppLayout><Inventory /></AppLayout>} />
       <Route path="/charges" element={<AppLayout><Charges /></AppLayout>} />
       <Route path="/offres" element={<AppLayout><Offres /></AppLayout>} />
-      <Route path="/ai-assistant" element={<AppLayout><AIAssistant /></AppLayout>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
