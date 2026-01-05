@@ -14,7 +14,8 @@ import {
   Globe,
   UserCheck,
   Megaphone,
-  Cloud
+  Cloud,
+  Bot
 } from 'lucide-react';
 
 const Sidebar: React.FC = () => {
@@ -34,6 +35,7 @@ const Sidebar: React.FC = () => {
     { to: '/marketing', label: 'Marketing Clients', icon: UserCheck },
     { to: '/marketing-spend', label: 'Marketing Spend', icon: Megaphone },
     { to: '/inventory', label: 'Stock & Inventaire', icon: Package },
+    { to: '/ai', label: 'Assistant IA', icon: Bot },
   ];
 
   const renderNavLink = (item: any) => (

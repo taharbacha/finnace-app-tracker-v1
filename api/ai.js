@@ -1,9 +1,7 @@
-
 export default async function handler(req, res) {
-  // Use simple Node.js handler for Vercel Serverless Functions
   if (req.method !== 'POST') {
     res.setHeader('Allow', ['POST']);
-    return res.status(405).json({ error: `Method ${req.method} not allowed. Use POST.` });
+    return res.status(405).json({ error: `Method ${req.method} not allowed. Please use POST.` });
   }
 
   const apiKey = process.env.OPENROUTER_API_KEY;
@@ -12,7 +10,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { messages, model } = req.body;
+    const { messages } = req.body;
 
     const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
@@ -20,11 +18,11 @@ export default async function handler(req, res) {
         "Authorization": `Bearer ${apiKey}`,
         "Content-Type": "application/json",
         "HTTP-Referer": "https://merch-by-dz.vercel.app",
-        "X-Title": "Merch By DZ Financial OS"
+        "X-Title": "Merch By DZ Assistant"
       },
       body: JSON.stringify({
-        model: model || "moonshotai/kimi-k2:free",
-        messages: messages || [],
+        model: "moonshotai/kimi-k2:free",
+        messages: messages || []
       }),
     });
 
