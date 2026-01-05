@@ -79,7 +79,9 @@ const AIAssistant: React.FC = () => {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${apiKey}`,
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
+          "HTTP-Referer": window.location.origin,
+          "X-Title": "Merch By DZ Financial OS"
         },
         body: JSON.stringify({
           "model": "moonshotai/kimi-k2:free",
