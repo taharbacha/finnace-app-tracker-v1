@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { 
@@ -5,22 +6,27 @@ import {
   CalculatedGros, CalculatedSiteweb, CalculatedMarketing, DashboardData,
   GrosStatus, SitewebStatus, OffreType, OffreCategory, MarketingStatus, MarketingSpendSource, MarketingSpendType
 } from './types.ts';
-import { INITIAL_GROS, INITIAL_EXTERN, INITIAL_OFFRES } from './constants.ts';
 
 /**
- * UTILITY: SHA-256 Hashing
+ * ARCHITECTURE SPECIFICATION: Business Logic Layer
+ * ------------------------------------------------
+ * All financial calculations are centralized here to ensure 
+ * consistency between the Data Grid views and the Dashboard.
+ */
+
+/**
+ * SHA-256 Hashing for secure auth verification
  */
 async function hashPassword(password: string): Promise<string> {
   const msgUint8 = new TextEncoder().encode(password);
   const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
-  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-  return hashHex;
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
 /**
- * PURE CALCULATION HELPERS
- * Strictly mapped to existing database schema columns
+ * BUSINESS LOGIC: Wholesale (GROS)
+ * Formula: Revenue - (Product Cost + Printing Cost)
  */
 const computeGrosCalculatedFields = (item: CommandeGros) => {
   const total_cout = Number(item.prix_achat_article || 0) + Number(item.prix_impression || 0);
@@ -30,6 +36,10 @@ const computeGrosCalculatedFields = (item: CommandeGros) => {
   return { ...item, total_cout, total_revenu, benefice_net, marge_percent };
 };
 
+/**
+ * BUSINESS LOGIC: Retail (SITEWEB)
+ * Formula: Revenue - (Product + Printing + Vendor Commission)
+ */
 const computeSitewebCalculatedFields = (item: CommandeSiteweb) => {
   const total_cout = Number(item.cout_article || 0) + Number(item.cout_impression || 0);
   const total_revenu = Number(item.prix_vente || 0);
@@ -39,7 +49,6 @@ const computeSitewebCalculatedFields = (item: CommandeSiteweb) => {
 };
 
 const computeMarketingCalculatedFields = (item: MarketingService) => {
-  // Marketing table stores ONLY benefice_net for calculated fields
   const benefice_net = Number(item.revenue || 0) - Number(item.client_charges || 0);
   return { ...item, benefice_net };
 };
@@ -49,7 +58,6 @@ const computeInventoryCalculatedFields = (item: InventoryItem) => {
   return { ...item, stock_value };
 };
 
-// Defensive check for environment variables to prevent crash on undefined env
 const SUPABASE_URL = (import.meta as any).env?.VITE_SUPABASE_URL || (window as any).process?.env?.VITE_SUPABASE_URL || '';
 const SUPABASE_KEY = (import.meta as any).env?.VITE_SUPABASE_ANON_KEY || (window as any).process?.env?.VITE_SUPABASE_ANON_KEY || '';
 
@@ -145,10 +153,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           supabase.from('marketing_services').select('*'),
           supabase.from('marketing_spends').select('*')
         ]);
-        if (g) setGros(g); if (s) setSiteweb(s); if (o) setOffres(o); if (i) setInventory(i); if (c) setCharges(c); if (m) setMarketingServices(m); if (ms) setMarketingSpends(ms);
+        if (g) setGros(g); 
+        if (s) setSiteweb(s); 
+        if (o) setOffres(o); 
+        if (i) setInventory(i); 
+        if (c) setCharges(c); 
+        if (m) setMarketingServices(m); 
+        if (ms) setMarketingSpends(ms);
         setLastSynced(new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }));
       } catch (e) { 
-        console.error(e); 
+        console.error("Supabase sync error on mount:", e); 
       } finally { 
         setIsSyncing(false); 
         setIsInitialLoaded(true);
@@ -207,7 +221,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       ]);
       const now = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
       setLastSynced(now);
-    } catch (e) { console.error(e); } finally { setIsSyncing(false); }
+    } catch (e) { 
+      console.error("Supabase manual sync error:", e); 
+    } finally { 
+      setIsSyncing(false); 
+    }
   }, [gros, siteweb, offres, inventory, charges, marketingServices, marketingSpends]);
 
   const updateGros = useCallback(async (id: string, field: keyof CommandeGros, value: any) => {
@@ -327,7 +345,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const deleteSiteweb = useCallback(async (id: string) => { if (supabase) await supabase.from('commandes_siteweb').delete().eq('id', id); setSiteweb(p => p.filter(i => String(i.id) !== String(id))); }, []);
   const deleteOffre = useCallback(async (id: string) => { if (supabase) await supabase.from('offres').delete().eq('id', id); setOffres(p => p.filter(i => String(i.id) !== String(id))); }, []);
   const deleteInventory = useCallback(async (id: string) => { if (supabase) await supabase.from('inventory').delete().eq('id', id); setInventory(p => p.filter(i => String(i.id) !== String(id))); }, []);
-  const updateCharge = useCallback(async (id: string, field: keyof Charge, value: any) => { setCharges(p => p.map(i => String(i.id) === String(id) ? { ...i, [field]: value } : i)); if (supabase) await supabase.from('charges').update({ [field]: value }).eq('id', id); }, []);
+  
+  const updateCharge = useCallback(async (id: string, field: keyof Charge, value: any) => { 
+    setCharges(p => p.map(i => String(i.id) === String(id) ? { ...i, [field]: value } : i)); 
+    if (supabase) await supabase.from('charges').update({ [field]: value }).eq('id', id); 
+  }, []);
+
   const addCharge = useCallback(async (l: string = 'Autre') => { 
     const baseRecord = { date: new Date().toISOString().split('T')[0], label: l, montant: 0, note: '' }; 
     if (supabase) { 
@@ -337,9 +360,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setCharges(p => [{ ...baseRecord, id: crypto.randomUUID() } as Charge, ...p]);
     }
   }, []);
+
   const deleteCharge = useCallback(async (id: string) => { if (supabase) await supabase.from('charges').delete().eq('id', id); setCharges(p => p.filter(i => String(i.id) !== String(id))); }, []);
   const deleteMarketing = useCallback(async (id: string) => { if (supabase) await supabase.from('marketing_services').delete().eq('id', id); setMarketingServices(p => p.filter(i => String(i.id) !== String(id))); }, []);
-  const updateMarketingSpend = useCallback(async (id: string, field: keyof MarketingSpend, value: any) => { setMarketingSpends(p => p.map(i => String(i.id) === String(id) ? { ...i, [field]: value } : i)); if (supabase) await supabase.from('marketing_spends').update({ [field]: value }).eq('id', id); }, []);
+  
+  const updateMarketingSpend = useCallback(async (id: string, field: keyof MarketingSpend, value: any) => { 
+    setMarketingSpends(p => p.map(i => String(i.id) === String(id) ? { ...i, [field]: value } : i)); 
+    if (supabase) await supabase.from('marketing_spends').update({ [field]: value }).eq('id', id); 
+  }, []);
+
   const addMarketingSpend = useCallback(async () => { 
     const baseRecord = { date_start: new Date().toISOString().split('T')[0], date_end: new Date().toISOString().split('T')[0], source: MarketingSpendSource.GROS, type: MarketingSpendType.ADS, amount: 0, note: '' }; 
     if (supabase) { 
@@ -349,7 +378,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setMarketingSpends(p => [{ ...baseRecord, id: crypto.randomUUID() } as MarketingSpend, ...p]);
     }
   }, []);
+
   const deleteMarketingSpend = useCallback(async (id: string) => { if (supabase) await supabase.from('marketing_spends').delete().eq('id', id); setMarketingSpends(p => p.filter(i => String(i.id) !== String(id))); }, []);
+  
   const duplicateSiteweb = useCallback(async (id: string) => { 
     const t = siteweb.find(i => String(i.id) === String(id)); 
     if (t) { 
@@ -415,7 +446,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, []);
 
-  // UI SELECTORS (KEEPING UI COMPATIBLE)
+  // UI SELECTORS
   const getCalculatedGros = useCallback((): CalculatedGros[] => gros.map(i => {
     const calc = computeGrosCalculatedFields(i);
     return { 
@@ -434,17 +465,45 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return { ...i, net_profit: i.status === MarketingStatus.TERMINE ? calc.benefice_net : 0 };
   }), [marketingServices]);
 
+  /**
+   * CENTRALIZED AGGREGATOR: getDashboardData
+   * This is the core engine for the entire application financial reporting.
+   */
   const getDashboardData = useCallback((startDate?: string, endDate?: string): DashboardData => {
     const cg = getCalculatedGros(); const cs = getCalculatedSiteweb();
     const filter = (d: string) => (!startDate || d >= startDate) && (!endDate || d <= endDate);
-    const fcg = cg.filter(i => filter(i.date_created)); const fcs = cs.filter(i => filter(i.date_created));
-    const fo = offres.filter(i => filter(i.date)); const fc = charges.filter(i => filter(i.date)); const fm = marketingSpends.filter(i => filter(i.date_start));
+    
+    const fcg = cg.filter(i => filter(i.date_created)); 
+    const fcs = cs.filter(i => filter(i.date_created));
+    const fo = offres.filter(i => filter(i.date)); 
+    const fc = charges.filter(i => filter(i.date)); 
+    const fm = marketingSpends.filter(i => filter(i.date_start));
+    
+    // Calculate REAL CASH (Encaisse)
     const enc = fcg.reduce((a, c) => a + c.profit_encaisse, 0) + fcs.filter(o => o.status === SitewebStatus.LIVREE).reduce((a, c) => a + c.profit_net, 0);
+    
+    // Calculate PENDING (Attendu)
     const att = fcg.reduce((a, c) => a + c.profit_attendu, 0) + fcs.filter(o => o.status === SitewebStatus.EN_LIVRAISON || o.status === SitewebStatus.LIVREE_NON_ENCAISSEE).reduce((a, c) => a + c.profit_net, 0);
+    
+    // Calculate LOSSES (Pertes)
     const per = fcg.reduce((a, c) => a + c.perte, 0) + fcs.filter(o => o.status === SitewebStatus.RETOUR).reduce((a, c) => a + (Number(c.cout_article) + Number(c.cout_impression)), 0);
+    
+    // Calculate MISC (Offres)
     const no = fo.reduce((a, c) => c.type === OffreType.REVENUE ? a + Number(c.montant) : a - Number(c.montant), 0);
-    const tc = fc.reduce((a, c) => a + Number(c.montant), 0); const tm = fm.reduce((a, c) => a + Number(c.amount), 0);
-    return { encaisse_reel: enc, profit_attendu: att, pertes: per, net_offres: no, total_charges: tc, total_marketing_spend: tm, profit_net_final: enc + att + no - per - tc - tm };
+    
+    // Calculate EXPENSES (Charges + Marketing Spend)
+    const tc = fc.reduce((a, c) => a + Number(c.montant), 0); 
+    const tm = fm.reduce((a, c) => a + Number(c.amount), 0);
+    
+    return { 
+      encaisse_reel: enc, 
+      profit_attendu: att, 
+      pertes: per, 
+      net_offres: no, 
+      total_charges: tc, 
+      total_marketing_spend: tm, 
+      profit_net_final: enc + att + no - per - tc - tm 
+    };
   }, [getCalculatedGros, getCalculatedSiteweb, offres, charges, marketingSpends]);
 
   return (
@@ -460,4 +519,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     </AppContext.Provider>
   );
 };
-export const useAppStore = () => { const c = useContext(AppContext); if (!c) throw new Error("Store error"); return c; };
+
+export const useAppStore = () => { 
+  const c = useContext(AppContext); 
+  if (!c) throw new Error("AppContext not found. Ensure AppProvider is wrapping the root."); 
+  return c; 
+};

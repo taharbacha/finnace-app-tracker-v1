@@ -19,16 +19,42 @@ import {
 
 const Sidebar: React.FC = () => {
   const { isSyncing, isCloudActive, syncData, lastSynced } = useAppStore();
-  const navItems = [
+  
+  // Group 1: Finance & Ops
+  const primaryNavItems = [
     { to: '/', label: 'Tableau de bord', icon: LayoutDashboard },
     { to: '/gros', label: 'Commandes GROS', icon: Truck },
     { to: '/detail', label: 'Commandes sitweb', icon: Globe },
+    { to: '/offres', label: 'Les Offres', icon: TrendingUp },
+    { to: '/charges', label: 'Les Charges', icon: Wallet },
+  ];
+
+  // Group 2: Marketing & Growth
+  const secondaryNavItems = [
     { to: '/marketing', label: 'Marketing Clients', icon: UserCheck },
     { to: '/marketing-spend', label: 'Marketing Spend', icon: Megaphone },
     { to: '/inventory', label: 'Stock & Inventaire', icon: Package },
-    { to: '/charges', label: 'Les Charges', icon: Wallet },
-    { to: '/offres', label: 'Les Offres', icon: TrendingUp },
   ];
+
+  const renderNavLink = (item: any) => (
+    <NavLink
+      key={item.to}
+      to={item.to}
+      className={({ isActive }) => `
+        flex items-center gap-3 px-4 py-3.5 rounded-2xl transition-all duration-300 group
+        ${isActive 
+          ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' 
+          : 'text-slate-400 hover:bg-slate-800 hover:text-slate-100'}
+      `}
+    >
+      {({ isActive }) => (
+        <>
+          <item.icon size={20} className={isActive ? 'text-white' : 'group-hover:scale-110 transition-transform'} />
+          <span className="font-bold text-sm tracking-tight">{item.label}</span>
+        </>
+      )}
+    </NavLink>
+  );
 
   return (
     <aside className="w-64 bg-slate-900 text-slate-400 h-screen sticky top-0 flex flex-col z-50 shadow-2xl">
@@ -41,26 +67,13 @@ const Sidebar: React.FC = () => {
       </div>
 
       <nav className="flex-1 px-4 py-4 space-y-1.5 overflow-y-auto">
-        <p className="px-4 text-[10px] font-black text-slate-600 uppercase tracking-widest mb-4">Menu Principal</p>
-        {navItems.map((item) => (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            className={({ isActive }) => `
-              flex items-center gap-3 px-4 py-3.5 rounded-2xl transition-all duration-300 group
-              ${isActive 
-                ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' 
-                : 'text-slate-400 hover:bg-slate-800 hover:text-slate-100'}
-            `}
-          >
-            {({ isActive }) => (
-              <>
-                <item.icon size={20} className={isActive ? 'text-white' : 'group-hover:scale-110 transition-transform'} />
-                <span className="font-bold text-sm tracking-tight">{item.label}</span>
-              </>
-            )}
-          </NavLink>
-        ))}
+        <p className="px-4 text-[10px] font-black text-slate-600 uppercase tracking-widest mb-4">Finance & Ops</p>
+        {primaryNavItems.map(renderNavLink)}
+        
+        <div className="my-6 border-t border-slate-800/30 mx-4" />
+        
+        <p className="px-4 text-[10px] font-black text-slate-600 uppercase tracking-widest mb-4">Marketing & Stock</p>
+        {secondaryNavItems.map(renderNavLink)}
       </nav>
 
       <div className="px-6 py-4 border-t border-slate-800/50 bg-slate-900/50">
