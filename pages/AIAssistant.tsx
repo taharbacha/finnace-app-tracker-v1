@@ -60,8 +60,6 @@ const AIAssistant: React.FC = () => {
     setIsLoading(true);
 
     try {
-      const apiKey = (import.meta as any).env?.VITE_OPENROUTER_API_KEY;
-
       const systemInstruction = `
         You are "MerchDZ Financial Analyst", an AI specialized in auditing the Merch By DZ business data.
         You have READ-ONLY access. 
@@ -75,13 +73,11 @@ const AIAssistant: React.FC = () => {
         ${businessContext}
       `;
 
-      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      // Call internal proxy instead of OpenRouter directly
+      const response = await fetch("/api/ai", {
         method: "POST",
         headers: {
-          "Authorization": `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-          "HTTP-Referer": window.location.origin,
-          "X-Title": "Merch By DZ Financial OS"
+          "Content-Type": "application/json"
         },
         body: JSON.stringify({
           "model": "moonshotai/kimi-k2:free",
@@ -93,7 +89,10 @@ const AIAssistant: React.FC = () => {
         })
       });
 
-      if (!response.ok) throw new Error("Failed to connect to OpenRouter");
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to connect to AI proxy");
+      }
       
       const data = await response.json();
       const aiResponse = data.choices[0]?.message?.content || "Désolé, je n'ai pas pu générer d'analyse.";
@@ -101,7 +100,7 @@ const AIAssistant: React.FC = () => {
       addChatMessage('assistant', aiResponse);
     } catch (error) {
       console.error("AI Assistant Error:", error);
-      addChatMessage('assistant', "Erreur de connexion avec l'intelligence OpenRouter. Vérifiez votre clé API.");
+      addChatMessage('assistant', "Erreur de communication avec le serveur AI. Vérifiez la configuration.");
     } finally {
       setIsLoading(false);
     }
@@ -124,7 +123,7 @@ const AIAssistant: React.FC = () => {
           </h2>
           <p className="text-slate-500 font-medium flex items-center gap-2">
             <ShieldCheck size={14} className="text-emerald-500" />
-            Lecture Seule via OpenRouter
+            Proxy Sécurisé • Lecture Seule
           </p>
         </div>
         <button 
