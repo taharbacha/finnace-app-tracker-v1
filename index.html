@@ -1,17 +1,38 @@
+
 <!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>Merch By DZ - Back Office</title>
+    
+    <!-- iOS Home Screen Meta Tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Merch DZ">
+    <link rel="apple-touch-icon" href="/logo.png">
+    
     <link rel="icon" type="image/png" href="/logo.png" />
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
+      :root {
+        --sat: env(safe-area-inset-top);
+        --sar: env(safe-area-inset-right);
+        --sab: env(safe-area-inset-bottom);
+        --sal: env(safe-area-inset-left);
+      }
+
       body {
         font-family: 'Inter', sans-serif;
         background-color: #f9fafb;
+        margin: 0;
+        padding: 0;
+        /* Prevent elastic bounce in some contexts but allow scrolling */
+        overscroll-behavior-y: none;
       }
+
+      /* Desktop scrollbars */
       ::-webkit-scrollbar {
         width: 8px;
         height: 8px;
@@ -26,22 +47,103 @@
       ::-webkit-scrollbar-thumb:hover {
         background: #94a3b8;
       }
-      @keyframes pulse-slow {
-        0%, 100% { opacity: 1; }
-        50% { opacity: 0.5; }
+
+      /* iOS Standalone Mode Fixes */
+      @media (max-width: 768px) {
+        aside {
+          position: fixed !important;
+          top: 0 !important;
+          left: -100% !important;
+          height: 100vh !important;
+          z-index: 100 !important;
+          transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+          padding-top: var(--sat) !important;
+          padding-bottom: var(--sab) !important;
+        }
+
+        body.sidebar-open aside {
+          left: 0 !important;
+        }
+
+        main {
+          padding-top: calc(4rem + var(--sat)) !important;
+          padding-bottom: calc(2rem + var(--sab)) !important;
+          padding-left: calc(1rem + var(--sal)) !important;
+          padding-right: calc(1rem + var(--sar)) !important;
+        }
+
+        /* Mobile Sidebar Overlay */
+        .sidebar-overlay {
+          position: fixed;
+          inset: 0;
+          background: rgba(0,0,0,0.5);
+          z-index: 90;
+          opacity: 0;
+          pointer-events: none;
+          transition: opacity 0.3s ease;
+        }
+        body.sidebar-open .sidebar-overlay {
+          opacity: 1;
+          pointer-events: auto;
+        }
       }
-      .animate-pulse-slow {
-        animation: pulse-slow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+
+      /* Mobile Toggle Button Injected Styling */
+      #mobile-toggle {
+        display: none;
+        position: fixed;
+        top: calc(1rem + var(--sat));
+        left: calc(1rem + var(--sal));
+        z-index: 110;
+        background: #2563eb;
+        color: white;
+        padding: 0.75rem;
+        border-radius: 1rem;
+        box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.3);
+        border: none;
+        cursor: pointer;
+      }
+
+      @media (max-width: 768px) {
+        #mobile-toggle {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
       }
     </style>
     <script>
-      // More robust process shim
       (function() {
         window.process = window.process || {};
         window.process.env = window.process.env || {};
         window.process.env.APP_PASSWORD = 'merchdz_private_2025';
         window.process.env.VITE_SUPABASE_URL = window.process.env.VITE_SUPABASE_URL || '';
         window.process.env.VITE_SUPABASE_ANON_KEY = window.process.env.VITE_SUPABASE_ANON_KEY || '';
+
+        // Inject Mobile Toggle and Overlay
+        document.addEventListener('DOMContentLoaded', function() {
+          const toggle = document.createElement('button');
+          toggle.id = 'mobile-toggle';
+          toggle.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>';
+          
+          const overlay = document.createElement('div');
+          overlay.className = 'sidebar-overlay';
+
+          document.body.appendChild(toggle);
+          document.body.appendChild(overlay);
+
+          const toggleSidebar = () => document.body.classList.toggle('sidebar-open');
+          
+          toggle.addEventListener('click', toggleSidebar);
+          overlay.addEventListener('click', toggleSidebar);
+
+          // Close sidebar on navigation (click on any navlink)
+          document.addEventListener('click', function(e) {
+            if (e.target.closest('a') && document.body.classList.contains('sidebar-open')) {
+              document.body.classList.remove('sidebar-open');
+            }
+          });
+        });
       })();
     </script>
     <script type="importmap">
