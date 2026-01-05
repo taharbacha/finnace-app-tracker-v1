@@ -1,3 +1,4 @@
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', ['POST']);
@@ -12,6 +13,12 @@ export default async function handler(req, res) {
   try {
     const { messages } = req.body;
 
+    // We include a system prompt here to give the AI context while maintaining isolation from the app's database
+    const systemMessage = {
+      role: "system",
+      content: "You are the Merch By DZ Assistant, a professional AI specialized in helping with e-commerce operations, marketing strategies, and business optimization. You are helpful, concise, and professional. You do not have direct access to real-time financial data in this session, but you can provide expert advice on how to manage wholesale, retail, and marketing activities."
+    };
+
     const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -22,12 +29,18 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         model: "moonshotai/kimi-k2:free",
-        messages: messages || []
+        messages: [systemMessage, ...(messages || [])]
       }),
     });
 
     const data = await response.json();
-    return res.status(response.status).json(data);
+    
+    if (!response.ok) {
+      console.error("OpenRouter Error Response:", data);
+      return res.status(response.status).json(data);
+    }
+
+    return res.status(200).json(data);
   } catch (error) {
     console.error("AI Proxy Error:", error);
     return res.status(500).json({ 
