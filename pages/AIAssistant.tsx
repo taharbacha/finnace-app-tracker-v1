@@ -60,6 +60,8 @@ const AIAssistant: React.FC = () => {
     setIsLoading(true);
 
     try {
+      const apiKey = (import.meta as any).env?.VITE_OPENROUTER_API_KEY;
+
       const systemInstruction = `
         You are "MerchDZ Financial Analyst", an AI specialized in auditing the Merch By DZ business data.
         You have READ-ONLY access. 
@@ -76,7 +78,7 @@ const AIAssistant: React.FC = () => {
       const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
         method: "POST",
         headers: {
-          "Authorization": `Bearer ${process.env.API_KEY}`,
+          "Authorization": `Bearer ${apiKey}`,
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
