@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAppStore } from '../store.tsx';
@@ -61,7 +60,7 @@ const Sidebar: React.FC = () => {
   return (
     <aside className="w-64 bg-slate-900 text-slate-400 h-screen sticky top-0 flex flex-col z-50 shadow-2xl">
       <div className="p-8 flex items-center gap-3">
-        <div className="bg-gradient-to-br from-blue-500 to-blue-700 w-10 h-10 rounded-2xl flex items-center justify-center text-white font-black text-xl shadow-lg shadow-blue-500/20">M</div>
+        <img src="/logo.png" alt="Merch By DZ" className="w-10 h-10 object-contain rounded-xl" />
         <div>
           <h1 className="font-black text-white text-lg leading-tight tracking-tighter">Merch By DZ</h1>
           <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Cloud OS v3.5</p>

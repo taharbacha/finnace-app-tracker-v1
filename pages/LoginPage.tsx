@@ -43,9 +43,7 @@ const LoginPage: React.FC = () => {
     <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
       <div className="max-w-md w-full bg-white rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 p-8 space-y-8 animate-in zoom-in-95 duration-300">
         <div className="text-center space-y-2">
-          <div className="mx-auto w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center text-white text-3xl font-black mb-6 shadow-lg shadow-blue-200">
-            M
-          </div>
+          <img src="/logo.png" alt="Logo" className="mx-auto w-20 h-20 object-contain mb-6" />
           <h1 className="text-2xl font-bold text-slate-800 tracking-tight">Merch By DZ</h1>
           <p className="text-slate-500 text-sm">Système d'exploitation privé. Veuillez vous identifier.</p>
         </div>
