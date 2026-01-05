@@ -1,25 +1,17 @@
 
-export const config = {
-  runtime: 'edge',
-};
+export const runtime = "nodejs";
 
-export default async function handler(req: Request) {
+export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
-      status: 405,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
-    const { messages, model } = await req.json();
+    const { messages, model } = req.body;
     const apiKey = process.env.OPENROUTER_API_KEY;
 
     if (!apiKey) {
-      return new Response(JSON.stringify({ error: 'API Key not configured on server' }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return res.status(500).json({ error: 'API Key not configured on server' });
     }
 
     const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
@@ -37,14 +29,11 @@ export default async function handler(req: Request) {
     });
 
     const data = await response.json();
-    return new Response(JSON.stringify(data), {
-      status: response.status,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return res.status(response.status).json(data);
   } catch (error) {
-    return new Response(JSON.stringify({ error: 'Internal Server Error', details: error instanceof Error ? error.message : String(error) }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
+    return res.status(500).json({ 
+      error: 'Internal Server Error', 
+      details: error instanceof Error ? error.message : String(error) 
     });
   }
 }
