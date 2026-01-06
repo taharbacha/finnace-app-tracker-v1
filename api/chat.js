@@ -33,11 +33,11 @@ export default async function handler(req, res) {
       headers: {
         "Authorization": `Bearer ${apiKey}`,
         "Content-Type": "application/json",
-        "HTTP-Referer": "https://merch-by-dz.vercel.app",
+        "HTTP-Referer": "finnace-app-tracker-v1.vercel.app",
         "X-Title": "Merch By DZ Advisor"
       },
       body: JSON.stringify({
-        model: "moonshotai/kimi-k2:free",
+        model: "google/gemma-3-27b-it:free",
         messages: [systemPrompt, ...messages]
       }),
     });
