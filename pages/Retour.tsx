@@ -5,8 +5,9 @@ import { RotateCcw, Search, Trash2, Plus, Loader2, CheckCircle2 } from 'lucide-r
 import { Retour as IRetour } from '../types.ts';
 
 // Supabase configuration local to the page to avoid store logic changes
-const SUPABASE_URL = (window as any).process?.env?.VITE_SUPABASE_URL || '';
-const SUPABASE_KEY = (window as any).process?.env?.VITE_SUPABASE_ANON_KEY || '';
+// Fixed TypeScript errors by using type casting for import.meta.env and safely initializing Supabase client.
+const SUPABASE_URL = (import.meta as any).env?.VITE_SUPABASE_URL || '';
+const SUPABASE_KEY = (import.meta as any).env?.VITE_SUPABASE_ANON_KEY || '';
 const supabase = (SUPABASE_URL && SUPABASE_KEY) ? createClient(SUPABASE_URL, SUPABASE_KEY) : null;
 
 const Retour: React.FC = () => {
