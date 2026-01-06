@@ -15,10 +15,16 @@ import {
   UserCheck,
   Megaphone,
   Cloud,
-  Bot
+  Bot,
+  X
 } from 'lucide-react';
 
-const Sidebar: React.FC = () => {
+interface SidebarProps {
+  isMobileOpen?: boolean;
+  onClose?: () => void;
+}
+
+const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen, onClose }) => {
   const { isSyncing, isCloudActive, syncData, lastSynced } = useAppStore();
   
   // Group 1: Finance & Ops
@@ -59,13 +65,26 @@ const Sidebar: React.FC = () => {
   );
 
   return (
-    <aside className="w-64 bg-slate-900 text-slate-400 h-screen sticky top-0 flex flex-col z-50 shadow-2xl">
-      <div className="p-8 flex items-center gap-3">
-        <img src="/logo.png" alt="Merch By DZ" className="w-10 h-10 object-contain rounded-xl" />
-        <div>
-          <h1 className="font-black text-white text-lg leading-tight tracking-tighter">Merch By DZ</h1>
-          <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Cloud OS v3.5</p>
+    <aside className={`
+      fixed inset-y-0 left-0 z-50 w-64 bg-slate-900 text-slate-400 flex flex-col shadow-2xl transition-transform duration-300 ease-in-out
+      md:relative md:translate-x-0 md:h-screen md:sticky md:top-0
+      ${isMobileOpen ? 'translate-x-0' : '-translate-x-full'}
+    `}>
+      <div className="p-8 pb-4 flex items-center justify-between pt-[calc(2rem+env(safe-area-inset-top))]">
+        <div className="flex items-center gap-3">
+          <img src="/logo.png" alt="Merch By DZ" className="w-10 h-10 object-contain rounded-xl" />
+          <div>
+            <h1 className="font-black text-white text-lg leading-tight tracking-tighter">Merch By DZ</h1>
+            <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Cloud OS v3.5</p>
+          </div>
         </div>
+        {/* Mobile close button */}
+        <button 
+          onClick={onClose}
+          className="md:hidden p-2 text-slate-500 hover:text-white transition-colors"
+        >
+          <X size={24} />
+        </button>
       </div>
 
       <nav className="flex-1 px-4 py-4 space-y-1.5 overflow-y-auto">
@@ -78,7 +97,7 @@ const Sidebar: React.FC = () => {
         {secondaryNavItems.map(renderNavLink)}
       </nav>
 
-      <div className="px-6 py-4 border-t border-slate-800/50 bg-slate-900/50">
+      <div className="px-6 py-4 border-t border-slate-800/50 bg-slate-900/50 pb-[calc(1rem+env(safe-area-inset-bottom))]">
         <div className="flex items-center justify-between mb-2">
            <div className="flex items-center gap-2">
             {isCloudActive ? (
@@ -106,7 +125,7 @@ const Sidebar: React.FC = () => {
         </div>
       </div>
       
-      <div className="p-4 mx-4 mb-8 bg-slate-800/5 rounded-3xl border border-slate-800/20 flex items-center justify-center">
+      <div className="p-4 mx-4 mb-8 md:mb-8 bg-slate-800/5 rounded-3xl border border-slate-800/20 flex items-center justify-center">
          <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Opérations Ouvertes</p>
       </div>
     </aside>
