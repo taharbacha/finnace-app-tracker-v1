@@ -16,6 +16,7 @@ import {
   Megaphone,
   Cloud,
   Bot,
+  RotateCcw,
   X
 } from 'lucide-react';
 
@@ -32,6 +33,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen, onClose }) => {
     { to: '/', label: 'Tableau de bord', icon: LayoutDashboard },
     { to: '/gros', label: 'Commandes GROS', icon: Truck },
     { to: '/detail', label: 'Commandes sitweb', icon: Globe },
+    { to: '/retour', label: 'Retours', icon: RotateCcw },
     { to: '/offres', label: 'Les Offres', icon: TrendingUp },
     { to: '/charges', label: 'Les Charges', icon: Wallet },
   ];

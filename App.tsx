@@ -11,6 +11,7 @@ import Inventory from './pages/Inventory.tsx';
 import Offres from './pages/Offres.tsx';
 import Charges from './pages/Charges.tsx';
 import AIAssistant from './pages/AIAssistant.tsx';
+import Retour from './pages/Retour.tsx';
 import { AppProvider } from './store.tsx';
 import { Menu } from 'lucide-react';
 
@@ -49,7 +50,7 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
           </button>
           
           <div className="flex items-center gap-2">
-            <img src="/logo.png" alt="Merch DZ" className="w-8 h-8 object-contain" />
+            <img src="/logo.png" alt="Merch By DZ" className="w-8 h-8 object-contain" />
             <span className="font-black text-slate-800 text-sm tracking-tight">Merch DZ</span>
           </div>
 
@@ -78,6 +79,7 @@ const AppRoutes: React.FC = () => {
       <Route path="/charges" element={<AppLayout><Charges /></AppLayout>} />
       <Route path="/offres" element={<AppLayout><Offres /></AppLayout>} />
       <Route path="/ai" element={<AppLayout><AIAssistant /></AppLayout>} />
+      <Route path="/retour" element={<AppLayout><Retour /></AppLayout>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

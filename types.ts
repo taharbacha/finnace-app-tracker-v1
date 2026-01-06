@@ -1,5 +1,4 @@
 
-
 export enum GrosStatus {
   EN_PRODUCTION = 'en_production',
   EN_LIVRAISON = 'en_livraison',
@@ -117,6 +116,12 @@ export interface Offre {
   montant: number;
   category: OffreCategory;
   description: string;
+}
+
+export interface Retour {
+  id: string;
+  order_reference: string;
+  created_at: string;
 }
 
 export interface CalculatedGros extends CommandeGros {
