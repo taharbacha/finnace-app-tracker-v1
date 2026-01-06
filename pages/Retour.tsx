@@ -15,6 +15,7 @@ const Retour: React.FC = () => {
   const [isScanning, setIsScanning] = useState(false);
   const [lastSaved, setLastSaved] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isProcessing, setIsProcessing] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Fetch initial data
@@ -35,7 +36,7 @@ const Retour: React.FC = () => {
     fetchData();
   }, []);
 
-  // Always maintain focus on input
+  // Always maintain focus on input when mode is active
   useEffect(() => {
     const focusInterval = setInterval(() => {
       if (isScanning && document.activeElement !== inputRef.current) {
@@ -45,32 +46,44 @@ const Retour: React.FC = () => {
     return () => clearInterval(focusInterval);
   }, [isScanning]);
 
-  // Handle Scan logic: Auto-save on change with debounce
+  // Handle Scan logic: Auto-save on change with stabilization (debounce)
   useEffect(() => {
-    if (!scanValue.trim()) return;
+    const trimmed = scanValue.trim();
+    if (!trimmed || !isScanning || isProcessing) return;
 
+    // Use a 400ms window for input to stabilize (finish scanner transmission)
     const saveTimeout = setTimeout(async () => {
       if (!supabase) return;
       
-      const reference = scanValue.trim();
-      const { data, error } = await supabase
-        .from('commandes_retours')
-        .insert([{ order_reference: reference }])
-        .select()
-        .single();
+      const referenceToSave = trimmed;
+      
+      // STEP 1: Immediate state reset to allow next scan while processing
+      setScanValue(''); 
+      setIsProcessing(true);
+      
+      try {
+        const { data, error } = await supabase
+          .from('commandes_retours')
+          .insert([{ order_reference: referenceToSave }])
+          .select()
+          .single();
 
-      if (data && !error) {
-        setRetours(prev => [data, ...prev]);
-        setLastSaved(reference);
-        setScanValue(''); // Clear for next scan
-        
-        // Reset success indicator after 2s
-        setTimeout(() => setLastSaved(null), 2000);
+        if (data && !error) {
+          setRetours(prev => [data, ...prev]);
+          setLastSaved(referenceToSave);
+          
+          // Reset success indicator after 2s
+          setTimeout(() => setLastSaved(null), 2000);
+        }
+      } catch (err) {
+        console.error("Save error:", err);
+      } finally {
+        setIsProcessing(false);
       }
-    }, 250); // Debounce to allow scanner to finish "typing"
+    }, 400); 
 
     return () => clearTimeout(saveTimeout);
-  }, [scanValue]);
+  }, [scanValue, isScanning, isProcessing]);
 
   const handleDelete = async (id: string) => {
     if (!supabase || !confirm('Supprimer ce retour ?')) return;
@@ -102,7 +115,10 @@ const Retour: React.FC = () => {
         <button 
           onClick={() => {
             setIsScanning(!isScanning);
-            if (!isScanning) setTimeout(() => inputRef.current?.focus(), 100);
+            if (!isScanning) {
+              setScanValue('');
+              setTimeout(() => inputRef.current?.focus(), 100);
+            }
           }}
           className={`flex items-center gap-2 px-6 py-3 rounded-2xl text-sm font-black transition-all shadow-xl shadow-blue-500/10 active:scale-95
             ${isScanning ? 'bg-emerald-600 text-white' : 'bg-blue-600 text-white'}`}
@@ -116,8 +132,10 @@ const Retour: React.FC = () => {
         <div className="bg-slate-900 p-8 rounded-[2rem] border border-slate-800 shadow-2xl animate-in zoom-in-95 duration-300">
           <div className="max-w-xl mx-auto text-center space-y-6">
             <div className="flex items-center justify-center gap-4 text-emerald-400">
-               <Loader2 className="animate-spin" size={20} />
-               <span className="text-xs font-black uppercase tracking-widest">En attente du scanner...</span>
+               {isProcessing ? <Loader2 className="animate-spin" size={20} /> : <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />}
+               <span className="text-xs font-black uppercase tracking-widest">
+                {isProcessing ? "Sauvegarde en cours..." : "Prêt pour le scan"}
+               </span>
             </div>
             
             <div className="relative">
@@ -133,12 +151,12 @@ const Retour: React.FC = () => {
               {lastSaved && (
                 <div className="absolute -bottom-10 left-0 right-0 text-emerald-500 text-sm font-bold flex items-center justify-center gap-2 animate-in slide-in-from-top-2">
                   <CheckCircle2 size={16} />
-                  Enregistré: {lastSaved}
+                  Dernier scan enregistré: {lastSaved}
                 </div>
               )}
             </div>
             
-            <p className="text-slate-500 text-xs font-medium">Les scans sont sauvegardés automatiquement sans appuyer sur Entrée.</p>
+            <p className="text-slate-500 text-xs font-medium">L'enregistrement est automatique dès que le code est lu.</p>
           </div>
         </div>
       )}
