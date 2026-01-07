@@ -52,7 +52,7 @@ export default async function handler(req, res) {
         "X-Title": "Merch By DZ Advisor"
       },
       body: JSON.stringify({
-        model: "moonshotai/kimi-k2:free",
+        model: "google/gemma-3-27b-it:free",
         messages: [systemPrompt, ...messages]
       }),
     });
