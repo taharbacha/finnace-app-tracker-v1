@@ -133,22 +133,27 @@ const CommandesDetail: React.FC = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 items-center">
         <StatCard label="Profit Réel (Livrée)" value={formatPrice(stats.profitReel)} icon={Banknote} color="text-emerald-600" bg="bg-emerald-50" />
         <StatCard label="Attendu (Non Encaissé)" value={formatPrice(stats.onHold)} icon={Clock} color="text-purple-600" bg="bg-purple-50" />
         <StatCard label="Lost (Retour)" value={formatPrice(stats.lost)} icon={AlertCircle} color="text-red-600" bg="bg-red-50" />
         
-        {/* New Logistical Header Indicator */}
-        <div className="bg-slate-900 p-5 rounded-2xl border border-slate-800 shadow-sm flex items-center gap-4 transition-all hover:bg-slate-800">
-          <div className="p-3 rounded-xl bg-slate-800 text-blue-400">
-            <Truck size={20} />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <p className="text-[10px] font-black text-slate-500 uppercase tracking-wider">En livraison</p>
-              <span className="text-[9px] bg-blue-500/10 text-blue-400 px-1.5 py-0.5 rounded-md font-black uppercase">Hors calcul</span>
+        {/* Compact & Horizontal Logistical Indicator (Hors calcul) */}
+        <div className="bg-white border border-slate-100 rounded-2xl px-4 py-3 flex items-center justify-between gap-3 transition-all hover:bg-slate-50 self-center shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="text-blue-500 bg-blue-50 p-1.5 rounded-lg">
+              <Truck size={14} />
             </div>
-            <h3 className="text-lg font-bold text-white">{stats.enLivraisonCount} colis ({formatPrice(stats.enLivraisonValue)})</h3>
+            <div>
+              <div className="flex items-center gap-2">
+                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">En livraison</p>
+                <span className="text-[8px] text-slate-300 font-bold uppercase leading-none">Hors calcul</span>
+              </div>
+              <p className="text-[11px] font-bold text-slate-700 mt-1">{stats.enLivraisonCount} colis</p>
+            </div>
+          </div>
+          <div className="text-right border-l border-slate-50 pl-3">
+            <p className="text-[11px] font-black text-slate-900 leading-none">{formatPrice(stats.enLivraisonValue)}</p>
           </div>
         </div>
       </div>
