@@ -405,7 +405,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const { data, error } = await supabase.from('commandes_gros').insert(cleanData).select();
       if (!error && data) setGros(p => [...data, ...p]);
     } else {
-      setGros(p => [...cleanData.map(i => ({ ...i, id: crypto.randomUUID() })), ...p]);
+      const mapped = cleanData.map(i => ({ ...i, id: crypto.randomUUID() }));
+      setGros(p => [...mapped, ...p]);
     }
   }, []);
 
@@ -415,7 +416,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const { data, error } = await supabase.from('commandes_siteweb').insert(cleanData).select();
       if (!error && data) setSiteweb(p => [...data, ...p]);
     } else {
-      setSiteweb(p => [...cleanData.map(i => ({ ...i, id: crypto.randomUUID() })), ...p]);
+      const mapped = cleanData.map(i => ({ ...i, id: crypto.randomUUID() }));
+      setSiteweb(p => [...mapped, ...p]);
     }
   }, []);
 
@@ -425,7 +427,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const { data, error } = await supabase.from('offres').insert(cleanData).select();
       if (!error && data) setOffres(p => [...data, ...p]);
     } else {
-      setOffres(p => [...cleanData.map(i => ({ ...i, id: crypto.randomUUID() })), ...p]);
+      const mapped = cleanData.map(i => ({ ...i, id: crypto.randomUUID() }));
+      setOffres(p => [...mapped, ...p]);
     }
   }, []);
 
@@ -435,7 +438,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const { data, error } = await supabase.from('inventory').insert(cleanData).select();
       if (!error && data) setInventory(p => [...data, ...p]);
     } else {
-      setInventory(p => [...cleanData.map(i => ({ ...i, id: crypto.randomUUID() })), ...p]);
+      const mapped = cleanData.map(i => ({ ...i, id: crypto.randomUUID() }));
+      setInventory(p => [...mapped, ...p]);
     }
   }, []);
 
@@ -445,7 +449,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const { data, error } = await supabase.from('charges').insert(cleanData).select();
       if (!error && data) setCharges(p => [...data, ...p]);
     } else {
-      setCharges(p => [...cleanData.map(i => ({ ...i, id: crypto.randomUUID() })), ...p]);
+      const mapped = cleanData.map(i => ({ ...i, id: crypto.randomUUID() }));
+      setCharges(p => [...mapped, ...p]);
     }
   }, []);
 
@@ -478,7 +483,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const fm = marketingSpends.filter(i => filter(i.date_start));
     
     const enc = fcg.reduce((a, c) => a + c.profit_encaisse, 0) + fcs.filter(o => o.status === SitewebStatus.LIVREE).reduce((a, c) => a + c.profit_net, 0);
-    const att = fcg.reduce((a, c) => a + c.profit_attendu, 0) + fcs.filter(o => o.status === SitewebStatus.EN_LIVRAISON || o.status === SitewebStatus.LIVREE_NON_ENCAISSEE).reduce((a, c) => a + c.profit_net, 0);
+    // Modified Business Rule: en_livraison is excluded from financials. Only livrée_non_encaissée contributes to Attendu.
+    const att = fcg.reduce((a, c) => a + c.profit_attendu, 0) + fcs.filter(o => o.status === SitewebStatus.LIVREE_NON_ENCAISSEE).reduce((a, c) => a + c.profit_net, 0);
     const per = fcg.reduce((a, c) => a + c.perte, 0) + fcs.filter(o => o.status === SitewebStatus.RETOUR).reduce((a, c) => a + (Number(c.cout_article) + Number(c.cout_impression)), 0);
     const no = fo.reduce((a, c) => c.type === OffreType.REVENUE ? a + Number(c.montant) : a - Number(c.montant), 0);
     const tc = fc.reduce((a, c) => a + Number(c.montant), 0); 

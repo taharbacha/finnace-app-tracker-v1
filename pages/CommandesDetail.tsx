@@ -4,7 +4,7 @@ import { useAppStore } from '../store.tsx';
 import EditableCell from '../components/EditableCell.tsx';
 import StatCard from '../components/StatCard.tsx';
 import { SitewebStatus } from '../types.ts';
-import { Plus, Search, Banknote, User, Trash2, Copy, Download, Upload, AlertCircle, Clock } from 'lucide-react';
+import { Plus, Search, Banknote, User, Trash2, Copy, Download, Upload, AlertCircle, Clock, Truck } from 'lucide-react';
 
 const CommandesDetail: React.FC = () => {
   const { getCalculatedSiteweb, updateSiteweb, addSiteweb, deleteSiteweb, duplicateSiteweb, importSiteweb } = useAppStore();
@@ -25,9 +25,9 @@ const CommandesDetail: React.FC = () => {
       .filter(o => o.status === SitewebStatus.LIVREE)
       .reduce((acc, curr) => acc + curr.profit_net, 0);
 
-    // On hold (en livraison + livrée non encaissée)
+    // On hold (uniquement livrée non encaissée, en_livraison exclu selon nouvelle règle financière)
     const onHold = filteredData
-      .filter(o => o.status === SitewebStatus.EN_LIVRAISON || o.status === SitewebStatus.LIVREE_NON_ENCAISSEE)
+      .filter(o => o.status === SitewebStatus.LIVREE_NON_ENCAISSEE)
       .reduce((acc, curr) => acc + curr.profit_net, 0);
 
     // Lost (retour)
@@ -35,7 +35,12 @@ const CommandesDetail: React.FC = () => {
       .filter(o => o.status === SitewebStatus.RETOUR)
       .reduce((acc, curr) => acc + (Number(curr.cout_article) + Number(curr.cout_impression)), 0);
 
-    return { profitReel, onHold, lost };
+    // Logistique seulement (hors calcul financier)
+    const enLivraison = filteredData.filter(o => o.status === SitewebStatus.EN_LIVRAISON);
+    const enLivraisonCount = enLivraison.length;
+    const enLivraisonValue = enLivraison.reduce((acc, curr) => acc + Number(curr.prix_vente), 0);
+
+    return { profitReel, onHold, lost, enLivraisonCount, enLivraisonValue };
   }, [filteredData]);
 
   const formatPrice = (val: number) => val.toLocaleString('fr-DZ') + ' DA';
@@ -128,10 +133,24 @@ const CommandesDetail: React.FC = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard label="Profit Réel (Livrée)" value={formatPrice(stats.profitReel)} icon={Banknote} color="text-emerald-600" bg="bg-emerald-50" />
-        <StatCard label="On Hold (Livraison)" value={formatPrice(stats.onHold)} icon={Clock} color="text-blue-600" bg="bg-blue-50" />
+        <StatCard label="Attendu (Non Encaissé)" value={formatPrice(stats.onHold)} icon={Clock} color="text-purple-600" bg="bg-purple-50" />
         <StatCard label="Lost (Retour)" value={formatPrice(stats.lost)} icon={AlertCircle} color="text-red-600" bg="bg-red-50" />
+        
+        {/* New Logistical Header Indicator */}
+        <div className="bg-slate-900 p-5 rounded-2xl border border-slate-800 shadow-sm flex items-center gap-4 transition-all hover:bg-slate-800">
+          <div className="p-3 rounded-xl bg-slate-800 text-blue-400">
+            <Truck size={20} />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <p className="text-[10px] font-black text-slate-500 uppercase tracking-wider">En livraison</p>
+              <span className="text-[9px] bg-blue-500/10 text-blue-400 px-1.5 py-0.5 rounded-md font-black uppercase">Hors calcul</span>
+            </div>
+            <h3 className="text-lg font-bold text-white">{stats.enLivraisonCount} colis ({formatPrice(stats.enLivraisonValue)})</h3>
+          </div>
+        </div>
       </div>
 
       <div className="bg-white border border-slate-100 rounded-[2rem] shadow-sm overflow-hidden">

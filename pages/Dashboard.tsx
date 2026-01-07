@@ -1,3 +1,4 @@
+
 import React, { useMemo } from 'react';
 import { useAppStore } from '../store.tsx';
 import { 
@@ -89,6 +90,9 @@ const Dashboard: React.FC = () => {
     // Process Retail
     getCalculatedSiteweb().forEach(item => {
       if (!filterByDate(item.date_created)) return;
+      // Modified: en_livraison is logistical only and must not affect financial trends
+      if (item.status === SitewebStatus.EN_LIVRAISON) return;
+      
       const d = item.date_created;
       if (!dailyMap[d]) dailyMap[d] = { date: d, grosProfit: 0, retailProfit: 0, offresNet: 0, marketingProfit: 0, marketingSpend: 0 };
       dailyMap[d].retailProfit += item.profit_net;
@@ -132,8 +136,10 @@ const Dashboard: React.FC = () => {
 
     // 2. Siteweb
     const swFiltered = getCalculatedSiteweb().filter(item => filterByDate(item.date_created));
+    // Revenue remains realized (LIVREE)
     const swRev = swFiltered.filter(i => i.status === SitewebStatus.LIVREE).reduce((a, c) => a + Number(c.prix_vente), 0);
-    const swProd = swFiltered.filter(i => i.status !== SitewebStatus.RETOUR).reduce((a, c) => a + (Number(c.cout_article) + Number(c.cout_impression) + Number(c.vendeur_benefice)), 0);
+    // Modified: Production expenses for Retail now exclude items in transit (en_livraison) to keep ROI and Net accurate to financial truth
+    const swProd = swFiltered.filter(i => i.status === SitewebStatus.LIVREE || i.status === SitewebStatus.LIVREE_NON_ENCAISSEE).reduce((a, c) => a + (Number(c.cout_article) + Number(c.cout_impression) + Number(c.vendeur_benefice)), 0);
     const swMarketing = marketingSpends.filter(s => s.source === MarketingSpendSource.SITEWEB && filterByDate(s.date_start)).reduce((a, c) => a + Number(c.amount), 0);
 
     // 3. Offres (Subscriptions)
@@ -144,7 +150,6 @@ const Dashboard: React.FC = () => {
 
     // 4. Marketing Client (Services)
     const clientFiltered = getCalculatedMarketing().filter(item => filterByDate(item.date));
-    // Fixed: Corrected scope of variables used in reduce callback (changed 'm' to 'c' to match the current reducer element)
     const clientRev = clientFiltered.filter(m => m.status === MarketingStatus.TERMINE).reduce((a, c) => a + Number(c.revenue), 0);
     const clientExp = clientFiltered.filter(m => m.status === MarketingStatus.TERMINE).reduce((a, c) => a + Number(c.client_charges), 0);
     const clientMarketing = marketingSpends.filter(s => s.source === MarketingSpendSource.MARKETING_CLIENT && filterByDate(s.date_start)).reduce((a, c) => a + Number(c.amount), 0);
