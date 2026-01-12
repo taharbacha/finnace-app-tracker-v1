@@ -14,6 +14,13 @@ export enum SitewebStatus {
   RETOUR = 'retour'
 }
 
+export enum MerchStatus {
+  EN_LIVRAISON = 'en_livraison',
+  LIVREE_NON_ENCAISSEE = 'livree_non_encaissee',
+  LIVREE = 'livree',
+  RETOUR = 'retour'
+}
+
 export enum MarketingStatus {
   EN_COURS = 'en_cours',
   TERMINE = 'termine',
@@ -34,6 +41,7 @@ export enum OffreCategory {
 export enum MarketingSpendSource {
   GROS = 'gros',
   SITEWEB = 'siteweb',
+  MERCH = 'merch',
   OFFRES = 'offres',
   MARKETING_CLIENT = 'marketing_client'
 }
@@ -99,6 +107,17 @@ export interface CommandeSiteweb {
   vendeur_benefice: number;
 }
 
+export interface CommandeMerch {
+  id: string;
+  reference: string;
+  client_name: string;
+  produit: string;
+  prix_achat: number;
+  prix_vente: number;
+  status: MerchStatus;
+  created_at: string;
+}
+
 export interface MarketingService {
   id: string;
   client_name: string;
@@ -135,6 +154,13 @@ export interface CalculatedSiteweb extends CommandeSiteweb {
   profit_net: number;
 }
 
+export interface CalculatedMerch extends CommandeMerch {
+  profit: number;
+  impact_encaisse: number;
+  impact_attendu: number;
+  impact_perte: number;
+}
+
 export interface CalculatedMarketing extends MarketingService {
   net_profit: number;
 }
@@ -149,7 +175,6 @@ export interface DashboardData {
   profit_net_final: number;
 }
 
-// Added ChatMessage interface
 export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant';

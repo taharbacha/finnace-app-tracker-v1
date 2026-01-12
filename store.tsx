@@ -2,9 +2,9 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { 
-  CommandeGros, CommandeSiteweb, Offre, InventoryItem, Charge, MarketingService, MarketingSpend,
-  CalculatedGros, CalculatedSiteweb, CalculatedMarketing, DashboardData,
-  GrosStatus, SitewebStatus, OffreType, OffreCategory, MarketingStatus, MarketingSpendSource, MarketingSpendType,
+  CommandeGros, CommandeSiteweb, CommandeMerch, Offre, InventoryItem, Charge, MarketingService, MarketingSpend,
+  CalculatedGros, CalculatedSiteweb, CalculatedMerch, CalculatedMarketing, DashboardData,
+  GrosStatus, SitewebStatus, MerchStatus, OffreType, OffreCategory, MarketingStatus, MarketingSpendSource, MarketingSpendType,
   ChatMessage
 } from './types.ts';
 
@@ -35,6 +35,24 @@ const computeSitewebCalculatedFields = (item: CommandeSiteweb) => {
   return { ...item, total_cout, total_revenu, benefice_net, marge_percent };
 };
 
+const computeMerchCalculatedFields = (item: CommandeMerch): CalculatedMerch => {
+  const profit = Number(item.prix_vente || 0) - Number(item.prix_achat || 0);
+  let impact_encaisse = 0;
+  let impact_attendu = 0;
+  let impact_perte = 0;
+
+  if (item.status === MerchStatus.LIVREE) {
+    impact_encaisse = profit;
+  } else if (item.status === MerchStatus.LIVREE_NON_ENCAISSEE) {
+    impact_attendu = profit;
+  } else if (item.status === MerchStatus.RETOUR) {
+    impact_perte = Number(item.prix_achat || 0);
+  }
+  // en_livraison results in all impacts being 0
+
+  return { ...item, profit, impact_encaisse, impact_attendu, impact_perte };
+};
+
 const computeMarketingCalculatedFields = (item: MarketingService) => {
   const benefice_net = Number(item.revenue || 0) - Number(item.client_charges || 0);
   return { ...item, benefice_net };
@@ -55,6 +73,7 @@ const supabase = (SUPABASE_URL && SUPABASE_KEY)
 interface AppState {
   gros: CommandeGros[];
   siteweb: CommandeSiteweb[];
+  merch: CommandeMerch[];
   offres: Offre[];
   inventory: InventoryItem[];
   charges: Charge[];
@@ -66,7 +85,6 @@ interface AppState {
   isSyncing: boolean;
   isCloudActive: boolean;
   lastSynced: string | null;
-  // Added chat properties
   chatHistory: ChatMessage[];
   addChatMessage: (role: 'user' | 'assistant', text: string) => void;
   clearChat: () => void;
@@ -82,8 +100,13 @@ interface AppState {
   duplicateSiteweb: (id: string) => Promise<void>;
   deleteSiteweb: (id: string) => Promise<void>;
   importSiteweb: (data: any[]) => Promise<void>;
+  updateMerch: (id: string, field: keyof CommandeMerch, value: any) => Promise<void>;
+  addMerch: () => Promise<void>;
+  deleteMerch: (id: string) => Promise<void>;
+  importMerch: (data: any[]) => Promise<void>;
   getCalculatedGros: () => CalculatedGros[];
   getCalculatedSiteweb: () => CalculatedSiteweb[];
+  getCalculatedMerch: () => CalculatedMerch[];
   getCalculatedMarketing: () => CalculatedMarketing[];
   getDashboardData: (startDate?: string, endDate?: string) => DashboardData;
   syncData: () => Promise<void>;
@@ -118,13 +141,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [gros, setGros] = useState<CommandeGros[]>([]);
   const [siteweb, setSiteweb] = useState<CommandeSiteweb[]>([]);
+  const [merch, setMerch] = useState<CommandeMerch[]>([]);
   const [offres, setOffres] = useState<Offre[]>([]);
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [charges, setCharges] = useState<Charge[]>([]);
   const [marketingServices, setMarketingServices] = useState<MarketingService[]>([]);
   const [marketingSpends, setMarketingSpends] = useState<MarketingSpend[]>([]);
   
-  // Added chat history state
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
 
   const [dashboardDateStart, setDashboardDateStart] = useState<string>('');
@@ -138,9 +161,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
       setIsSyncing(true);
       try {
-        const [ { data: g }, { data: s }, { data: o }, { data: i }, { data: c }, { data: m }, { data: ms } ] = await Promise.all([
+        const [ { data: g }, { data: s }, { data: m_orders }, { data: o }, { data: i }, { data: c }, { data: m }, { data: ms } ] = await Promise.all([
           supabase.from('commandes_gros').select('*'),
           supabase.from('commandes_siteweb').select('*'),
+          supabase.from('commandes_merch').select('*'),
           supabase.from('offres').select('*'),
           supabase.from('inventory').select('*'),
           supabase.from('charges').select('*'),
@@ -149,6 +173,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         ]);
         if (g) setGros(g); 
         if (s) setSiteweb(s); 
+        if (m_orders) setMerch(m_orders);
         if (o) setOffres(o); 
         if (i) setInventory(i); 
         if (c) setCharges(c); 
@@ -175,10 +200,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         .eq('id', 'auth')
         .single();
 
-      if (error || !data) {
-        console.error("Auth verification failed: Settings not found or Supabase error.");
-        return false;
-      }
+      if (error || !data) return false;
 
       if (data.password_hash === inputHash) {
         setIsAuthenticated(true);
@@ -186,28 +208,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
       return false;
     } catch (err) {
-      console.error("Login process error:", err);
       return false;
     }
   }, []);
 
-  const logout = useCallback(() => {
-    setIsAuthenticated(false);
-  }, []);
+  const logout = useCallback(() => setIsAuthenticated(false), []);
 
   const setDashboardDateRange = useCallback((start: string, end: string) => {
     setDashboardDateStart(start);
     setDashboardDateEnd(end);
   }, []);
 
-  // Added chat history management functions
   const addChatMessage = useCallback((role: 'user' | 'assistant', text: string) => {
     setChatHistory(prev => [...prev, { id: crypto.randomUUID(), role, text }]);
   }, []);
 
-  const clearChat = useCallback(() => {
-    setChatHistory([]);
-  }, []);
+  const clearChat = useCallback(() => setChatHistory([]), []);
 
   const syncData = useCallback(async () => {
     if (!supabase) return;
@@ -216,20 +232,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       await Promise.all([
         supabase.from('commandes_gros').upsert(gros.map(computeGrosCalculatedFields)),
         supabase.from('commandes_siteweb').upsert(siteweb.map(computeSitewebCalculatedFields)),
+        supabase.from('commandes_merch').upsert(merch),
         supabase.from('offres').upsert(offres),
         supabase.from('inventory').upsert(inventory.map(computeInventoryCalculatedFields)),
         supabase.from('charges').upsert(charges),
         supabase.from('marketing_services').upsert(marketingServices.map(computeMarketingCalculatedFields)),
         supabase.from('marketing_spends').upsert(marketingSpends)
       ]);
-      const now = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-      setLastSynced(now);
+      setLastSynced(new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }));
     } catch (e) { 
       console.error("Supabase manual sync error:", e); 
     } finally { 
       setIsSyncing(false); 
     }
-  }, [gros, siteweb, offres, inventory, charges, marketingServices, marketingSpends]);
+  }, [gros, siteweb, merch, offres, inventory, charges, marketingServices, marketingSpends]);
 
   const updateGros = useCallback(async (id: string, field: keyof CommandeGros, value: any) => {
     let item: CommandeGros | undefined;
@@ -237,20 +253,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (String(i.id) === String(id)) { item = { ...i, [field]: value }; return item; }
       return i;
     }));
-    if (supabase && item) {
-      const dbPayload = computeGrosCalculatedFields(item);
-      await supabase.from('commandes_gros').update(dbPayload).eq('id', id);
-    }
+    if (supabase && item) await supabase.from('commandes_gros').update(computeGrosCalculatedFields(item)).eq('id', id);
   }, []);
 
   const addGros = useCallback(async () => {
-    const baseRecord = { 
-      reference: `G${Date.now()}`, client_name: '', client_phone: '', date_created: new Date().toISOString().split('T')[0], 
-      prix_achat_article: 0, impression: false, prix_impression: 0, prix_vente: 0, status: GrosStatus.EN_PRODUCTION, stock_note: '' 
-    };
+    const baseRecord = { reference: `G${Date.now()}`, client_name: '', client_phone: '', date_created: new Date().toISOString().split('T')[0], prix_achat_article: 0, impression: false, prix_impression: 0, prix_vente: 0, status: GrosStatus.EN_PRODUCTION, stock_note: '' };
     if (supabase) {
-      const dbPayload = computeGrosCalculatedFields(baseRecord as CommandeGros);
-      const { data } = await supabase.from('commandes_gros').insert([dbPayload]).select();
+      const { data } = await supabase.from('commandes_gros').insert([computeGrosCalculatedFields(baseRecord as CommandeGros)]).select();
       if (data) setGros(p => [data[0], ...p]);
     } else {
       setGros(p => [{ ...baseRecord, id: crypto.randomUUID() } as CommandeGros, ...p]);
@@ -263,23 +272,50 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (String(i.id) === String(id)) { item = { ...i, [field]: value }; return item; }
       return i;
     }));
-    if (supabase && item) {
-      const dbPayload = computeSitewebCalculatedFields(item);
-      await supabase.from('commandes_siteweb').update(dbPayload).eq('id', id);
-    }
+    if (supabase && item) await supabase.from('commandes_siteweb').update(computeSitewebCalculatedFields(item)).eq('id', id);
   }, []);
 
   const addSiteweb = useCallback(async () => {
-    const baseRecord = { 
-      reference: String(Date.now()).slice(-6), date_created: new Date().toISOString().split('T')[0], 
-      cout_article: 0, cout_impression: 0, prix_vente: 0, status: SitewebStatus.EN_LIVRAISON, stock_note: '', vendeur_name: 'V-X', vendeur_benefice: 0 
-    };
+    const baseRecord = { reference: String(Date.now()).slice(-6), date_created: new Date().toISOString().split('T')[0], cout_article: 0, cout_impression: 0, prix_vente: 0, status: SitewebStatus.EN_LIVRAISON, stock_note: '', vendeur_name: 'V-X', vendeur_benefice: 0 };
     if (supabase) {
-      const dbPayload = computeSitewebCalculatedFields(baseRecord as CommandeSiteweb);
-      const { data } = await supabase.from('commandes_siteweb').insert([dbPayload]).select();
+      const { data } = await supabase.from('commandes_siteweb').insert([computeSitewebCalculatedFields(baseRecord as CommandeSiteweb)]).select();
       if (data) setSiteweb(p => [data[0], ...p]);
     } else {
       setSiteweb(p => [{ ...baseRecord, id: crypto.randomUUID() } as CommandeSiteweb, ...p]);
+    }
+  }, []);
+
+  const updateMerch = useCallback(async (id: string, field: keyof CommandeMerch, value: any) => {
+    let item: CommandeMerch | undefined;
+    setMerch(p => p.map(i => {
+      if (String(i.id) === String(id)) { item = { ...i, [field]: value }; return item; }
+      return i;
+    }));
+    if (supabase && item) await supabase.from('commandes_merch').update(item).eq('id', id);
+  }, []);
+
+  const addMerch = useCallback(async () => {
+    const baseRecord = { reference: `M${Date.now()}`, client_name: '', produit: '', prix_achat: 0, prix_vente: 0, status: MerchStatus.EN_LIVRAISON, created_at: new Date().toISOString() };
+    if (supabase) {
+      const { data } = await supabase.from('commandes_merch').insert([baseRecord]).select();
+      if (data) setMerch(p => [data[0], ...p]);
+    } else {
+      setMerch(p => [{ ...baseRecord, id: crypto.randomUUID() } as CommandeMerch, ...p]);
+    }
+  }, []);
+
+  const deleteMerch = useCallback(async (id: string) => { 
+    if (supabase) await supabase.from('commandes_merch').delete().eq('id', id); 
+    setMerch(p => p.filter(i => String(i.id) !== String(id))); 
+  }, []);
+
+  const importMerch = useCallback(async (d: any[]) => {
+    if (supabase) {
+      const { data } = await supabase.from('commandes_merch').insert(d).select();
+      if (data) setMerch(p => [...data, ...p]);
+    } else {
+      const mapped = d.map(i => ({ ...i, id: crypto.randomUUID() }));
+      setMerch(p => [...mapped, ...p]);
     }
   }, []);
 
@@ -289,17 +325,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (String(i.id) === String(id)) { item = { ...i, [field]: value }; return item; }
       return i;
     }));
-    if (supabase && item) {
-      const dbPayload = computeInventoryCalculatedFields(item);
-      await supabase.from('inventory').update(dbPayload).eq('id', id);
-    }
+    if (supabase && item) await supabase.from('inventory').update(computeInventoryCalculatedFields(item)).eq('id', id);
   }, []);
 
   const addInventory = useCallback(async () => {
     const baseRecord = { name: 'Nouveau Stock', sku: 'SKU-' + Date.now(), quantity: 0, min_stock: 5, unit_cost: 0, supplier: '' };
     if (supabase) {
-      const dbPayload = computeInventoryCalculatedFields(baseRecord as InventoryItem);
-      const { data } = await supabase.from('inventory').insert([dbPayload]).select();
+      const { data } = await supabase.from('inventory').insert([computeInventoryCalculatedFields(baseRecord as InventoryItem)]).select();
       if (data) setInventory(p => [data[0], ...p]);
     } else {
       setInventory(p => [{ ...baseRecord, id: crypto.randomUUID() } as InventoryItem, ...p]);
@@ -312,17 +344,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (String(i.id) === String(id)) { item = { ...i, [field]: value }; return item; }
       return i;
     }));
-    if (supabase && item) {
-      const dbPayload = computeMarketingCalculatedFields(item);
-      await supabase.from('marketing_services').update(dbPayload).eq('id', id);
-    }
+    if (supabase && item) await supabase.from('marketing_services').update(computeMarketingCalculatedFields(item)).eq('id', id);
   }, []);
 
   const addMarketing = useCallback(async () => {
     const baseRecord = { client_name: 'Nouveau Client', service_description: '', date: new Date().toISOString().split('T')[0], revenue: 0, client_charges: 0, status: MarketingStatus.EN_COURS };
     if (supabase) {
-      const dbPayload = computeMarketingCalculatedFields(baseRecord as MarketingService);
-      const { data } = await supabase.from('marketing_services').insert([dbPayload]).select();
+      const { data } = await supabase.from('marketing_services').insert([computeMarketingCalculatedFields(baseRecord as MarketingService)]).select();
       if (data) setMarketingServices(p => [data[0], ...p]);
     } else {
       setMarketingServices(p => [{ ...baseRecord, id: crypto.randomUUID() } as MarketingService, ...p]);
@@ -388,77 +416,64 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const t = siteweb.find(i => String(i.id) === String(id)); 
     if (t) { 
       const { id: _, ...baseRecord } = t;
-      const nr = { ...baseRecord, reference: t.reference + '-copy' }; 
       if (supabase) { 
-        const dbPayload = computeSitewebCalculatedFields(nr as CommandeSiteweb);
-        const { data, error } = await supabase.from('commandes_siteweb').insert([dbPayload]).select(); 
-        if (!error && data) setSiteweb(p => [data[0], ...p]); 
+        const { data } = await supabase.from('commandes_siteweb').insert([computeSitewebCalculatedFields({ ...baseRecord, reference: t.reference + '-copy' } as CommandeSiteweb)]).select(); 
+        if (data) setSiteweb(p => [data[0], ...p]); 
       } else {
-        setSiteweb(p => [{ ...nr, id: crypto.randomUUID() } as CommandeSiteweb, ...p]);
+        setSiteweb(p => [{ ...baseRecord, reference: t.reference + '-copy', id: crypto.randomUUID() } as CommandeSiteweb, ...p]);
       }
     } 
   }, [siteweb]);
 
   const importGros = useCallback(async (d: any[]) => {
-    const cleanData = d.map(({ id, ...rest }) => computeGrosCalculatedFields(rest as CommandeGros));
     if (supabase) {
-      const { data, error } = await supabase.from('commandes_gros').insert(cleanData).select();
-      if (!error && data) setGros(p => [...data, ...p]);
+      const { data } = await supabase.from('commandes_gros').insert(d.map(computeGrosCalculatedFields)).select();
+      if (data) setGros(p => [...data, ...p]);
     } else {
-      const mapped = cleanData.map(i => ({ ...i, id: crypto.randomUUID() }));
-      setGros(p => [...mapped, ...p]);
+      setGros(p => [...d.map(i => ({ ...i, id: crypto.randomUUID() })), ...p]);
     }
   }, []);
 
   const importSiteweb = useCallback(async (d: any[]) => {
-    const cleanData = d.map(({ id, ...rest }) => computeSitewebCalculatedFields(rest as CommandeSiteweb));
     if (supabase) {
-      const { data, error } = await supabase.from('commandes_siteweb').insert(cleanData).select();
-      if (!error && data) setSiteweb(p => [...data, ...p]);
+      const { data } = await supabase.from('commandes_siteweb').insert(d.map(computeSitewebCalculatedFields)).select();
+      if (data) setSiteweb(p => [...data, ...p]);
     } else {
-      const mapped = cleanData.map(i => ({ ...i, id: crypto.randomUUID() }));
-      setSiteweb(p => [...mapped, ...p]);
+      setSiteweb(p => [...d.map(i => ({ ...i, id: crypto.randomUUID() })), ...p]);
     }
   }, []);
 
   const importOffres = useCallback(async (d: any[]) => {
-    const cleanData = d.map(({ id, ...rest }) => rest);
     if (supabase) {
-      const { data, error } = await supabase.from('offres').insert(cleanData).select();
-      if (!error && data) setOffres(p => [...data, ...p]);
+      const { data } = await supabase.from('offres').insert(d).select();
+      if (data) setOffres(p => [...data, ...p]);
     } else {
-      const mapped = cleanData.map(i => ({ ...i, id: crypto.randomUUID() }));
-      setOffres(p => [...mapped, ...p]);
+      setOffres(p => [...d.map(i => ({ ...i, id: crypto.randomUUID() })), ...p]);
     }
   }, []);
 
   const importInventory = useCallback(async (d: any[]) => {
-    const cleanData = d.map(({ id, ...rest }) => computeInventoryCalculatedFields(rest as InventoryItem));
     if (supabase) {
-      const { data, error } = await supabase.from('inventory').insert(cleanData).select();
-      if (!error && data) setInventory(p => [...data, ...p]);
+      const { data } = await supabase.from('inventory').insert(d.map(computeInventoryCalculatedFields)).select();
+      if (data) setInventory(p => [...data, ...p]);
     } else {
-      const mapped = cleanData.map(i => ({ ...i, id: crypto.randomUUID() }));
-      setInventory(p => [...mapped, ...p]);
+      setInventory(p => [...d.map(i => ({ ...i, id: crypto.randomUUID() })), ...p]);
     }
   }, []);
 
   const importCharges = useCallback(async (d: any[]) => {
-    const cleanData = d.map(({ id, ...rest }) => rest);
     if (supabase) {
-      const { data, error } = await supabase.from('charges').insert(cleanData).select();
-      if (!error && data) setCharges(p => [...data, ...p]);
+      const { data } = await supabase.from('charges').insert(d).select();
+      if (data) setCharges(p => [...data, ...p]);
     } else {
-      const mapped = cleanData.map(i => ({ ...i, id: crypto.randomUUID() }));
-      setCharges(p => [...mapped, ...p]);
+      setCharges(p => [...d.map(i => ({ ...i, id: crypto.randomUUID() })), ...p]);
     }
   }, []);
 
   const getCalculatedGros = useCallback((): CalculatedGros[] => gros.map(i => {
     const calc = computeGrosCalculatedFields(i);
     return { 
-      ...i, 
-      cost: calc.total_cout, 
+      ...i, cost: calc.total_cout, 
       profit_encaisse: i.status === GrosStatus.LIVREE_ENCAISSE ? calc.benefice_net : 0, 
       profit_attendu: i.status === GrosStatus.LIVREE_NON_ENCAISSE ? calc.benefice_net : 0, 
       perte: i.status === GrosStatus.RETOUR ? calc.total_cout : 0 
@@ -467,25 +482,38 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const getCalculatedSiteweb = useCallback((): CalculatedSiteweb[] => siteweb.map(i => ({ ...i, profit_net: computeSitewebCalculatedFields(i).benefice_net })), [siteweb]);
   
+  const getCalculatedMerch = useCallback((): CalculatedMerch[] => merch.map(computeMerchCalculatedFields), [merch]);
+
   const getCalculatedMarketing = useCallback((): CalculatedMarketing[] => marketingServices.map(i => {
     const calc = computeMarketingCalculatedFields(i);
     return { ...i, net_profit: i.status === MarketingStatus.TERMINE ? calc.benefice_net : 0 };
   }), [marketingServices]);
 
   const getDashboardData = useCallback((startDate?: string, endDate?: string): DashboardData => {
-    const cg = getCalculatedGros(); const cs = getCalculatedSiteweb();
+    const cg = getCalculatedGros(); 
+    const cs = getCalculatedSiteweb();
+    const cm = getCalculatedMerch();
     const filter = (d: string) => (!startDate || d >= startDate) && (!endDate || d <= endDate);
     
     const fcg = cg.filter(i => filter(i.date_created)); 
     const fcs = cs.filter(i => filter(i.date_created));
+    const fcm = cm.filter(i => filter(i.created_at));
     const fo = offres.filter(i => filter(i.date)); 
     const fc = charges.filter(i => filter(i.date)); 
     const fm = marketingSpends.filter(i => filter(i.date_start));
     
-    const enc = fcg.reduce((a, c) => a + c.profit_encaisse, 0) + fcs.filter(o => o.status === SitewebStatus.LIVREE).reduce((a, c) => a + c.profit_net, 0);
-    // Modified Business Rule: en_livraison is excluded from financials. Only livrée_non_encaissée contributes to Attendu.
-    const att = fcg.reduce((a, c) => a + c.profit_attendu, 0) + fcs.filter(o => o.status === SitewebStatus.LIVREE_NON_ENCAISSEE).reduce((a, c) => a + c.profit_net, 0);
-    const per = fcg.reduce((a, c) => a + c.perte, 0) + fcs.filter(o => o.status === SitewebStatus.RETOUR).reduce((a, c) => a + (Number(c.cout_article) + Number(c.cout_impression)), 0);
+    const enc = fcg.reduce((a, c) => a + c.profit_encaisse, 0) + 
+                fcs.filter(o => o.status === SitewebStatus.LIVREE).reduce((a, c) => a + c.profit_net, 0) +
+                fcm.reduce((a, c) => a + c.impact_encaisse, 0);
+
+    const att = fcg.reduce((a, c) => a + c.profit_attendu, 0) + 
+                fcs.filter(o => o.status === SitewebStatus.LIVREE_NON_ENCAISSEE).reduce((a, c) => a + c.profit_net, 0) +
+                fcm.reduce((a, c) => a + c.impact_attendu, 0);
+
+    const per = fcg.reduce((a, c) => a + c.perte, 0) + 
+                fcs.filter(o => o.status === SitewebStatus.RETOUR).reduce((a, c) => a + (Number(c.cout_article) + Number(c.cout_impression)), 0) +
+                fcm.reduce((a, c) => a + c.impact_perte, 0);
+
     const no = fo.reduce((a, c) => c.type === OffreType.REVENUE ? a + Number(c.montant) : a - Number(c.montant), 0);
     const tc = fc.reduce((a, c) => a + Number(c.montant), 0); 
     const tm = fm.reduce((a, c) => a + Number(c.amount), 0);
@@ -499,17 +527,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       total_marketing_spend: tm, 
       profit_net_final: enc + att + no - per - tc - tm 
     };
-  }, [getCalculatedGros, getCalculatedSiteweb, offres, charges, marketingSpends]);
+  }, [getCalculatedGros, getCalculatedSiteweb, getCalculatedMerch, offres, charges, marketingSpends]);
 
   return (
     <AppContext.Provider value={{ 
-      gros, siteweb, offres, inventory, charges, marketingServices, marketingSpends, dashboardDateStart, dashboardDateEnd, setDashboardDateRange,
+      gros, siteweb, merch, offres, inventory, charges, marketingServices, marketingSpends, dashboardDateStart, dashboardDateEnd, setDashboardDateRange,
       isAuthenticated, login, logout, isSyncing, isCloudActive, lastSynced,
       chatHistory, addChatMessage, clearChat,
       updateGros, addGros, deleteGros, importGros, updateSiteweb, addSiteweb, duplicateSiteweb, deleteSiteweb, importSiteweb,
+      updateMerch, addMerch, deleteMerch, importMerch,
       updateOffre, addOffre, deleteOffre, importOffres, updateInventory, addInventory, deleteInventory, importInventory,
       updateCharge, addCharge, deleteCharge, importCharges, updateMarketing, addMarketing, deleteMarketing,
-      updateMarketingSpend, addMarketingSpend, deleteMarketingSpend, getCalculatedGros, getCalculatedSiteweb, getCalculatedMarketing, getDashboardData, syncData
+      updateMarketingSpend, addMarketingSpend, deleteMarketingSpend, getCalculatedGros, getCalculatedSiteweb, getCalculatedMerch, getCalculatedMarketing, getDashboardData, syncData
     }}>
       {isInitialLoaded ? children : null}
     </AppContext.Provider>
@@ -518,6 +547,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
 export const useAppStore = () => { 
   const c = useContext(AppContext); 
-  if (!c) throw new Error("AppContext not found. Ensure AppProvider is wrapping the root."); 
+  if (!c) throw new Error("AppContext not found."); 
   return c; 
 };

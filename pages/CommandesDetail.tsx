@@ -4,7 +4,7 @@ import { useAppStore } from '../store.tsx';
 import EditableCell from '../components/EditableCell.tsx';
 import StatCard from '../components/StatCard.tsx';
 import { SitewebStatus } from '../types.ts';
-import { Plus, Search, Banknote, User, Trash2, Copy, Download, Upload, AlertCircle, Clock, Truck } from 'lucide-react';
+import { Plus, Search, Banknote, Trash2, Copy, Download, Upload, AlertCircle, Clock, Truck } from 'lucide-react';
 
 const CommandesDetail: React.FC = () => {
   const { getCalculatedSiteweb, updateSiteweb, addSiteweb, deleteSiteweb, duplicateSiteweb, importSiteweb } = useAppStore();
@@ -20,22 +20,18 @@ const CommandesDetail: React.FC = () => {
   }, [allData, searchTerm]);
 
   const stats = useMemo(() => {
-    // Profit réel (livrée)
     const profitReel = filteredData
       .filter(o => o.status === SitewebStatus.LIVREE)
       .reduce((acc, curr) => acc + curr.profit_net, 0);
 
-    // On hold (uniquement livrée non encaissée, en_livraison exclu selon nouvelle règle financière)
     const onHold = filteredData
       .filter(o => o.status === SitewebStatus.LIVREE_NON_ENCAISSEE)
       .reduce((acc, curr) => acc + curr.profit_net, 0);
 
-    // Lost (retour)
     const lost = filteredData
       .filter(o => o.status === SitewebStatus.RETOUR)
       .reduce((acc, curr) => acc + (Number(curr.cout_article) + Number(curr.cout_impression)), 0);
 
-    // Logistique seulement (hors calcul financier)
     const enLivraison = filteredData.filter(o => o.status === SitewebStatus.EN_LIVRAISON);
     const enLivraisonCount = enLivraison.length;
     const enLivraisonValue = enLivraison.reduce((acc, curr) => acc + Number(curr.prix_vente), 0);
@@ -48,7 +44,7 @@ const CommandesDetail: React.FC = () => {
   const handleDelete = (e: React.MouseEvent, id: string) => {
     e.preventDefault();
     e.stopPropagation();
-    if (window.confirm('Voulez-vous vraiment supprimer cette commande sitweb ?')) {
+    if (window.confirm('Voulez-vous vraiment supprimer cette commande ?')) {
       deleteSiteweb(id);
     }
   };
@@ -92,21 +88,12 @@ const CommandesDetail: React.FC = () => {
 
   const exportCSV = () => {
     if (filteredData.length === 0) return;
-    const headers = ["reference", "vendeur_name", "date_created", "cout_article", "cout_impression", "prix_vente", "vendeur_benefice", "status"];
-    const rows = filteredData.map(item => [
-      item.reference,
-      item.vendeur_name,
-      item.date_created,
-      item.cout_article,
-      item.cout_impression,
-      item.prix_vente,
-      item.vendeur_benefice,
-      item.status
-    ]);
+    const headers = ["reference", "vendeur_name", "date_created", "status", "profit"];
+    const rows = filteredData.map(item => [item.reference, item.vendeur_name, item.date_created, item.status, item.profit_net]);
     const csvContent = "data:text/csv;charset=utf-8," + headers.join(",") + "\n" + rows.map(e => e.join(",")).join("\n");
     const link = document.createElement("a");
     link.setAttribute("href", encodeURI(csvContent));
-    link.setAttribute("download", "commandes_siteweb.csv");
+    link.setAttribute("download", "commandes_vendeurs.csv");
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -116,8 +103,8 @@ const CommandesDetail: React.FC = () => {
     <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-black text-slate-800 tracking-tight">Commandes siteweb</h2>
-          <p className="text-slate-500 text-sm font-medium">Gestion indépendante des commandes directes et commissions vendeurs.</p>
+          <h2 className="text-2xl font-black text-slate-800 tracking-tight">Commandes Vendeurs</h2>
+          <p className="text-slate-500 text-sm font-medium">Gestion des commandes directes par les vendeurs et calcul des commissions.</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <input type="file" ref={fileInputRef} onChange={handleImportCSV} accept=".csv" className="hidden" />
@@ -134,11 +121,10 @@ const CommandesDetail: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 items-center">
-        <StatCard label="Profit Réel (Livrée)" value={formatPrice(stats.profitReel)} icon={Banknote} color="text-emerald-600" bg="bg-emerald-50" />
-        <StatCard label="Attendu (Non Encaissé)" value={formatPrice(stats.onHold)} icon={Clock} color="text-purple-600" bg="bg-purple-50" />
+        <StatCard label="Profit Réel" value={formatPrice(stats.profitReel)} icon={Banknote} color="text-emerald-600" bg="bg-emerald-50" />
+        <StatCard label="Attendu" value={formatPrice(stats.onHold)} icon={Clock} color="text-purple-600" bg="bg-purple-50" />
         <StatCard label="Lost (Retour)" value={formatPrice(stats.lost)} icon={AlertCircle} color="text-red-600" bg="bg-red-50" />
         
-        {/* Compact & Horizontal Logistical Indicator (Hors calcul) */}
         <div className="bg-white border border-slate-100 rounded-2xl px-4 py-3 flex items-center justify-between gap-3 transition-all hover:bg-slate-50 self-center shadow-sm">
           <div className="flex items-center gap-3">
             <div className="text-blue-500 bg-blue-50 p-1.5 rounded-lg">
@@ -147,7 +133,7 @@ const CommandesDetail: React.FC = () => {
             <div>
               <div className="flex items-center gap-2">
                 <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">En livraison</p>
-                <span className="text-[8px] text-slate-300 font-bold uppercase leading-none">Hors calcul</span>
+                <span className="text-[8px] text-slate-300 font-bold uppercase leading-none">Logistique</span>
               </div>
               <p className="text-[11px] font-bold text-slate-700 mt-1">{stats.enLivraisonCount} colis</p>
             </div>
@@ -178,78 +164,65 @@ const CommandesDetail: React.FC = () => {
               <tr className="bg-slate-50 border-b border-slate-200">
                 <th className="p-4 font-bold text-slate-500 uppercase tracking-tighter text-[10px]">Ref</th>
                 <th className="p-4 font-bold text-slate-500 uppercase tracking-tighter text-[10px]">Vendeur</th>
-                <th className="p-4 font-bold text-slate-500 uppercase tracking-tighter text-[10px] text-center">Production (x + y)</th>
+                <th className="p-4 font-bold text-slate-500 uppercase tracking-tighter text-[10px] text-center">Production (A+I)</th>
                 <th className="p-4 font-bold text-slate-500 uppercase tracking-tighter text-[10px] text-right">Vente</th>
                 <th className="p-4 font-bold text-slate-500 uppercase tracking-tighter text-[10px] text-right">Com. Vendeur</th>
                 <th className="p-4 font-bold text-slate-500 uppercase tracking-tighter text-[10px] text-center">Status</th>
-                <th className="p-4 font-bold text-slate-500 uppercase tracking-tighter text-[10px] text-right">Profit Net</th>
+                <th className="p-4 font-bold text-slate-500 uppercase tracking-tighter text-[10px] text-right">Net Profit</th>
                 <th className="p-4 font-bold text-slate-500 uppercase tracking-tighter text-[10px] text-center">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filteredData.map((item) => {
-                return (
-                  <tr key={item.id} className="hover:bg-slate-50/50 transition-colors group">
-                    <td className="p-2 font-mono text-xs font-black text-slate-400">
-                      <EditableCell type="text" value={item.reference} onSave={(v) => updateSiteweb(item.id, 'reference', v)} />
-                    </td>
-                    <td className="p-2 font-bold text-blue-600">
-                      <EditableCell value={item.vendeur_name} onSave={(v) => updateSiteweb(item.id, 'vendeur_name', v)} />
-                    </td>
-                    <td className="p-2">
-                      <div className="flex items-center justify-center gap-2 text-center">
-                        <EditableCell type="number" value={item.cout_article} onSave={(v) => updateSiteweb(item.id, 'cout_article', v)} prefix="A: " className="text-[10px] py-1 h-auto min-w-[65px]" />
-                        <span className="text-slate-300 text-[10px] font-bold">+</span>
-                        <EditableCell type="number" value={item.cout_impression} onSave={(v) => updateSiteweb(item.id, 'cout_impression', v)} prefix="I: " className="text-[10px] py-1 h-auto min-w-[65px]" />
-                      </div>
-                    </td>
-                    <td className="p-2 text-right font-black text-slate-900">
-                      <EditableCell type="number" value={item.prix_vente} onSave={(v) => updateSiteweb(item.id, 'prix_vente', v)} />
-                    </td>
-                    <td className="p-2 text-right font-bold text-purple-600">
-                      <EditableCell type="number" value={item.vendeur_benefice} onSave={(v) => updateSiteweb(item.id, 'vendeur_benefice', v)} />
-                    </td>
-                    <td className="p-2 text-center">
-                      <select 
-                        value={item.status} 
-                        onChange={(e) => updateSiteweb(item.id, 'status', e.target.value)}
-                        className={`text-[10px] p-2 rounded-xl border-none font-black uppercase tracking-widest cursor-pointer transition-colors
-                          ${item.status === SitewebStatus.LIVREE ? 'bg-emerald-50 text-emerald-700' : 
-                            item.status === SitewebStatus.LIVREE_NON_ENCAISSEE ? 'bg-purple-50 text-purple-700' :
-                            item.status === SitewebStatus.EN_LIVRAISON ? 'bg-blue-50 text-blue-700' : 
-                            'bg-red-50 text-red-700'}`}
-                      >
-                        {Object.values(SitewebStatus).map(opt => <option key={opt} value={opt}>{opt.replace(/_/g, ' ')}</option>)}
-                      </select>
-                    </td>
-                    <td className="p-4 text-right">
-                      <span className={`font-black text-sm ${item.profit_net >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                        {formatPrice(item.profit_net)}
-                      </span>
-                    </td>
-                    <td className="p-2 text-center">
-                      <div className="flex items-center justify-center gap-1">
-                        <button 
-                          type="button"
-                          onClick={(e) => handleDuplicate(e, item.id)}
-                          className="p-2 text-slate-300 hover:text-blue-500 transition-all rounded-lg hover:bg-blue-50"
-                          title="Dupliquer la commande"
-                        >
-                          <Copy size={16} />
-                        </button>
-                        <button 
-                          type="button"
-                          onClick={(e) => handleDelete(e, item.id)}
-                          className="p-2 text-slate-300 hover:text-red-500 transition-all rounded-lg hover:bg-red-50"
-                          title="Supprimer la commande"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
+              {filteredData.map((item) => (
+                <tr key={item.id} className="hover:bg-slate-50/50 transition-colors group">
+                  <td className="p-2 font-mono text-xs font-black text-slate-400">
+                    <EditableCell type="text" value={item.reference} onSave={(v) => updateSiteweb(item.id, 'reference', v)} />
+                  </td>
+                  <td className="p-2 font-bold text-blue-600">
+                    <EditableCell value={item.vendeur_name} onSave={(v) => updateSiteweb(item.id, 'vendeur_name', v)} />
+                  </td>
+                  <td className="p-2">
+                    <div className="flex items-center justify-center gap-2">
+                      <EditableCell type="number" value={item.cout_article} onSave={(v) => updateSiteweb(item.id, 'cout_article', v)} prefix="A: " className="text-[10px] py-1 h-auto min-w-[65px]" />
+                      <span className="text-slate-300 text-[10px] font-bold">+</span>
+                      <EditableCell type="number" value={item.cout_impression} onSave={(v) => updateSiteweb(item.id, 'cout_impression', v)} prefix="I: " className="text-[10px] py-1 h-auto min-w-[65px]" />
+                    </div>
+                  </td>
+                  <td className="p-2 text-right font-black text-slate-900">
+                    <EditableCell type="number" value={item.prix_vente} onSave={(v) => updateSiteweb(item.id, 'prix_vente', v)} />
+                  </td>
+                  <td className="p-2 text-right font-bold text-purple-600">
+                    <EditableCell type="number" value={item.vendeur_benefice} onSave={(v) => updateSiteweb(item.id, 'vendeur_benefice', v)} />
+                  </td>
+                  <td className="p-2 text-center">
+                    <select 
+                      value={item.status} 
+                      onChange={(e) => updateSiteweb(item.id, 'status', e.target.value)}
+                      className={`text-[10px] p-2 rounded-xl border-none font-black uppercase tracking-widest cursor-pointer transition-colors
+                        ${item.status === SitewebStatus.LIVREE ? 'bg-emerald-50 text-emerald-700' : 
+                          item.status === SitewebStatus.LIVREE_NON_ENCAISSEE ? 'bg-purple-50 text-purple-700' :
+                          item.status === SitewebStatus.EN_LIVRAISON ? 'bg-blue-50 text-blue-700' : 'bg-red-50 text-red-700'}`}
+                    >
+                      {Object.values(SitewebStatus).map(opt => <option key={opt} value={opt}>{opt.toUpperCase()}</option>)}
+                    </select>
+                  </td>
+                  <td className="p-4 text-right">
+                    <span className={`font-black text-sm ${item.profit_net >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                      {formatPrice(item.profit_net)}
+                    </span>
+                  </td>
+                  <td className="p-2 text-center">
+                    <div className="flex items-center justify-center gap-1">
+                      <button onClick={(e) => handleDuplicate(e, item.id)} className="p-2 text-slate-300 hover:text-blue-500 transition-all rounded-lg hover:bg-blue-50">
+                        <Copy size={16} />
+                      </button>
+                      <button onClick={(e) => handleDelete(e, item.id)} className="p-2 text-slate-300 hover:text-red-500 transition-all rounded-lg hover:bg-red-50">
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>

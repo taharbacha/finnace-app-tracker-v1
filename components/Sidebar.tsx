@@ -17,7 +17,8 @@ import {
   Cloud,
   Bot,
   RotateCcw,
-  X
+  X,
+  Store
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -32,7 +33,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen, onClose }) => {
   const primaryNavItems = [
     { to: '/', label: 'Tableau de bord', icon: LayoutDashboard },
     { to: '/gros', label: 'Commandes GROS', icon: Truck },
-    { to: '/detail', label: 'Commandes sitweb', icon: Globe },
+    { to: '/detail', label: 'Commandes Vendeurs', icon: Globe },
+    { to: '/merch', label: 'Commande Merch', icon: Store },
     { to: '/retour', label: 'Retours', icon: RotateCcw },
     { to: '/offres', label: 'Les Offres', icon: TrendingUp },
     { to: '/charges', label: 'Les Charges', icon: Wallet },
@@ -80,7 +82,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen, onClose }) => {
             <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Cloud OS v3.5</p>
           </div>
         </div>
-        {/* Mobile close button */}
         <button 
           onClick={onClose}
           className="md:hidden p-2 text-slate-500 hover:text-white transition-colors"

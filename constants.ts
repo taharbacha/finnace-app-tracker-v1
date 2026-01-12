@@ -1,5 +1,5 @@
 
-import { GrosStatus, SitewebStatus, OffreType, OffreCategory, MarketingSpendSource, MarketingSpendType, CommandeGros, CommandeSiteweb, Offre } from './types.ts';
+import { GrosStatus, SitewebStatus, MerchStatus, OffreType, OffreCategory, MarketingSpendSource, MarketingSpendType, CommandeGros, CommandeSiteweb, Offre } from './types.ts';
 
 export const INITIAL_GROS: CommandeGros[] = [
   {
@@ -45,6 +45,7 @@ export const INITIAL_OFFRES: Offre[] = [
 
 export const GROS_STATUS_OPTIONS = Object.values(GrosStatus);
 export const EXTERN_STATUS_OPTIONS = Object.values(SitewebStatus) as string[];
+export const MERCH_STATUS_OPTIONS = Object.values(MerchStatus);
 export const OFFRE_TYPE_OPTIONS = Object.values(OffreType);
 export const OFFRE_CATEGORY_OPTIONS = Object.values(OffreCategory);
 export const MARKETING_SPEND_SOURCE_OPTIONS = Object.values(MarketingSpendSource);

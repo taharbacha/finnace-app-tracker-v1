@@ -5,6 +5,7 @@ import Sidebar from './components/Sidebar.tsx';
 import Dashboard from './pages/Dashboard.tsx';
 import CommandesGros from './pages/CommandesGros.tsx';
 import CommandesDetail from './pages/CommandesDetail.tsx';
+import CommandeMerch from './pages/CommandeMerch.tsx';
 import MarketingClient from './pages/MarketingClient.tsx';
 import MarketingSpend from './pages/MarketingSpend.tsx';
 import Inventory from './pages/Inventory.tsx';
@@ -19,14 +20,12 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const location = useLocation();
 
-  // Close sidebar automatically when navigating
   useEffect(() => {
     setIsMobileMenuOpen(false);
   }, [location.pathname]);
 
   return (
     <div className="flex min-h-screen bg-[#F8FAFC]">
-      {/* Mobile Overlay */}
       {isMobileMenuOpen && (
         <div 
           className="fixed inset-0 bg-slate-900/60 z-40 md:hidden backdrop-blur-sm transition-opacity animate-in fade-in duration-300" 
@@ -40,7 +39,6 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       />
 
       <div className="flex-1 flex flex-col min-w-0">
-        {/* Mobile Header (Visible only on mobile/tablet) */}
         <header className="md:hidden bg-white border-b border-slate-100 p-4 sticky top-0 z-30 flex items-center justify-between pt-[calc(1rem+env(safe-area-inset-top))]">
           <button 
             onClick={() => setIsMobileMenuOpen(true)}
@@ -54,7 +52,7 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             <span className="font-black text-slate-800 text-sm tracking-tight">Merch DZ</span>
           </div>
 
-          <div className="w-8" /> {/* Spacer for centering logo */}
+          <div className="w-8" />
         </header>
 
         <main className="flex-1 p-4 md:p-8 overflow-y-auto">
@@ -73,6 +71,7 @@ const AppRoutes: React.FC = () => {
       <Route path="/" element={<AppLayout><Dashboard /></AppLayout>} />
       <Route path="/gros" element={<AppLayout><CommandesGros /></AppLayout>} />
       <Route path="/detail" element={<AppLayout><CommandesDetail /></AppLayout>} />
+      <Route path="/merch" element={<AppLayout><CommandeMerch /></AppLayout>} />
       <Route path="/marketing" element={<AppLayout><MarketingClient /></AppLayout>} />
       <Route path="/marketing-spend" element={<AppLayout><MarketingSpend /></AppLayout>} />
       <Route path="/inventory" element={<AppLayout><Inventory /></AppLayout>} />
