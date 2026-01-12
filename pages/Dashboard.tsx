@@ -16,7 +16,7 @@ import {
   ComposedChart,
   Legend 
 } from 'recharts';
-import { Clock, Banknote, Calendar, Wallet, TrendingUp, Megaphone, RotateCcw, BarChart3 } from 'lucide-react';
+import { Clock, Banknote, Calendar, Wallet, TrendingUp, Megaphone, RotateCcw, BarChart3, ArrowUpRight, ArrowDownRight, LayoutGrid, Truck } from 'lucide-react';
 import { OffreType, MarketingSpendSource, MarketingStatus, GrosStatus, SitewebStatus, MerchStatus } from '../types.ts';
 
 interface ChartCardProps {
@@ -24,15 +24,16 @@ interface ChartCardProps {
   children: React.ReactNode;
   icon: any;
   colorClass: string;
+  height?: number;
 }
 
-const ChartCard: React.FC<ChartCardProps> = ({ title, children, icon: Icon, colorClass }) => (
-  <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm flex flex-col h-[380px]">
+const ChartCard: React.FC<ChartCardProps> = ({ title, children, icon: Icon, colorClass, height = 280 }) => (
+  <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm flex flex-col transition-all hover:shadow-md" style={{ height }}>
     <div className="flex items-center gap-3 mb-6">
       <div className={`p-2 rounded-xl ${colorClass.replace('text', 'bg').replace('600', '50')}`}>
-        <Icon className={colorClass} size={18} />
+        <Icon className={colorClass} size={16} />
       </div>
-      <h4 className="font-bold text-slate-800 text-sm tracking-tight">{title}</h4>
+      <h4 className="font-bold text-slate-700 text-[10px] tracking-widest uppercase">{title}</h4>
     </div>
     <div className="flex-1 min-h-0">
       <ResponsiveContainer width="100%" height="100%">
@@ -68,43 +69,70 @@ const Dashboard: React.FC = () => {
 
   const timeSeriesData = useMemo(() => {
     const dailyMap: Record<string, { 
-      date: string, 
-      grosProfit: number, 
-      retailProfit: number, 
-      merchProfit: number,
-      offresNet: number, 
-      marketingProfit: number,
-      marketingSpend: number 
+      date: string;
+      grosProfit: number;
+      grosReturns: number;
+      grosAds: number;
+      retailProfit: number;
+      merchProfit: number;
+      merchReturns: number;
+      merchAds: number;
+      offresNet: number;
+      offresAds: number;
+      marketingProfit: number;
+      marketingSpend: number;
     }> = {};
+
+    const initDate = (d: string) => {
+      if (!dailyMap[d]) {
+        dailyMap[d] = { 
+          date: d, 
+          grosProfit: 0, grosReturns: 0, grosAds: 0,
+          retailProfit: 0, 
+          merchProfit: 0, merchReturns: 0, merchAds: 0,
+          offresNet: 0, offresAds: 0,
+          marketingProfit: 0, 
+          marketingSpend: 0 
+        };
+      }
+    };
 
     getCalculatedGros().forEach(item => {
       if (!filterByDate(item.date_created)) return;
       const d = item.date_created;
-      if (!dailyMap[d]) dailyMap[d] = { date: d, grosProfit: 0, retailProfit: 0, merchProfit: 0, offresNet: 0, marketingProfit: 0, marketingSpend: 0 };
-      const profit = item.status === GrosStatus.RETOUR ? -item.cost : (item.prix_vente - item.cost);
-      dailyMap[d].grosProfit += profit;
+      initDate(d);
+      if (item.status === GrosStatus.RETOUR) {
+        dailyMap[d].grosReturns += item.cost;
+        dailyMap[d].grosProfit -= item.cost;
+      } else {
+        dailyMap[d].grosProfit += (item.prix_vente - item.cost);
+      }
     });
 
     getCalculatedSiteweb().forEach(item => {
       if (!filterByDate(item.date_created)) return;
       if (item.status === SitewebStatus.EN_LIVRAISON) return;
       const d = item.date_created;
-      if (!dailyMap[d]) dailyMap[d] = { date: d, grosProfit: 0, retailProfit: 0, merchProfit: 0, offresNet: 0, marketingProfit: 0, marketingSpend: 0 };
+      initDate(d);
       dailyMap[d].retailProfit += item.profit_net;
     });
 
     getCalculatedMerch().forEach(item => {
       if (!filterByDate(item.created_at.split('T')[0])) return;
-      if (item.status === MerchStatus.EN_LIVRAISON) return;
       const d = item.created_at.split('T')[0];
-      if (!dailyMap[d]) dailyMap[d] = { date: d, grosProfit: 0, retailProfit: 0, merchProfit: 0, offresNet: 0, marketingProfit: 0, marketingSpend: 0 };
-      dailyMap[d].merchProfit += (item.impact_encaisse + item.impact_attendu - item.impact_perte);
+      initDate(d);
+      if (item.status === MerchStatus.RETOUR) {
+        dailyMap[d].merchReturns += item.impact_perte;
+      }
+      if (item.status !== MerchStatus.EN_LIVRAISON) {
+        dailyMap[d].merchProfit += (item.impact_encaisse + item.impact_attendu - item.impact_perte);
+      }
     });
 
     offres.forEach(item => {
       if (!filterByDate(item.date)) return;
       const d = item.date;
-      if (!dailyMap[d]) dailyMap[d] = { date: d, grosProfit: 0, retailProfit: 0, merchProfit: 0, offresNet: 0, marketingProfit: 0, marketingSpend: 0 };
+      initDate(d);
       const amt = Number(item.montant);
       dailyMap[d].offresNet += item.type === OffreType.REVENUE ? amt : -amt;
     });
@@ -112,15 +140,20 @@ const Dashboard: React.FC = () => {
     getCalculatedMarketing().forEach(item => {
       if (!filterByDate(item.date)) return;
       const d = item.date;
-      if (!dailyMap[d]) dailyMap[d] = { date: d, grosProfit: 0, retailProfit: 0, merchProfit: 0, offresNet: 0, marketingProfit: 0, marketingSpend: 0 };
+      initDate(d);
       dailyMap[d].marketingProfit += item.net_profit;
     });
 
     marketingSpends.forEach(item => {
       if (!filterByDate(item.date_start)) return;
       const d = item.date_start;
-      if (!dailyMap[d]) dailyMap[d] = { date: d, grosProfit: 0, retailProfit: 0, merchProfit: 0, offresNet: 0, marketingProfit: 0, marketingSpend: 0 };
-      dailyMap[d].marketingSpend += Number(item.amount);
+      initDate(d);
+      const amt = Number(item.amount);
+      dailyMap[d].marketingSpend += amt;
+      
+      if (item.source === MarketingSpendSource.GROS) dailyMap[d].grosAds += amt;
+      if (item.source === MarketingSpendSource.MERCH) dailyMap[d].merchAds += amt;
+      if (item.source === MarketingSpendSource.OFFRES) dailyMap[d].offresAds += amt;
     });
 
     return Object.values(dailyMap).sort((a, b) => a.date.localeCompare(b.date));
@@ -148,18 +181,16 @@ const Dashboard: React.FC = () => {
     const offMarketing = marketingSpends.filter(s => s.source === MarketingSpendSource.OFFRES && filterByDate(s.date_start)).reduce((a, c) => a + Number(c.amount), 0);
 
     const clientFiltered = getCalculatedMarketing().filter(item => filterByDate(item.date));
-    // Fix: Use callback parameter 'c' instead of 'm' to avoid "Cannot find name 'm'" error
     const clientRev = clientFiltered.filter(m => m.status === MarketingStatus.TERMINE).reduce((a, c) => a + Number(c.revenue), 0);
-    // Fix: Use callback parameter 'c' instead of 'm' to avoid "Cannot find name 'm'" error
     const clientExp = clientFiltered.filter(m => m.status === MarketingStatus.TERMINE).reduce((a, c) => a + Number(c.client_charges), 0);
     const clientMarketing = marketingSpends.filter(s => s.source === MarketingSpendSource.MARKETING_CLIENT && filterByDate(s.date_start)).reduce((a, c) => a + Number(c.amount), 0);
 
     return [
-      { name: 'Gros', rev: grosRev, exp: grosProd, marketing: grosMarketing, net: grosRev - grosProd - grosMarketing },
-      { name: 'Vendeurs', rev: swRev, exp: swProd, marketing: swMarketing, net: swRev - swProd - swMarketing },
-      { name: 'Merch', rev: merchRev, exp: merchProd, marketing: merchMarketing, net: merchRev - merchProd - merchMarketing },
-      { name: 'Plans', rev: offRev, exp: offExp, marketing: offMarketing, net: offRev - offExp - offMarketing },
-      { name: 'Services', rev: clientRev, exp: clientExp, marketing: clientMarketing, net: clientRev - clientExp - clientMarketing },
+      { name: 'Gros', rev: grosRev, exp: grosProd, marketing: grosMarketing, net: grosRev - grosProd - grosMarketing, color: 'text-blue-600', bg: 'bg-blue-50' },
+      { name: 'Vendeurs', rev: swRev, exp: swProd, marketing: swMarketing, net: swRev - swProd - swMarketing, color: 'text-indigo-600', bg: 'bg-indigo-50' },
+      { name: 'Merch', rev: merchRev, exp: merchProd, marketing: merchMarketing, net: merchRev - merchProd - merchMarketing, color: 'text-purple-600', bg: 'bg-purple-50' },
+      { name: 'Plans', rev: offRev, exp: offExp, marketing: offMarketing, net: offRev - offExp - offMarketing, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+      { name: 'Services', rev: clientRev, exp: clientExp, marketing: clientMarketing, net: clientRev - clientExp - clientMarketing, color: 'text-slate-600', bg: 'bg-slate-50' },
     ];
   }, [getCalculatedGros, getCalculatedSiteweb, getCalculatedMerch, getCalculatedMarketing, offres, marketingSpends, dashboardDateStart, dashboardDateEnd]);
 
@@ -171,11 +202,12 @@ const Dashboard: React.FC = () => {
   ];
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500 pb-12">
+    <div className="space-y-10 animate-in fade-in duration-500 pb-20">
+      {/* Header */}
       <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6">
         <div>
-          <h2 className="text-3xl font-black text-slate-800 tracking-tight">Tableau de Bord</h2>
-          <p className="text-slate-500 font-medium italic">Analyse {dashboardDateStart || dashboardDateEnd ? 'filtrée par période' : 'globale'}.</p>
+          <h2 className="text-3xl font-black text-slate-800 tracking-tight">Tableau de Bord Operations</h2>
+          <p className="text-slate-500 font-medium italic">Consolidation financière en temps réel.</p>
         </div>
         
         <div className="flex flex-wrap items-center gap-3 p-3 bg-white border border-slate-100 rounded-3xl shadow-sm">
@@ -206,6 +238,7 @@ const Dashboard: React.FC = () => {
         </div>
       </div>
 
+      {/* KPI Section */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {kpis.map((kpi, idx) => (
           <div key={idx} className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm transition-all hover:shadow-md">
@@ -218,116 +251,180 @@ const Dashboard: React.FC = () => {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-        <div className="xl:col-span-2 space-y-8">
-           <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm">
-             <div className="flex items-center justify-between mb-6">
-                <h4 className="font-bold text-slate-800 text-lg">Rentabilité par Pilier</h4>
-                <div className="px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-[10px] font-black uppercase tracking-widest">
-                  ROI Piliers
-                </div>
-             </div>
-             <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-                {pillarStats.map(p => (
-                  <div key={p.name} className="p-4 rounded-2xl bg-slate-50 border border-slate-100 space-y-3 transition-all hover:border-blue-100 hover:bg-white">
-                    <p className="text-[10px] font-black uppercase text-blue-600 tracking-wider">{p.name}</p>
-                    <div className="space-y-1">
-                      <div className="flex justify-between text-[10px] font-bold">
-                        <span className="text-slate-400 uppercase">Rev:</span>
-                        <span className="text-slate-700">{formatCurrency(p.rev)}</span>
-                      </div>
-                      <div className="flex justify-between text-[10px] font-bold">
-                        <span className="text-slate-400 uppercase">MKT:</span>
-                        <span className="text-purple-600">{formatCurrency(p.marketing)}</span>
-                      </div>
-                    </div>
-                    <div className="pt-2 border-t border-slate-200 flex justify-between items-center">
-                       <span className="text-[10px] font-black uppercase text-slate-400">Net:</span>
-                       <span className={`text-xs font-black ${p.net >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>{formatCurrency(p.net)}</span>
-                    </div>
-                  </div>
-                ))}
-             </div>
-           </div>
-
-           <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm h-[350px]">
-              <h4 className="font-bold text-slate-800 text-lg mb-6">Distribution Profit Net</h4>
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={pillarStats}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8', fontWeight: 600 }} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8', fontWeight: 600 }} tickFormatter={(val) => `${(val / 1000).toFixed(0)}k`} />
-                  <Tooltip cursor={{ fill: '#f8fafc' }} contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: '11px', fontWeight: 'bold' }} />
-                  <Bar dataKey="net" radius={[6, 6, 0, 0]} barSize={40}>
-                    {pillarStats.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.net >= 0 ? '#10b981' : '#ef4444'} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-           </div>
+      {/* Rentabilité par Pilier Refined UI */}
+      <div className="space-y-6">
+        <div className="flex items-center gap-3">
+          <LayoutGrid className="text-slate-400" size={20} />
+          <h3 className="text-xl font-black text-slate-800 tracking-tight">Rentabilité par Pilier</h3>
         </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+          {pillarStats.map(p => (
+            <div key={p.name} className={`relative overflow-hidden bg-white rounded-[2.5rem] border border-slate-100 shadow-sm p-6 group transition-all hover:shadow-xl hover:-translate-y-1`}>
+              <div className="flex justify-between items-start mb-8">
+                <div className={`px-3 py-1 rounded-full ${p.bg} ${p.color} text-[9px] font-black uppercase tracking-widest`}>
+                  {p.name}
+                </div>
+                {p.net >= 0 ? <ArrowUpRight size={16} className="text-emerald-500" /> : <ArrowDownRight size={16} className="text-red-500" />}
+              </div>
+              
+              <div className="mb-8">
+                <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">Profit Net</p>
+                <h4 className={`text-xl font-black tracking-tighter ${p.net >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+                  {formatCurrency(p.net)}
+                </h4>
+              </div>
 
-        <div className="bg-slate-900 text-white p-8 rounded-3xl shadow-xl shadow-slate-200 relative overflow-hidden flex flex-col justify-between min-h-[500px]">
-          <div className="relative z-10">
-            <p className="text-blue-400 text-xs font-black uppercase tracking-widest mb-4">Solde Net Final</p>
-            <h4 className="text-4xl font-black mb-4 tracking-tighter">{formatCurrency(data.profit_net_final)}</h4>
-            <p className="text-slate-400 text-sm font-medium leading-relaxed">Profit calculé incluant Gros, Vendeurs, Merch, Offres et Marketing Services.</p>
-          </div>
-          
-          <div className="relative z-10 space-y-3 mt-12">
-            <div className="p-4 bg-slate-800/50 rounded-2xl flex items-center justify-between border border-white/5">
-               <span className="text-[10px] font-black uppercase text-slate-500">Global ROI</span>
-               <span className="text-xs font-black text-blue-400">
-                {data.total_marketing_spend > 0 ? (( (data.encaisse_reel + data.profit_attendu) / data.total_marketing_spend)).toFixed(2) + 'x' : 'N/A'}
-               </span>
+              <div className="pt-6 border-t border-slate-50 space-y-2">
+                <div className="flex justify-between items-center text-[10px] font-bold">
+                  <span className="text-slate-400 uppercase tracking-tighter">Revenue</span>
+                  <span className="text-slate-700">{formatCurrency(p.rev)}</span>
+                </div>
+                <div className="flex justify-between items-center text-[10px] font-bold">
+                  <span className="text-slate-400 uppercase tracking-tighter">Marketing</span>
+                  <span className="text-purple-600">-{formatCurrency(p.marketing)}</span>
+                </div>
+              </div>
             </div>
-            <div className="p-4 bg-emerald-500/10 rounded-2xl flex items-center justify-between border border-emerald-500/20">
-               <span className="text-[10px] font-black uppercase text-emerald-500">Marge Nette</span>
-               <span className="text-xs font-black text-emerald-400">
-                {data.encaisse_reel + data.profit_attendu > 0 ? ((data.profit_net_final / (data.encaisse_reel + data.profit_attendu)) * 100).toFixed(1) : 0}%
-               </span>
-            </div>
-          </div>
-          <TrendingUp size={150} className="absolute -bottom-10 -right-10 text-white/5 rotate-12" />
+          ))}
         </div>
       </div>
 
-      <div className="space-y-6">
+      {/* Main Solde Card */}
+      <div className="bg-slate-900 text-white p-10 rounded-[3.5rem] shadow-2xl shadow-slate-200 relative overflow-hidden flex flex-col lg:flex-row items-center justify-between gap-10">
+        <div className="relative z-10 space-y-4 max-w-xl text-center lg:text-left">
+          <p className="text-blue-400 text-xs font-black uppercase tracking-[0.3em]">Solde Net Final Global</p>
+          <h4 className="text-6xl font-black tracking-tighter">{formatCurrency(data.profit_net_final)}</h4>
+          <p className="text-slate-400 text-sm font-medium leading-relaxed">
+            Consolidation totale incluant tous les piliers business, après déduction des charges fixes et du marketing spend.
+          </p>
+        </div>
+        
+        <div className="relative z-10 grid grid-cols-2 gap-4 w-full lg:w-auto min-w-[320px]">
+          <div className="p-6 bg-slate-800/50 rounded-3xl border border-white/5 space-y-2">
+             <span className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Global ROI</span>
+             <p className="text-3xl font-black text-blue-400">
+              {data.total_marketing_spend > 0 ? (( (data.encaisse_reel + data.profit_attendu) / data.total_marketing_spend)).toFixed(2) + 'x' : 'N/A'}
+             </p>
+          </div>
+          <div className="p-6 bg-emerald-500/10 rounded-3xl border border-emerald-500/20 space-y-2">
+             <span className="text-[10px] font-black uppercase text-emerald-500 tracking-widest">Marge Nette</span>
+             <p className="text-3xl font-black text-emerald-400">
+              {data.encaisse_reel + data.profit_attendu > 0 ? ((data.profit_net_final / (data.encaisse_reel + data.profit_attendu)) * 100).toFixed(1) : 0}%
+             </p>
+          </div>
+        </div>
+        <TrendingUp size={300} className="absolute -bottom-20 -right-20 text-white/[0.02] rotate-12 pointer-events-none" />
+      </div>
+
+      {/* Temporal Pillar Performance Analysis */}
+      <div className="space-y-12 pt-8 border-t border-slate-100">
         <div className="flex items-center gap-3">
           <BarChart3 className="text-slate-400" size={24} />
-          <h3 className="text-xl font-black text-slate-800 tracking-tight">Performances Temporelles</h3>
+          <h3 className="text-2xl font-black text-slate-800 tracking-tight">Performances Temporelles par Pilier</h3>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <ChartCard title="Évolution Profit Merch" icon={TrendingUp} colorClass="text-purple-600">
-            <AreaChart data={timeSeriesData}>
-              <defs>
-                <linearGradient id="colorMerch" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#a855f7" stopOpacity={0.1}/>
-                  <stop offset="95%" stopColor="#a855f7" stopOpacity={0}/>
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-              <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fontSize: 9, fill: '#94a3b8'}} />
-              <YAxis axisLine={false} tickLine={false} tick={{fontSize: 9, fill: '#94a3b8'}} />
-              <Tooltip contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
-              <Area type="monotone" dataKey="merchProfit" stroke="#a855f7" fillOpacity={1} fill="url(#colorMerch)" strokeWidth={3} />
-            </AreaChart>
-          </ChartCard>
+        {/* Pillar: Commandes GROS */}
+        <section className="space-y-6">
+          <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 border border-blue-100 rounded-2xl w-fit">
+            <Truck className="text-blue-600" size={16} />
+            <h4 className="text-[11px] font-black text-blue-700 uppercase tracking-widest">Commandes GROS</h4>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <ChartCard title="Profit Gros" icon={TrendingUp} colorClass="text-emerald-600">
+              <AreaChart data={timeSeriesData}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fontSize: 9, fill: '#94a3b8'}} />
+                <YAxis axisLine={false} tickLine={false} tick={{fontSize: 9, fill: '#94a3b8'}} />
+                <Tooltip contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
+                <Area type="monotone" dataKey="grosProfit" stroke="#10b981" fill="#10b981" fillOpacity={0.05} strokeWidth={2} />
+              </AreaChart>
+            </ChartCard>
+            <ChartCard title="Pertes Gros (Retours)" icon={RotateCcw} colorClass="text-red-600">
+              <BarChart data={timeSeriesData}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fontSize: 9, fill: '#94a3b8'}} />
+                <YAxis axisLine={false} tickLine={false} tick={{fontSize: 9, fill: '#94a3b8'}} />
+                <Tooltip contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
+                <Bar dataKey="grosReturns" fill="#ef4444" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ChartCard>
+            <ChartCard title="Ads Gros" icon={Megaphone} colorClass="text-blue-600">
+              <AreaChart data={timeSeriesData}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fontSize: 9, fill: '#94a3b8'}} />
+                <YAxis axisLine={false} tickLine={false} tick={{fontSize: 9, fill: '#94a3b8'}} />
+                <Tooltip contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
+                <Area type="monotone" dataKey="grosAds" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.05} strokeWidth={2} />
+              </AreaChart>
+            </ChartCard>
+          </div>
+        </section>
 
-          <ChartCard title="Ads Spend vs Profit Total" icon={Megaphone} colorClass="text-purple-600">
-            <ComposedChart data={timeSeriesData}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-              <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fontSize: 9, fill: '#94a3b8'}} />
-              <YAxis axisLine={false} tickLine={false} tick={{fontSize: 9, fill: '#94a3b8'}} />
-              <Tooltip contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
-              <Legend verticalAlign="top" height={36} iconType="circle" wrapperStyle={{fontSize: '10px', fontWeight: 'bold'}} />
-              <Area name="Dépenses" type="monotone" dataKey="marketingSpend" fill="#ef4444" stroke="#ef4444" fillOpacity={0.1} strokeWidth={2} />
-              <Line name="Profit Retail" type="monotone" dataKey="retailProfit" stroke="#3b82f6" strokeWidth={2} dot={{r: 2}} />
-            </ComposedChart>
-          </ChartCard>
-        </div>
+        {/* Pillar: Commande MERCH */}
+        <section className="space-y-6">
+          <div className="flex items-center gap-2 px-4 py-2 bg-purple-50 border border-purple-100 rounded-2xl w-fit">
+            <LayoutGrid className="text-purple-600" size={16} />
+            <h4 className="text-[11px] font-black text-purple-700 uppercase tracking-widest">Commande MERCH</h4>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <ChartCard title="Profit Merch" icon={TrendingUp} colorClass="text-emerald-600">
+              <AreaChart data={timeSeriesData}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fontSize: 9, fill: '#94a3b8'}} />
+                <YAxis axisLine={false} tickLine={false} tick={{fontSize: 9, fill: '#94a3b8'}} />
+                <Tooltip contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
+                <Area type="monotone" dataKey="merchProfit" stroke="#10b981" fill="#10b981" fillOpacity={0.05} strokeWidth={2} />
+              </AreaChart>
+            </ChartCard>
+            <ChartCard title="Pertes Merch" icon={RotateCcw} colorClass="text-red-600">
+              <BarChart data={timeSeriesData}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fontSize: 9, fill: '#94a3b8'}} />
+                <YAxis axisLine={false} tickLine={false} tick={{fontSize: 9, fill: '#94a3b8'}} />
+                <Tooltip contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
+                <Bar dataKey="merchReturns" fill="#ef4444" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ChartCard>
+            <ChartCard title="Ads Merch" icon={Megaphone} colorClass="text-purple-600">
+              <AreaChart data={timeSeriesData}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fontSize: 9, fill: '#94a3b8'}} />
+                <YAxis axisLine={false} tickLine={false} tick={{fontSize: 9, fill: '#94a3b8'}} />
+                <Tooltip contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
+                <Area type="monotone" dataKey="merchAds" stroke="#a855f7" fill="#a855f7" fillOpacity={0.05} strokeWidth={2} />
+              </AreaChart>
+            </ChartCard>
+          </div>
+        </section>
+
+        {/* Pillar: OFFRES / PLANS */}
+        <section className="space-y-6">
+          <div className="flex items-center gap-2 px-4 py-2 bg-emerald-50 border border-emerald-100 rounded-2xl w-fit">
+            <ArrowUpRight className="text-emerald-600" size={16} />
+            <h4 className="text-[11px] font-black text-emerald-700 uppercase tracking-widest">OFFRES / PLANS</h4>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <ChartCard title="Profit Plans" icon={TrendingUp} colorClass="text-emerald-600">
+              <AreaChart data={timeSeriesData}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fontSize: 9, fill: '#94a3b8'}} />
+                <YAxis axisLine={false} tickLine={false} tick={{fontSize: 9, fill: '#94a3b8'}} />
+                <Tooltip contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
+                <Area type="monotone" dataKey="offresNet" stroke="#10b981" fill="#10b981" fillOpacity={0.05} strokeWidth={2} />
+              </AreaChart>
+            </ChartCard>
+            <ChartCard title="Ads Offres" icon={Megaphone} colorClass="text-emerald-600">
+              <AreaChart data={timeSeriesData}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fontSize: 9, fill: '#94a3b8'}} />
+                <YAxis axisLine={false} tickLine={false} tick={{fontSize: 9, fill: '#94a3b8'}} />
+                <Tooltip contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
+                <Area type="monotone" dataKey="offresAds" stroke="#10b981" fill="#10b981" fillOpacity={0.05} strokeWidth={2} />
+              </AreaChart>
+            </ChartCard>
+          </div>
+        </section>
       </div>
     </div>
   );
