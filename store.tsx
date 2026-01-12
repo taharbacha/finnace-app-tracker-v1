@@ -2,7 +2,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { 
-  CommandeGros, CommandeSiteweb, CommandeMerch, Offre, InventoryItem, Charge, MarketingService, MarketingSpend,
+  CommandeGros, CommandeSiteweb, CommandeMerch, Offre, InventoryItem, Charge, MarketingService, MarketingService as MarketingServiceType, MarketingSpend,
   CalculatedGros, CalculatedSiteweb, CalculatedMerch, CalculatedMarketing, DashboardData,
   GrosStatus, SitewebStatus, MerchStatus, OffreType, OffreCategory, MarketingStatus, MarketingSpendSource, MarketingSpendType,
   ChatMessage
@@ -48,12 +48,11 @@ const computeMerchCalculatedFields = (item: CommandeMerch): CalculatedMerch => {
   } else if (item.status === MerchStatus.RETOUR) {
     impact_perte = Number(item.prix_achat || 0);
   }
-  // en_livraison results in all impacts being 0
 
   return { ...item, profit, impact_encaisse, impact_attendu, impact_perte };
 };
 
-const computeMarketingCalculatedFields = (item: MarketingService) => {
+const computeMarketingCalculatedFields = (item: MarketingServiceType) => {
   const benefice_net = Number(item.revenue || 0) - Number(item.client_charges || 0);
   return { ...item, benefice_net };
 };
@@ -77,7 +76,7 @@ interface AppState {
   offres: Offre[];
   inventory: InventoryItem[];
   charges: Charge[];
-  marketingServices: MarketingService[];
+  marketingServices: MarketingServiceType[];
   marketingSpends: MarketingSpend[];
   dashboardDateStart: string;
   dashboardDateEnd: string;
@@ -122,7 +121,7 @@ interface AppState {
   addCharge: (label?: string) => Promise<void>;
   deleteCharge: (id: string) => Promise<void>;
   importCharges: (data: any[]) => Promise<void>;
-  updateMarketing: (id: string, field: keyof MarketingService, value: any) => Promise<void>;
+  updateMarketing: (id: string, field: keyof MarketingServiceType, value: any) => Promise<void>;
   addMarketing: () => Promise<void>;
   deleteMarketing: (id: string) => Promise<void>;
   updateMarketingSpend: (id: string, field: keyof MarketingSpend, value: any) => Promise<void>;
@@ -145,7 +144,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [offres, setOffres] = useState<Offre[]>([]);
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [charges, setCharges] = useState<Charge[]>([]);
-  const [marketingServices, setMarketingServices] = useState<MarketingService[]>([]);
+  const [marketingServices, setMarketingServices] = useState<MarketingServiceType[]>([]);
   const [marketingSpends, setMarketingSpends] = useState<MarketingSpend[]>([]);
   
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
@@ -260,7 +259,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const baseRecord = { reference: `G${Date.now()}`, client_name: '', client_phone: '', date_created: new Date().toISOString().split('T')[0], prix_achat_article: 0, impression: false, prix_impression: 0, prix_vente: 0, status: GrosStatus.EN_PRODUCTION, stock_note: '' };
     if (supabase) {
       const { data } = await supabase.from('commandes_gros').insert([computeGrosCalculatedFields(baseRecord as CommandeGros)]).select();
-      if (data) setGros(p => [data[0], ...p]);
+      if (data) setGros(p => p.some(o => o.id === data[0].id) ? p : [data[0], ...p]);
     } else {
       setGros(p => [{ ...baseRecord, id: crypto.randomUUID() } as CommandeGros, ...p]);
     }
@@ -279,7 +278,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const baseRecord = { reference: String(Date.now()).slice(-6), date_created: new Date().toISOString().split('T')[0], cout_article: 0, cout_impression: 0, prix_vente: 0, status: SitewebStatus.EN_LIVRAISON, stock_note: '', vendeur_name: 'V-X', vendeur_benefice: 0 };
     if (supabase) {
       const { data } = await supabase.from('commandes_siteweb').insert([computeSitewebCalculatedFields(baseRecord as CommandeSiteweb)]).select();
-      if (data) setSiteweb(p => [data[0], ...p]);
+      if (data) setSiteweb(p => p.some(o => o.id === data[0].id) ? p : [data[0], ...p]);
     } else {
       setSiteweb(p => [{ ...baseRecord, id: crypto.randomUUID() } as CommandeSiteweb, ...p]);
     }
@@ -298,7 +297,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const baseRecord = { reference: `M${Date.now()}`, client_name: '', produit: '', prix_achat: 0, prix_vente: 0, status: MerchStatus.EN_LIVRAISON, created_at: new Date().toISOString() };
     if (supabase) {
       const { data } = await supabase.from('commandes_merch').insert([baseRecord]).select();
-      if (data) setMerch(p => [data[0], ...p]);
+      if (data) setMerch(prev => prev.some(o => o.id === data[0].id) ? prev : [data[0], ...prev]);
     } else {
       setMerch(p => [{ ...baseRecord, id: crypto.randomUUID() } as CommandeMerch, ...p]);
     }
@@ -312,7 +311,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const importMerch = useCallback(async (d: any[]) => {
     if (supabase) {
       const { data } = await supabase.from('commandes_merch').insert(d).select();
-      if (data) setMerch(p => [...data, ...p]);
+      if (data) {
+        setMerch(prev => {
+          const existingIds = new Set(prev.map(item => item.id));
+          const newItems = data.filter(item => !existingIds.has(item.id));
+          return [...newItems, ...prev];
+        });
+      }
     } else {
       const mapped = d.map(i => ({ ...i, id: crypto.randomUUID() }));
       setMerch(p => [...mapped, ...p]);
@@ -332,14 +337,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const baseRecord = { name: 'Nouveau Stock', sku: 'SKU-' + Date.now(), quantity: 0, min_stock: 5, unit_cost: 0, supplier: '' };
     if (supabase) {
       const { data } = await supabase.from('inventory').insert([computeInventoryCalculatedFields(baseRecord as InventoryItem)]).select();
-      if (data) setInventory(p => [data[0], ...p]);
+      if (data) setInventory(p => p.some(o => o.id === data[0].id) ? p : [data[0], ...p]);
     } else {
       setInventory(p => [{ ...baseRecord, id: crypto.randomUUID() } as InventoryItem, ...p]);
     }
   }, []);
 
-  const updateMarketing = useCallback(async (id: string, field: keyof MarketingService, value: any) => {
-    let item: MarketingService | undefined;
+  const updateMarketing = useCallback(async (id: string, field: keyof MarketingServiceType, value: any) => {
+    let item: MarketingServiceType | undefined;
     setMarketingServices(p => p.map(i => {
       if (String(i.id) === String(id)) { item = { ...i, [field]: value }; return item; }
       return i;
@@ -350,10 +355,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const addMarketing = useCallback(async () => {
     const baseRecord = { client_name: 'Nouveau Client', service_description: '', date: new Date().toISOString().split('T')[0], revenue: 0, client_charges: 0, status: MarketingStatus.EN_COURS };
     if (supabase) {
-      const { data } = await supabase.from('marketing_services').insert([computeMarketingCalculatedFields(baseRecord as MarketingService)]).select();
-      if (data) setMarketingServices(p => [data[0], ...p]);
+      const { data } = await supabase.from('marketing_services').insert([computeMarketingCalculatedFields(baseRecord as MarketingServiceType)]).select();
+      if (data) setMarketingServices(p => p.some(o => o.id === data[0].id) ? p : [data[0], ...p]);
     } else {
-      setMarketingServices(p => [{ ...baseRecord, id: crypto.randomUUID() } as MarketingService, ...p]);
+      setMarketingServices(p => [{ ...baseRecord, id: crypto.randomUUID() } as MarketingServiceType, ...p]);
     }
   }, []);
 
@@ -366,7 +371,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const baseRecord = { date: new Date().toISOString().split('T')[0], type: OffreType.REVENUE, montant: 0, category: OffreCategory.OTHER, description: 'Nouveau Mouvement' };
     if (supabase) { 
       const { data } = await supabase.from('offres').insert([baseRecord]).select(); 
-      if (data) setOffres(p => [data[0], ...p]); 
+      if (data) setOffres(p => p.some(o => o.id === data[0].id) ? p : [data[0], ...p]); 
     } else {
       setOffres(p => [{ ...baseRecord, id: crypto.randomUUID() } as Offre, ...p]);
     }
@@ -386,7 +391,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const baseRecord = { date: new Date().toISOString().split('T')[0], label: l, montant: 0, note: '' }; 
     if (supabase) { 
       const { data } = await supabase.from('charges').insert([baseRecord]).select(); 
-      if (data) setCharges(p => [data[0], ...p]); 
+      if (data) setCharges(p => p.some(o => o.id === data[0].id) ? p : [data[0], ...p]); 
     } else {
       setCharges(p => [{ ...baseRecord, id: crypto.randomUUID() } as Charge, ...p]);
     }
@@ -404,7 +409,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const baseRecord = { date_start: new Date().toISOString().split('T')[0], date_end: new Date().toISOString().split('T')[0], source: MarketingSpendSource.GROS, type: MarketingSpendType.ADS, amount: 0, note: '' }; 
     if (supabase) { 
       const { data } = await supabase.from('marketing_spends').insert([baseRecord]).select(); 
-      if (data) setMarketingSpends(p => [data[0], ...p]); 
+      if (data) setMarketingSpends(p => p.some(o => o.id === data[0].id) ? p : [data[0], ...p]); 
     } else {
       setMarketingSpends(p => [{ ...baseRecord, id: crypto.randomUUID() } as MarketingSpend, ...p]);
     }
@@ -418,7 +423,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const { id: _, ...baseRecord } = t;
       if (supabase) { 
         const { data } = await supabase.from('commandes_siteweb').insert([computeSitewebCalculatedFields({ ...baseRecord, reference: t.reference + '-copy' } as CommandeSiteweb)]).select(); 
-        if (data) setSiteweb(p => [data[0], ...p]); 
+        if (data) setSiteweb(p => p.some(o => o.id === data[0].id) ? p : [data[0], ...p]); 
       } else {
         setSiteweb(p => [{ ...baseRecord, reference: t.reference + '-copy', id: crypto.randomUUID() } as CommandeSiteweb, ...p]);
       }
@@ -428,7 +433,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const importGros = useCallback(async (d: any[]) => {
     if (supabase) {
       const { data } = await supabase.from('commandes_gros').insert(d.map(computeGrosCalculatedFields)).select();
-      if (data) setGros(p => [...data, ...p]);
+      if (data) {
+        setGros(prev => {
+          const existingIds = new Set(prev.map(item => item.id));
+          const newItems = data.filter(item => !existingIds.has(item.id));
+          return [...newItems, ...prev];
+        });
+      }
     } else {
       setGros(p => [...d.map(i => ({ ...i, id: crypto.randomUUID() })), ...p]);
     }
@@ -437,7 +448,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const importSiteweb = useCallback(async (d: any[]) => {
     if (supabase) {
       const { data } = await supabase.from('commandes_siteweb').insert(d.map(computeSitewebCalculatedFields)).select();
-      if (data) setSiteweb(p => [...data, ...p]);
+      if (data) {
+        setSiteweb(prev => {
+          const existingIds = new Set(prev.map(item => item.id));
+          const newItems = data.filter(item => !existingIds.has(item.id));
+          return [...newItems, ...prev];
+        });
+      }
     } else {
       setSiteweb(p => [...d.map(i => ({ ...i, id: crypto.randomUUID() })), ...p]);
     }
@@ -446,7 +463,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const importOffres = useCallback(async (d: any[]) => {
     if (supabase) {
       const { data } = await supabase.from('offres').insert(d).select();
-      if (data) setOffres(p => [...data, ...p]);
+      if (data) {
+        setOffres(prev => {
+          const existingIds = new Set(prev.map(item => item.id));
+          const newItems = data.filter(item => !existingIds.has(item.id));
+          return [...newItems, ...prev];
+        });
+      }
     } else {
       setOffres(p => [...d.map(i => ({ ...i, id: crypto.randomUUID() })), ...p]);
     }
@@ -455,7 +478,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const importInventory = useCallback(async (d: any[]) => {
     if (supabase) {
       const { data } = await supabase.from('inventory').insert(d.map(computeInventoryCalculatedFields)).select();
-      if (data) setInventory(p => [...data, ...p]);
+      if (data) {
+        setInventory(prev => {
+          const existingIds = new Set(prev.map(item => item.id));
+          const newItems = data.filter(item => !existingIds.has(item.id));
+          return [...newItems, ...prev];
+        });
+      }
     } else {
       setInventory(p => [...d.map(i => ({ ...i, id: crypto.randomUUID() })), ...p]);
     }
@@ -464,7 +493,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const importCharges = useCallback(async (d: any[]) => {
     if (supabase) {
       const { data } = await supabase.from('charges').insert(d).select();
-      if (data) setCharges(p => [...data, ...p]);
+      if (data) {
+        setCharges(prev => {
+          const existingIds = new Set(prev.map(item => item.id));
+          const newItems = data.filter(item => !existingIds.has(item.id));
+          return [...newItems, ...prev];
+        });
+      }
     } else {
       setCharges(p => [...d.map(i => ({ ...i, id: crypto.randomUUID() })), ...p]);
     }
