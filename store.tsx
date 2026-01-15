@@ -1,8 +1,8 @@
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { 
-  CommandeGros, CommandeSiteweb, CommandeMerch, Offre, InventoryItem, Charge, MarketingService, MarketingService as MarketingServiceType, MarketingSpend,
+  CommandeGros, CommandeSiteweb, CommandeMerch, Offre, InventoryItem, Charge, MarketingService as MarketingServiceType, MarketingSpend, Retour,
   CalculatedGros, CalculatedSiteweb, CalculatedMerch, CalculatedMarketing, DashboardData,
   GrosStatus, SitewebStatus, MerchStatus, OffreType, OffreCategory, MarketingStatus, MarketingSpendSource, MarketingSpendType,
   ChatMessage
@@ -78,6 +78,7 @@ interface AppState {
   charges: Charge[];
   marketingServices: MarketingServiceType[];
   marketingSpends: MarketingSpend[];
+  retours: Retour[];
   dashboardDateStart: string;
   dashboardDateEnd: string;
   isAuthenticated: boolean;
@@ -127,6 +128,8 @@ interface AppState {
   updateMarketingSpend: (id: string, field: keyof MarketingSpend, value: any) => Promise<void>;
   addMarketingSpend: () => Promise<void>;
   deleteMarketingSpend: (id: string) => Promise<void>;
+  addRetour: (reference: string) => Promise<void>;
+  deleteRetour: (id: string) => Promise<void>;
 }
 
 const AppContext = createContext<AppState | undefined>(undefined);
@@ -146,48 +149,95 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [charges, setCharges] = useState<Charge[]>([]);
   const [marketingServices, setMarketingServices] = useState<MarketingServiceType[]>([]);
   const [marketingSpends, setMarketingSpends] = useState<MarketingSpend[]>([]);
+  const [retours, setRetours] = useState<Retour[]>([]);
   
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
 
   const [dashboardDateStart, setDashboardDateStart] = useState<string>('');
   const [dashboardDateEnd, setDashboardDateEnd] = useState<string>('');
 
-  useEffect(() => {
-    const fetchAllData = async () => {
-      if (!supabase) {
-        setIsInitialLoaded(true);
-        return;
-      }
-      setIsSyncing(true);
-      try {
-        const [ { data: g }, { data: s }, { data: m_orders }, { data: o }, { data: i }, { data: c }, { data: m }, { data: ms } ] = await Promise.all([
-          supabase.from('commandes_gros').select('*'),
-          supabase.from('commandes_siteweb').select('*'),
-          supabase.from('commandes_merch').select('*'),
-          supabase.from('offres').select('*'),
-          supabase.from('inventory').select('*'),
-          supabase.from('charges').select('*'),
-          supabase.from('marketing_services').select('*'),
-          supabase.from('marketing_spends').select('*')
-        ]);
-        if (g) setGros(g); 
-        if (s) setSiteweb(s); 
-        if (m_orders) setMerch(m_orders);
-        if (o) setOffres(o); 
-        if (i) setInventory(i); 
-        if (c) setCharges(c); 
-        if (m) setMarketingServices(m); 
-        if (ms) setMarketingSpends(ms);
-        setLastSynced(new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }));
-      } catch (e) { 
-        console.error("Supabase sync error on mount:", e); 
-      } finally { 
-        setIsSyncing(false); 
-        setIsInitialLoaded(true);
-      }
-    };
-    fetchAllData();
+  // Fix: Replaced NodeJS.Timeout with ReturnType<typeof setTimeout> to fix namespace error in browser environment
+  const realtimeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const fetchAllData = useCallback(async (isSilent = false) => {
+    if (!supabase) {
+      setIsInitialLoaded(true);
+      return;
+    }
+    if (!isSilent) setIsSyncing(true);
+    try {
+      const [ { data: g }, { data: s }, { data: m_orders }, { data: o }, { data: i }, { data: c }, { data: m }, { data: ms }, { data: r } ] = await Promise.all([
+        supabase.from('commandes_gros').select('*'),
+        supabase.from('commandes_siteweb').select('*'),
+        supabase.from('commandes_merch').select('*'),
+        supabase.from('offres').select('*'),
+        supabase.from('inventory').select('*'),
+        supabase.from('charges').select('*'),
+        supabase.from('marketing_services').select('*'),
+        supabase.from('marketing_spends').select('*'),
+        supabase.from('commandes_retours').select('*')
+      ]);
+      if (g) setGros(g); 
+      if (s) setSiteweb(s); 
+      if (m_orders) setMerch(m_orders);
+      if (o) setOffres(o); 
+      if (i) setInventory(i); 
+      if (c) setCharges(c); 
+      if (m) setMarketingServices(m); 
+      if (ms) setMarketingSpends(ms);
+      if (r) setRetours(r);
+      setLastSynced(new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }));
+    } catch (e) { 
+      console.error("Supabase fetch error:", e); 
+    } finally { 
+      if (!isSilent) setIsSyncing(false); 
+      setIsInitialLoaded(true);
+    }
   }, []);
+
+  // INITIAL FETCH & REALTIME SUBSCRIPTION
+  useEffect(() => {
+    fetchAllData();
+
+    if (!supabase) return;
+
+    // Supabase Realtime Strategy:
+    // Listen to ALL relevant tables. On any event, trigger debounced global refresh.
+    const tables = [
+      'commandes_gros', 
+      'commandes_siteweb', 
+      'commandes_merch', 
+      'offres', 
+      'inventory', 
+      'charges', 
+      'marketing_services', 
+      'marketing_spends',
+      'commandes_retours'
+    ];
+
+    const channel = supabase.channel('merchdz_realtime');
+
+    tables.forEach(table => {
+      channel.on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table },
+        (payload) => {
+          // Debounce logic to batch multiple rapid changes (1-3s delay target)
+          if (realtimeTimeoutRef.current) clearTimeout(realtimeTimeoutRef.current);
+          realtimeTimeoutRef.current = setTimeout(() => {
+            fetchAllData(true);
+          }, 750);
+        }
+      );
+    });
+
+    channel.subscribe();
+
+    return () => {
+      if (realtimeTimeoutRef.current) clearTimeout(realtimeTimeoutRef.current);
+      supabase.removeChannel(channel);
+    };
+  }, [fetchAllData]);
 
   const login = useCallback(async (password: string) => {
     if (!supabase) return false;
@@ -417,6 +467,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const deleteMarketingSpend = useCallback(async (id: string) => { if (supabase) await supabase.from('marketing_spends').delete().eq('id', id); setMarketingSpends(p => p.filter(i => String(i.id) !== String(id))); }, []);
   
+  const addRetour = useCallback(async (reference: string) => {
+    if (supabase) {
+      const { data, error } = await supabase
+        .from('commandes_retours')
+        .insert([{ order_reference: reference }])
+        .select()
+        .single();
+      if (data && !error) setRetours(prev => [data, ...prev]);
+    }
+  }, []);
+
+  const deleteRetour = useCallback(async (id: string) => {
+    if (supabase) {
+      const { error } = await supabase.from('commandes_retours').delete().eq('id', id);
+      if (!error) setRetours(prev => prev.filter(r => r.id !== id));
+    }
+  }, []);
+
   const duplicateSiteweb = useCallback(async (id: string) => { 
     const t = siteweb.find(i => String(i.id) === String(id)); 
     if (t) { 
@@ -566,14 +634,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   return (
     <AppContext.Provider value={{ 
-      gros, siteweb, merch, offres, inventory, charges, marketingServices, marketingSpends, dashboardDateStart, dashboardDateEnd, setDashboardDateRange,
+      gros, siteweb, merch, offres, inventory, charges, marketingServices, marketingSpends, retours, dashboardDateStart, dashboardDateEnd, setDashboardDateRange,
       isAuthenticated, login, logout, isSyncing, isCloudActive, lastSynced,
       chatHistory, addChatMessage, clearChat,
       updateGros, addGros, deleteGros, importGros, updateSiteweb, addSiteweb, duplicateSiteweb, deleteSiteweb, importSiteweb,
       updateMerch, addMerch, deleteMerch, importMerch,
       updateOffre, addOffre, deleteOffre, importOffres, updateInventory, addInventory, deleteInventory, importInventory,
       updateCharge, addCharge, deleteCharge, importCharges, updateMarketing, addMarketing, deleteMarketing,
-      updateMarketingSpend, addMarketingSpend, deleteMarketingSpend, getCalculatedGros, getCalculatedSiteweb, getCalculatedMerch, getCalculatedMarketing, getDashboardData, syncData
+      updateMarketingSpend, addMarketingSpend, deleteMarketingSpend, addRetour, deleteRetour,
+      getCalculatedGros, getCalculatedSiteweb, getCalculatedMerch, getCalculatedMarketing, getDashboardData, syncData
     }}>
       {isInitialLoaded ? children : null}
     </AppContext.Provider>

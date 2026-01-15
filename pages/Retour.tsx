@@ -1,41 +1,15 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { createClient } from '@supabase/supabase-js';
-import { RotateCcw, Search, Trash2, Plus, Loader2, CheckCircle2 } from 'lucide-react';
-import { Retour as IRetour } from '../types.ts';
-
-// Supabase configuration local to the page to avoid store logic changes
-// Fixed TypeScript errors by using type casting for import.meta.env and safely initializing Supabase client.
-const SUPABASE_URL = (import.meta as any).env?.VITE_SUPABASE_URL || '';
-const SUPABASE_KEY = (import.meta as any).env?.VITE_SUPABASE_ANON_KEY || '';
-const supabase = (SUPABASE_URL && SUPABASE_KEY) ? createClient(SUPABASE_URL, SUPABASE_KEY) : null;
+import { RotateCcw, Plus, Loader2, CheckCircle2, Trash2 } from 'lucide-react';
+import { useAppStore } from '../store.tsx';
 
 const Retour: React.FC = () => {
-  const [retours, setRetours] = useState<IRetour[]>([]);
+  const { retours, addRetour, deleteRetour, isSyncing } = useAppStore();
   const [scanValue, setScanValue] = useState('');
   const [isScanning, setIsScanning] = useState(false);
   const [lastSaved, setLastSaved] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
-
-  // Fetch initial data
-  useEffect(() => {
-    const fetchData = async () => {
-      if (!supabase) {
-        setIsLoading(false);
-        return;
-      }
-      const { data, error } = await supabase
-        .from('commandes_retours')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
-      if (data) setRetours(data);
-      setIsLoading(false);
-    };
-    fetchData();
-  }, []);
 
   // Always maintain focus on input when mode is active
   useEffect(() => {
@@ -54,8 +28,6 @@ const Retour: React.FC = () => {
 
     // Use a 400ms window for input to stabilize (finish scanner transmission)
     const saveTimeout = setTimeout(async () => {
-      if (!supabase) return;
-      
       const referenceToSave = trimmed;
       
       // STEP 1: Immediate state reset to allow next scan while processing
@@ -63,19 +35,10 @@ const Retour: React.FC = () => {
       setIsProcessing(true);
       
       try {
-        const { data, error } = await supabase
-          .from('commandes_retours')
-          .insert([{ order_reference: referenceToSave }])
-          .select()
-          .single();
-
-        if (data && !error) {
-          setRetours(prev => [data, ...prev]);
-          setLastSaved(referenceToSave);
-          
-          // Reset success indicator after 2s
-          setTimeout(() => setLastSaved(null), 2000);
-        }
+        await addRetour(referenceToSave);
+        setLastSaved(referenceToSave);
+        // Reset success indicator after 2s
+        setTimeout(() => setLastSaved(null), 2000);
       } catch (err) {
         console.error("Save error:", err);
       } finally {
@@ -84,12 +47,11 @@ const Retour: React.FC = () => {
     }, 400); 
 
     return () => clearTimeout(saveTimeout);
-  }, [scanValue, isScanning, isProcessing]);
+  }, [scanValue, isScanning, isProcessing, addRetour]);
 
   const handleDelete = async (id: string) => {
-    if (!supabase || !confirm('Supprimer ce retour ?')) return;
-    const { error } = await supabase.from('commandes_retours').delete().eq('id', id);
-    if (!error) setRetours(prev => prev.filter(r => r.id !== id));
+    if (!confirm('Supprimer ce retour ?')) return;
+    await deleteRetour(id);
   };
 
   const formatDate = (dateStr: string) => {
@@ -167,10 +129,10 @@ const Retour: React.FC = () => {
           <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">Historique des Retours ({retours.length})</h3>
         </div>
 
-        {isLoading ? (
+        {isSyncing ? (
           <div className="p-20 flex flex-col items-center justify-center text-slate-400 gap-4">
              <Loader2 size={32} className="animate-spin" />
-             <span className="text-xs font-bold uppercase tracking-widest">Chargement...</span>
+             <span className="text-xs font-bold uppercase tracking-widest">Mise à jour...</span>
           </div>
         ) : (
           <div className="overflow-x-auto">
