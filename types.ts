@@ -93,6 +93,7 @@ export interface CommandeGros {
   prix_vente: number;
   status: GrosStatus;
   stock_note: string;
+  processed: boolean;
 }
 
 export interface CommandeSiteweb {

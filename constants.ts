@@ -13,7 +13,9 @@ export const INITIAL_GROS: CommandeGros[] = [
     prix_impression: 200,
     prix_vente: 2500,
     status: GrosStatus.LIVREE_ENCAISSE,
-    stock_note: 'Validated'
+    stock_note: 'Validated',
+    // Added processed property to satisfy CommandeGros interface requirements
+    processed: true
   }
 ];
 

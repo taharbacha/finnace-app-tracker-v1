@@ -91,7 +91,7 @@ interface AppState {
   login: (password: string) => Promise<boolean>;
   logout: () => void;
   setDashboardDateRange: (start: string, end: string) => void;
-  updateGros: (id: string, field: keyof CommandeGros, value: any) => Promise<void>;
+  updateGros: (id: string, updates: Partial<CommandeGros>) => Promise<void>;
   addGros: () => Promise<void>;
   deleteGros: (id: string) => Promise<void>;
   importGros: (data: any[]) => Promise<void>;
@@ -296,17 +296,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, [gros, siteweb, merch, offres, inventory, charges, marketingServices, marketingSpends]);
 
-  const updateGros = useCallback(async (id: string, field: keyof CommandeGros, value: any) => {
-    let item: CommandeGros | undefined;
-    setGros(p => p.map(i => {
-      if (String(i.id) === String(id)) { item = { ...i, [field]: value }; return item; }
-      return i;
-    }));
-    if (supabase && item) await supabase.from('commandes_gros').update(computeGrosCalculatedFields(item)).eq('id', id);
+  const updateGros = useCallback(async (id: string, updates: Partial<CommandeGros>) => {
+    setGros(prev => {
+      const currentItem = prev.find(i => String(i.id) === String(id));
+      if (!currentItem) return prev;
+      const updatedItem = { ...currentItem, ...updates };
+      if (supabase) {
+        supabase.from('commandes_gros')
+          .update(computeGrosCalculatedFields(updatedItem))
+          .eq('id', id)
+          .then(({ error }) => {
+            if (error) console.error("Supabase update error:", error);
+          });
+      }
+      return prev.map(i => String(i.id) === String(id) ? updatedItem : i);
+    });
   }, []);
 
   const addGros = useCallback(async () => {
-    const baseRecord = { reference: `G${Date.now()}`, client_name: '', client_phone: '', date_created: new Date().toISOString().split('T')[0], prix_achat_article: 0, impression: false, prix_impression: 0, prix_vente: 0, status: GrosStatus.EN_PRODUCTION, stock_note: '' };
+    const baseRecord = { reference: `G${Date.now()}`, client_name: '', client_phone: '', date_created: new Date().toISOString().split('T')[0], prix_achat_article: 0, impression: false, prix_impression: 0, prix_vente: 0, status: GrosStatus.EN_PRODUCTION, stock_note: '', processed: false };
     if (supabase) {
       const { data } = await supabase.from('commandes_gros').insert([computeGrosCalculatedFields(baseRecord as CommandeGros)]).select();
       if (data) setGros(p => p.some(o => o.id === data[0].id) ? p : [data[0], ...p]);

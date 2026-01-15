@@ -20,7 +20,6 @@ const CommandesGros: React.FC = () => {
   const [dateEnd, setDateEnd] = useState('');
   const [analysisMode, setAnalysisMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [processedIds, setProcessedIds] = useState<Set<string>>(new Set());
   const [showHeaders, setShowHeaders] = useState(true);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -84,13 +83,6 @@ const CommandesGros: React.FC = () => {
     setSelectedIds(next);
   };
 
-  const toggleProcessed = (id: string) => {
-    const next = new Set(processedIds);
-    if (next.has(id)) next.delete(id);
-    else next.add(id);
-    setProcessedIds(next);
-  };
-
   const selectAll = () => {
     if (selectedIds.size === filteredData.length) setSelectedIds(new Set());
     else setSelectedIds(new Set(filteredData.map(i => i.id)));
@@ -127,7 +119,8 @@ const CommandesGros: React.FC = () => {
           prix_impression: Number(obj.prix_impression) || 0,
           prix_vente: Number(obj.prix_vente) || 0,
           status: (obj.status as GrosStatus) || GrosStatus.EN_PRODUCTION,
-          stock_note: obj.stock_note || ''
+          stock_note: obj.stock_note || '',
+          processed: obj.processed === 'true'
         };
       });
       importGros(importedData);
@@ -304,28 +297,28 @@ const CommandesGros: React.FC = () => {
                     </button>
                   </td>
                   <td className="p-2">
-                    <EditableCell value={item.reference} onSave={(v) => updateGros(item.id, 'reference', v)} className="font-mono text-[10px] font-black text-blue-600 min-w-[60px]" />
+                    <EditableCell value={item.reference} onSave={(v) => updateGros(item.id, { reference: v })} className="font-mono text-[10px] font-black text-blue-600 min-w-[60px]" />
                   </td>
                   <td className="p-2">
-                    <EditableCell value={item.client_name} onSave={(v) => updateGros(item.id, 'client_name', v)} className="font-bold text-slate-800 text-sm min-w-[120px]" />
+                    <EditableCell value={item.client_name} onSave={(v) => updateGros(item.id, { client_name: v })} className="font-bold text-slate-800 text-sm min-w-[120px]" />
                   </td>
                   <td className="p-2">
-                    <EditableCell type="date" value={item.date_created} onSave={(v) => updateGros(item.id, 'date_created', v)} className="text-[10px] text-slate-400 font-bold" />
+                    <EditableCell type="date" value={item.date_created} onSave={(v) => updateGros(item.id, { date_created: v })} className="text-[10px] text-slate-400 font-bold" />
                   </td>
                   <td className="p-2">
                     <div className="flex items-center justify-end gap-2 text-right">
-                      <EditableCell type="number" value={item.prix_achat_article} onSave={(v) => updateGros(item.id, 'prix_achat_article', v)} prefix="A: " className="text-[10px] h-auto text-slate-500 min-w-[70px]" />
+                      <EditableCell type="number" value={item.prix_achat_article} onSave={(v) => updateGros(item.id, { prix_achat_article: v })} prefix="A: " className="text-[10px] h-auto text-slate-500 min-w-[70px]" />
                       <span className="text-slate-300 text-[10px] font-bold">+</span>
-                      <EditableCell type="number" value={item.prix_impression} onSave={(v) => updateGros(item.id, 'prix_impression', v)} prefix="I: " className="text-[10px] h-auto text-slate-500 min-w-[70px]" />
+                      <EditableCell type="number" value={item.prix_impression} onSave={(v) => updateGros(item.id, { prix_impression: v })} prefix="I: " className="text-[10px] h-auto text-slate-500 min-w-[70px]" />
                     </div>
                   </td>
                   <td className="p-2 text-right font-black text-slate-900">
-                    <EditableCell type="number" value={item.prix_vente} onSave={(v) => updateGros(item.id, 'prix_vente', v)} className="text-right" />
+                    <EditableCell type="number" value={item.prix_vente} onSave={(v) => updateGros(item.id, { prix_vente: v })} className="text-right" />
                   </td>
                   <td className="p-2">
                     <select 
                       value={item.status} 
-                      onChange={(e) => updateGros(item.id, 'status', e.target.value as GrosStatus)} 
+                      onChange={(e) => updateGros(item.id, { status: e.target.value as GrosStatus })} 
                       className={`w-full text-[10px] p-2 rounded-xl border-none font-black uppercase tracking-widest cursor-pointer transition-colors
                         ${item.status === GrosStatus.LIVREE_ENCAISSE ? 'bg-emerald-50 text-emerald-700' : 
                           item.status === GrosStatus.LIVREE_NON_ENCAISSE ? 'bg-purple-50 text-purple-700' :
@@ -341,9 +334,9 @@ const CommandesGros: React.FC = () => {
                   <td className="p-2 text-center">
                     <div className="flex items-center justify-center gap-1">
                       <button 
-                        onClick={() => toggleProcessed(item.id)} 
+                        onClick={() => updateGros(item.id, { processed: !item.processed })} 
                         title="Marquer comme traité"
-                        className={`p-2 transition-all rounded-lg ${processedIds.has(item.id) ? 'text-emerald-500 bg-emerald-50' : 'text-slate-300 hover:text-slate-600 hover:bg-slate-100'}`}
+                        className={`p-2 transition-all rounded-lg ${item.processed ? 'text-emerald-500 bg-emerald-50' : 'text-slate-300 hover:text-slate-600 hover:bg-slate-100'}`}
                       >
                         <ClipboardCheck size={18} />
                       </button>
