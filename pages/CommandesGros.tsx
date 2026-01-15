@@ -1,4 +1,3 @@
-
 import React, { useRef, useState, useMemo } from 'react';
 import { useAppStore } from '../store.tsx';
 import EditableCell from '../components/EditableCell.tsx';
@@ -50,6 +49,12 @@ const CommandesGros: React.FC = () => {
       .filter(o => o.status === GrosStatus.LIVREE_ENCAISSE)
       .reduce((acc, curr) => acc + (curr.prix_vente - curr.cost), 0);
       
+    // New Calculation: Livrée Non Encaissé
+    const nonEncaisseData = kpiData.filter(o => o.status === GrosStatus.LIVREE_NON_ENCAISSE);
+    const profitNonEncaisse = nonEncaisseData.reduce((acc, curr) => acc + (curr.prix_vente - curr.cost), 0);
+    const totalANonEncaisse = nonEncaisseData.reduce((acc, curr) => acc + Number(curr.prix_achat_article || 0), 0);
+    const totalINonEncaisse = nonEncaisseData.reduce((acc, curr) => acc + Number(curr.prix_impression || 0), 0);
+
     const enLivraisonValue = kpiData
       .filter(o => o.status === GrosStatus.EN_LIVRAISON)
       .reduce((acc, curr) => acc + Number(curr.prix_vente), 0);
@@ -71,7 +76,7 @@ const CommandesGros: React.FC = () => {
       retour: kpiData.filter(o => o.status === GrosStatus.RETOUR).length,
     };
     
-    return { totalProd, totalA, totalI, profitEncaisse, enLivraisonValue, enLivraisonProfit, costRetour, counts };
+    return { totalProd, totalA, totalI, profitEncaisse, profitNonEncaisse, totalANonEncaisse, totalINonEncaisse, enLivraisonValue, enLivraisonProfit, costRetour, counts };
   }, [kpiData]);
 
   const formatPrice = (val: number) => val.toLocaleString('fr-DZ') + ' DA';
@@ -176,7 +181,7 @@ const CommandesGros: React.FC = () => {
       {/* KPI Cards Section */}
       {showHeaders && (
         <div className="space-y-6 animate-in fade-in zoom-in-95 duration-300">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
             {/* KPI A: Production */}
             <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-col justify-between">
               <div>
@@ -202,6 +207,24 @@ const CommandesGros: React.FC = () => {
               </div>
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Profit Encaissé</p>
               <h3 className="text-2xl font-black text-emerald-600">{formatPrice(stats.profitEncaisse)}</h3>
+            </div>
+
+            {/* NEW KPI: Profit Livrée Non Encaissé */}
+            <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-col justify-between">
+              <div>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Profit Livré (Non Encaissé)</p>
+                <h3 className="text-2xl font-black text-purple-600">{formatPrice(stats.profitNonEncaisse)}</h3>
+              </div>
+              <div className="flex gap-2 mt-4">
+                <div className="flex-1 bg-slate-50 p-3 rounded-2xl border border-slate-100">
+                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">Article (A)</p>
+                  <p className="text-xs font-bold text-slate-700">{formatPrice(stats.totalANonEncaisse)}</p>
+                </div>
+                <div className="flex-1 bg-purple-50/50 p-3 rounded-2xl border border-purple-100/50">
+                  <p className="text-[9px] font-black text-purple-400 uppercase tracking-tighter">Impr. (I)</p>
+                  <p className="text-xs font-bold text-purple-700">{formatPrice(stats.totalINonEncaisse)}</p>
+                </div>
+              </div>
             </div>
 
             {/* KPI C: En Livraison */}
