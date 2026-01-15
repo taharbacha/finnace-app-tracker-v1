@@ -62,21 +62,26 @@ const Wholesale: React.FC = () => {
               {filteredData.map(item => (
                 <tr key={item.id} className="hover:bg-blue-50/20 transition-all group">
                   <td className="p-3">
-                    <EditableCell value={item.reference} onSave={v => updateGros(item.id, 'reference', v)} className="font-mono font-black text-blue-600 text-xs" />
-                    <EditableCell type="date" value={item.date_created} onSave={v => updateGros(item.id, 'date_created', v)} className="text-[10px] text-slate-400" />
+                    {/* Fixed: updateGros now takes a Partial object as expected by the store */}
+                    <EditableCell value={item.reference} onSave={v => updateGros(item.id, { reference: String(v) })} className="font-mono font-black text-blue-600 text-xs" />
+                    <EditableCell type="date" value={item.date_created} onSave={v => updateGros(item.id, { date_created: String(v) })} className="text-[10px] text-slate-400" />
                   </td>
                   <td className="p-3">
-                    <EditableCell value={item.client_name} onSave={v => updateGros(item.id, 'client_name', v)} className="font-bold text-slate-800" />
-                    <EditableCell value={item.client_phone} onSave={v => updateGros(item.id, 'client_phone', v)} className="text-[10px] text-slate-400" />
+                    {/* Fixed: updateGros now takes a Partial object as expected by the store */}
+                    <EditableCell value={item.client_name} onSave={v => updateGros(item.id, { client_name: String(v) })} className="font-bold text-slate-800" />
+                    <EditableCell value={item.client_phone} onSave={v => updateGros(item.id, { client_phone: String(v) })} className="text-[10px] text-slate-400" />
                   </td>
                   <td className="p-3 text-right">
-                    <EditableCell type="number" value={item.prix_achat_article} onSave={v => updateGros(item.id, 'prix_achat_article', v)} className="font-bold text-slate-600" />
+                    {/* Fixed: updateGros now takes a Partial object as expected by the store */}
+                    <EditableCell type="number" value={item.prix_achat_article} onSave={v => updateGros(item.id, { prix_achat_article: Number(v) })} className="font-bold text-slate-600" />
                   </td>
                   <td className="p-3 text-right">
-                    <EditableCell type="number" value={item.prix_vente} onSave={v => updateGros(item.id, 'prix_vente', v)} className="font-black text-slate-900" />
+                    {/* Fixed: updateGros now takes a Partial object as expected by the store */}
+                    <EditableCell type="number" value={item.prix_vente} onSave={v => updateGros(item.id, { prix_vente: Number(v) })} className="font-black text-slate-900" />
                   </td>
                   <td className="p-3 text-center">
-                    <select value={item.status} onChange={e => updateGros(item.id, 'status', e.target.value)} className="text-[10px] font-black uppercase p-1 bg-slate-100 rounded-lg">
+                    {/* Fixed: updateGros now takes a Partial object as expected by the store */}
+                    <select value={item.status} onChange={e => updateGros(item.id, { status: e.target.value as any })} className="text-[10px] font-black uppercase p-1 bg-slate-100 rounded-lg">
                       {GROS_STATUS_OPTIONS.map(o => <option key={o} value={o}>{o.replace(/_/g, ' ')}</option>)}
                     </select>
                   </td>
