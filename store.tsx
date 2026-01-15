@@ -156,6 +156,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [dashboardDateStart, setDashboardDateStart] = useState<string>('');
   const [dashboardDateEnd, setDashboardDateEnd] = useState<string>('');
 
+  // Fix: Replaced NodeJS.Timeout with ReturnType<typeof setTimeout> to fix namespace error in browser environment
   const realtimeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const fetchAllData = useCallback(async (isSilent = false) => {
@@ -194,9 +195,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, []);
 
+  // INITIAL FETCH & REALTIME SUBSCRIPTION
   useEffect(() => {
     fetchAllData();
+
     if (!supabase) return;
+
+    // Supabase Realtime Strategy:
+    // Listen to ALL relevant tables. On any event, trigger debounced global refresh.
     const tables = [
       'commandes_gros', 
       'commandes_siteweb', 
@@ -208,12 +214,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       'marketing_spends',
       'commandes_retours'
     ];
+
     const channel = supabase.channel('merchdz_realtime');
+
     tables.forEach(table => {
       channel.on(
         'postgres_changes',
         { event: '*', schema: 'public', table },
         (payload) => {
+          // Debounce logic to batch multiple rapid changes (1-3s delay target)
           if (realtimeTimeoutRef.current) clearTimeout(realtimeTimeoutRef.current);
           realtimeTimeoutRef.current = setTimeout(() => {
             fetchAllData(true);
@@ -221,7 +230,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
       );
     });
+
     channel.subscribe();
+
     return () => {
       if (realtimeTimeoutRef.current) clearTimeout(realtimeTimeoutRef.current);
       supabase.removeChannel(channel);
@@ -237,7 +248,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         .select('password_hash')
         .eq('id', 'auth')
         .single();
+
       if (error || !data) return false;
+
       if (data.password_hash === inputHash) {
         setIsAuthenticated(true);
         return true;
@@ -249,13 +262,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, []);
 
   const logout = useCallback(() => setIsAuthenticated(false), []);
+
   const setDashboardDateRange = useCallback((start: string, end: string) => {
     setDashboardDateStart(start);
     setDashboardDateEnd(end);
   }, []);
+
   const addChatMessage = useCallback((role: 'user' | 'assistant', text: string) => {
     setChatHistory(prev => [...prev, { id: crypto.randomUUID(), role, text }]);
   }, []);
+
   const clearChat = useCallback(() => setChatHistory([]), []);
 
   const syncData = useCallback(async () => {
@@ -576,7 +592,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }), [gros]);
 
   const getCalculatedSiteweb = useCallback((): CalculatedSiteweb[] => siteweb.map(i => ({ ...i, profit_net: computeSitewebCalculatedFields(i).benefice_net })), [siteweb]);
+  
   const getCalculatedMerch = useCallback((): CalculatedMerch[] => merch.map(computeMerchCalculatedFields), [merch]);
+
   const getCalculatedMarketing = useCallback((): CalculatedMarketing[] => marketingServices.map(i => {
     const calc = computeMarketingCalculatedFields(i);
     return { ...i, net_profit: i.status === MarketingStatus.TERMINE ? calc.benefice_net : 0 };
@@ -587,24 +605,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const cs = getCalculatedSiteweb();
     const cm = getCalculatedMerch();
     const filter = (d: string) => (!startDate || d >= startDate) && (!endDate || d <= endDate);
+    
     const fcg = cg.filter(i => filter(i.date_created)); 
     const fcs = cs.filter(i => filter(i.date_created));
     const fcm = cm.filter(i => filter(i.created_at));
     const fo = offres.filter(i => filter(i.date)); 
     const fc = charges.filter(i => filter(i.date)); 
     const fm = marketingSpends.filter(i => filter(i.date_start));
+    
     const enc = fcg.reduce((a, c) => a + c.profit_encaisse, 0) + 
                 fcs.filter(o => o.status === SitewebStatus.LIVREE).reduce((a, c) => a + c.profit_net, 0) +
                 fcm.reduce((a, c) => a + c.impact_encaisse, 0);
+
     const att = fcg.reduce((a, c) => a + c.profit_attendu, 0) + 
                 fcs.filter(o => o.status === SitewebStatus.LIVREE_NON_ENCAISSEE).reduce((a, c) => a + c.profit_net, 0) +
                 fcm.reduce((a, c) => a + c.impact_attendu, 0);
+
     const per = fcg.reduce((a, c) => a + c.perte, 0) + 
                 fcs.filter(o => o.status === SitewebStatus.RETOUR).reduce((a, c) => a + (Number(c.cout_article) + Number(c.cout_impression)), 0) +
                 fcm.reduce((a, c) => a + c.impact_perte, 0);
+
     const no = fo.reduce((a, c) => c.type === OffreType.REVENUE ? a + Number(c.montant) : a - Number(c.montant), 0);
     const tc = fc.reduce((a, c) => a + Number(c.montant), 0); 
     const tm = fm.reduce((a, c) => a + Number(c.amount), 0);
+    
     return { 
       encaisse_reel: enc, 
       profit_attendu: att, 

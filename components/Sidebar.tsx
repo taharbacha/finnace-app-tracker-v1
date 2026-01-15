@@ -24,10 +24,9 @@ import {
 interface SidebarProps {
   isMobileOpen?: boolean;
   onClose?: () => void;
-  isCollapsed?: boolean;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen, onClose, isCollapsed }) => {
+const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen, onClose }) => {
   const { isSyncing, isCloudActive, syncData, lastSynced } = useAppStore();
   
   // Group 1: Finance & Ops
@@ -72,9 +71,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen, onClose, isCollapsed })
   return (
     <aside className={`
       fixed inset-y-0 left-0 z-50 w-64 bg-slate-900 text-slate-400 flex flex-col shadow-2xl transition-transform duration-300 ease-in-out
-      md:relative md:h-screen md:sticky md:top-0
+      md:relative md:translate-x-0 md:h-screen md:sticky md:top-0
       ${isMobileOpen ? 'translate-x-0' : '-translate-x-full'}
-      ${isCollapsed ? 'md:hidden' : 'md:translate-x-0 md:sticky'}
     `}>
       <div className="p-8 pb-4 flex items-center justify-between pt-[calc(2rem+env(safe-area-inset-top))]">
         <div className="flex items-center gap-3">
