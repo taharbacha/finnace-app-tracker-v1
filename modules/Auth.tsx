@@ -12,9 +12,11 @@ const Auth: React.FC = () => {
 
   useEffect(() => { if (isAuthenticated) navigate('/', { replace: true }); }, [isAuthenticated, navigate]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Fix: login is an async function returning a Promise, so we must await it.
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (login(password)) navigate('/', { replace: true });
+    const success = await login(password);
+    if (success) navigate('/', { replace: true });
     else { setError(true); setPassword(''); }
   };
 

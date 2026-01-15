@@ -30,7 +30,9 @@ export const INITIAL_EXTERN: CommandeSiteweb[] = [
     status: SitewebStatus.LIVREE,
     stock_note: '',
     vendeur_name: 'V-X',
-    vendeur_benefice: 500
+    vendeur_benefice: 500,
+    // Fix: Added missing processed property
+    processed: true
   }
 ];
 

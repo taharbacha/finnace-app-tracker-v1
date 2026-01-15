@@ -1,5 +1,4 @@
 
-
 export enum GrosStatus {
   EN_PRODUCTION = 'en_production',
   EN_LIVRAISON = 'en_livraison',
@@ -107,6 +106,7 @@ export interface CommandeSiteweb {
   stock_note: string;
   vendeur_name: string;
   vendeur_benefice: number;
+  processed: boolean;
 }
 
 export interface CommandeMerch {
