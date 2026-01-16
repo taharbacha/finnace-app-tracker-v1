@@ -383,15 +383,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const duplicateSiteweb = useCallback(async (id: string) => { const t = siteweb.find(i => String(i.id) === String(id)); if (t) { const { id: _, ...baseRecord } = t; if (supabase) { const { data } = await supabase.from('commandes_siteweb').insert([computeSitewebCalculatedFields({ ...baseRecord, reference: t.reference + '-copy' } as CommandeSiteweb)]).select(); if (data) setSiteweb(p => p.some(o => o.id === data[0].id) ? p : [data[0], ...p]); } else { setSiteweb(p => [{ ...baseRecord, reference: t.reference + '-copy', id: crypto.randomUUID() } as CommandeSiteweb, ...p]); } } }, [siteweb]);
 
   const addPayout = useCallback(async () => {
-    const baseRecord = { vendeur: '', orders_count: 0, amount_total: 0, amount_remaining: 0, status: PayoutStatus.NON_PAYEE, created_at: new Date().toISOString() };
+    // UPDATED: Use schema-compliant field names (somme, reste)
+    const dbRecord = { 
+      vendeur: '', 
+      orders_count: 0, 
+      somme: 0, 
+      reste: 0, 
+      status: PayoutStatus.NON_PAYEE, 
+      created_at: new Date().toISOString() 
+    };
     if (supabase) {
-      const { data, error } = await supabase.from('payouts').insert([baseRecord]).select().single();
+      const { data, error } = await supabase.from('payouts').insert([dbRecord]).select().single();
       if (error) {
         console.error("Payout Creation Failed:", error.message);
         return;
       }
       if (data) setPayouts(p => [data, ...p]);
-    } else { setPayouts(p => [{ ...baseRecord, id: crypto.randomUUID() } as Payout, ...p]); }
+    } else { setPayouts(p => [{ ...dbRecord, id: crypto.randomUUID() } as Payout, ...p]); }
   }, []);
   const updatePayout = useCallback(async (id: string, field: keyof Payout, value: any) => {
     setPayouts(p => p.map(i => String(i.id) === String(id) ? { ...i, [field]: value } : i));
@@ -403,15 +411,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, []);
 
   const addCredit = useCallback(async () => {
-    const baseRecord = { client: '', amount: 0, status: CreditStatus.NON_PAYEE, created_at: new Date().toISOString() };
+    // UPDATED: Use schema-compliant field name (somme)
+    const dbRecord = { 
+      client: '', 
+      somme: 0, 
+      status: CreditStatus.NON_PAYEE, 
+      created_at: new Date().toISOString() 
+    };
     if (supabase) {
-      const { data, error } = await supabase.from('credits').insert([baseRecord]).select().single();
+      const { data, error } = await supabase.from('credits').insert([dbRecord]).select().single();
       if (error) {
         console.error("Credit Creation Failed:", error.message);
         return;
       }
       if (data) setCredits(p => [data, ...p]);
-    } else { setCredits(p => [{ ...baseRecord, id: crypto.randomUUID() } as Credit, ...p]); }
+    } else { setCredits(p => [{ ...dbRecord, id: crypto.randomUUID() } as Credit, ...p]); }
   }, []);
   const updateCredit = useCallback(async (id: string, field: keyof Credit, value: any) => {
     setCredits(p => p.map(i => String(i.id) === String(id) ? { ...i, [field]: value } : i));

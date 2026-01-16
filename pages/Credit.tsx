@@ -18,8 +18,9 @@ const Credit: React.FC = () => {
 
   const stats = useMemo(() => {
     const totalCount = filteredData.length;
-    const totalUnpaidAmount = filteredData.filter(i => i.status === CreditStatus.NON_PAYEE).reduce((acc, curr) => acc + Number(curr.amount), 0);
-    const totalPaidAmount = filteredData.filter(i => i.status === CreditStatus.PAYEE).reduce((acc, curr) => acc + Number(curr.amount), 0);
+    // UPDATED: Use item.somme instead of amount
+    const totalUnpaidAmount = filteredData.filter(i => i.status === CreditStatus.NON_PAYEE).reduce((acc, curr) => acc + Number(curr.somme || 0), 0);
+    const totalPaidAmount = filteredData.filter(i => i.status === CreditStatus.PAYEE).reduce((acc, curr) => acc + Number(curr.somme || 0), 0);
     const debtorCount = filteredData.filter(i => i.status === CreditStatus.NON_PAYEE).length;
     return { totalCount, totalUnpaidAmount, totalPaidAmount, debtorCount };
   }, [filteredData]);
@@ -82,7 +83,8 @@ const Credit: React.FC = () => {
                     <EditableCell value={item.client} onSave={(v) => updateCredit(item.id, 'client', v)} className="font-bold text-slate-800" />
                   </td>
                   <td className="p-2 text-right">
-                    <EditableCell type="number" value={item.amount} onSave={(v) => updateCredit(item.id, 'amount', v)} className="text-right font-black text-red-600" />
+                    {/* UPDATED: Use item.somme instead of amount */}
+                    <EditableCell type="number" value={item.somme} onSave={(v) => updateCredit(item.id, 'somme', v)} className="text-right font-black text-red-600" />
                   </td>
                   <td className="p-2">
                     <select 

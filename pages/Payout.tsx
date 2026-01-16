@@ -18,8 +18,9 @@ const Payout: React.FC = () => {
 
   const stats = useMemo(() => {
     const total = filteredData.length;
-    const paidAmount = filteredData.filter(i => i.status === PayoutStatus.PAYEE).reduce((acc, curr) => acc + Number(curr.amount_total), 0);
-    const unpaidAmount = filteredData.filter(i => i.status === PayoutStatus.NON_PAYEE).reduce((acc, curr) => acc + Number(curr.amount_total), 0);
+    // UPDATED: Use item.somme instead of amount_total
+    const paidAmount = filteredData.filter(i => i.status === PayoutStatus.PAYEE).reduce((acc, curr) => acc + Number(curr.somme || 0), 0);
+    const unpaidAmount = filteredData.filter(i => i.status === PayoutStatus.NON_PAYEE).reduce((acc, curr) => acc + Number(curr.somme || 0), 0);
     const paidCount = filteredData.filter(i => i.status === PayoutStatus.PAYEE).length;
     const unpaidCount = filteredData.filter(i => i.status === PayoutStatus.NON_PAYEE).length;
     return { total, paidAmount, unpaidAmount, paidCount, unpaidCount };
@@ -88,10 +89,12 @@ const Payout: React.FC = () => {
                     <EditableCell type="number" value={item.orders_count} onSave={(v) => updatePayout(item.id, 'orders_count', v)} className="text-center font-bold text-slate-500" />
                   </td>
                   <td className="p-2 text-right">
-                    <EditableCell type="number" value={item.amount_total} onSave={(v) => updatePayout(item.id, 'amount_total', v)} className="text-right font-black text-slate-900" />
+                    {/* UPDATED: Use item.somme instead of amount_total */}
+                    <EditableCell type="number" value={item.somme} onSave={(v) => updatePayout(item.id, 'somme', v)} className="text-right font-black text-slate-900" />
                   </td>
                   <td className="p-2 text-right">
-                    <EditableCell type="number" value={item.amount_remaining} onSave={(v) => updatePayout(item.id, 'amount_remaining', v)} className="text-right font-bold text-red-500" />
+                    {/* UPDATED: Use item.reste instead of amount_remaining */}
+                    <EditableCell type="number" value={item.reste} onSave={(v) => updatePayout(item.id, 'reste', v)} className="text-right font-bold text-red-500" />
                   </td>
                   <td className="p-2">
                     <select 

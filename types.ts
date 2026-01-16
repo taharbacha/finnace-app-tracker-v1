@@ -155,8 +155,8 @@ export interface Payout {
   created_at: string;
   vendeur: string;
   orders_count: number;
-  amount_total: number;
-  amount_remaining: number;
+  somme: number;
+  reste: number;
   status: PayoutStatus;
 }
 
@@ -169,7 +169,7 @@ export interface Credit {
   id: string;
   created_at: string;
   client: string;
-  amount: number;
+  somme: number;
   status: CreditStatus;
 }
 
