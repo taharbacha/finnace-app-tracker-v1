@@ -385,8 +385,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const addPayout = useCallback(async () => {
     const baseRecord = { vendeur: '', orders_count: 0, amount_total: 0, amount_remaining: 0, status: PayoutStatus.NON_PAYEE, created_at: new Date().toISOString() };
     if (supabase) {
-      const { data } = await supabase.from('payouts').insert([baseRecord]).select();
-      if (data) setPayouts(p => [data[0], ...p]);
+      const { data, error } = await supabase.from('payouts').insert([baseRecord]).select().single();
+      if (error) {
+        console.error("Payout Creation Failed:", error.message);
+        return;
+      }
+      if (data) setPayouts(p => [data, ...p]);
     } else { setPayouts(p => [{ ...baseRecord, id: crypto.randomUUID() } as Payout, ...p]); }
   }, []);
   const updatePayout = useCallback(async (id: string, field: keyof Payout, value: any) => {
@@ -401,8 +405,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const addCredit = useCallback(async () => {
     const baseRecord = { client: '', amount: 0, status: CreditStatus.NON_PAYEE, created_at: new Date().toISOString() };
     if (supabase) {
-      const { data } = await supabase.from('credits').insert([baseRecord]).select();
-      if (data) setCredits(p => [data[0], ...p]);
+      const { data, error } = await supabase.from('credits').insert([baseRecord]).select().single();
+      if (error) {
+        console.error("Credit Creation Failed:", error.message);
+        return;
+      }
+      if (data) setCredits(p => [data, ...p]);
     } else { setCredits(p => [{ ...baseRecord, id: crypto.randomUUID() } as Credit, ...p]); }
   }, []);
   const updateCredit = useCallback(async (id: string, field: keyof Credit, value: any) => {
