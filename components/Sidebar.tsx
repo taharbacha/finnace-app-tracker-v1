@@ -19,7 +19,9 @@ import {
   RotateCcw,
   X,
   Store,
-  PanelLeftClose
+  PanelLeftClose,
+  Banknote,
+  CreditCard
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -32,25 +34,6 @@ interface SidebarProps {
 const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen, onClose, isHidden, onToggle }) => {
   const { isSyncing, isCloudActive, syncData, lastSynced } = useAppStore();
   
-  // Group 1: Finance & Ops
-  const primaryNavItems = [
-    { to: '/', label: 'Tableau de bord', icon: LayoutDashboard },
-    { to: '/gros', label: 'Commandes GROS', icon: Truck },
-    { to: '/detail', label: 'Commandes Vendeurs', icon: Globe },
-    { to: '/merch', label: 'Commande Merch', icon: Store },
-    { to: '/retour', label: 'Retours', icon: RotateCcw },
-    { to: '/offres', label: 'Les Offres', icon: TrendingUp },
-    { to: '/charges', label: 'Les Charges', icon: Wallet },
-  ];
-
-  // Group 2: Marketing & Growth
-  const secondaryNavItems = [
-    { to: '/marketing', label: 'Marketing Clients', icon: UserCheck },
-    { to: '/marketing-spend', label: 'Marketing Spend', icon: Megaphone },
-    { to: '/inventory', label: 'Stock & Inventaire', icon: Package },
-    { to: '/ai', label: 'Assistant IA', icon: Bot },
-  ];
-
   const renderNavLink = (item: any) => (
     <NavLink
       key={item.to}
@@ -83,7 +66,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen, onClose, isHidden, onTo
           <img src="/logo.png" alt="Merch By DZ" className="w-10 h-10 object-contain rounded-xl flex-shrink-0" />
           <div className="whitespace-nowrap">
             <h1 className="font-black text-white text-lg leading-tight tracking-tighter">Merch By DZ</h1>
-            <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Cloud OS v3.5</p>
+            <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Cloud OS v4.5</p>
           </div>
         </div>
         <div className="flex items-center gap-1">
@@ -106,13 +89,41 @@ const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen, onClose, isHidden, onTo
       </div>
 
       <nav className="flex-1 px-4 py-4 space-y-1.5 overflow-y-auto">
-        <p className="px-4 text-[10px] font-black text-slate-600 uppercase tracking-widest mb-4">Finance & Ops</p>
-        {primaryNavItems.map(renderNavLink)}
-        
+        <NavLink
+          to="/"
+          className={({ isActive }) => `
+            flex items-center gap-3 px-4 py-3.5 rounded-2xl transition-all duration-300 group mb-4
+            ${isActive 
+              ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' 
+              : 'text-slate-100 hover:bg-slate-800'}
+          `}
+        >
+          <LayoutDashboard size={20} />
+          <span className="font-black text-sm uppercase tracking-widest">Tableau de Bord</span>
+        </NavLink>
+
+        <div className="my-4 border-t border-slate-800/30 mx-4" />
+
+        {renderNavLink({ to: '/gros', label: 'Commandes Gros', icon: Truck })}
+        {renderNavLink({ to: '/detail', label: 'Commandes Vendeurs', icon: Globe })}
+        {renderNavLink({ to: '/merch', label: 'Commandes Merch', icon: Store })}
+        {renderNavLink({ to: '/offres', label: 'Offres', icon: TrendingUp })}
+        {renderNavLink({ to: '/marketing', label: 'Marketing Clients', icon: UserCheck })}
+
         <div className="my-6 border-t border-slate-800/30 mx-4" />
-        
-        <p className="px-4 text-[10px] font-black text-slate-600 uppercase tracking-widest mb-4">Marketing & Stock</p>
-        {secondaryNavItems.map(renderNavLink)}
+
+        {renderNavLink({ to: '/marketing-spend', label: 'Marketing Spend', icon: Megaphone })}
+        {renderNavLink({ to: '/charges', label: 'Les Charges', icon: Wallet })}
+
+        <div className="my-6 border-t border-slate-800/30 mx-4" />
+
+        {renderNavLink({ to: '/retour', label: 'Retours', icon: RotateCcw })}
+        {renderNavLink({ to: '/payout', label: 'Payout', icon: Banknote })}
+        {renderNavLink({ to: '/credit', label: 'Crédit', icon: CreditCard })}
+
+        <div className="my-6 border-t border-slate-800/30 mx-4" />
+
+        {renderNavLink({ to: '/ai', label: 'AI Assistant', icon: Bot })}
       </nav>
 
       <div className="px-6 py-4 border-t border-slate-800/50 bg-slate-900/50 pb-[calc(1rem+env(safe-area-inset-bottom))]">
@@ -141,10 +152,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen, onClose, isHidden, onTo
              </button>
            )}
         </div>
-      </div>
-      
-      <div className="p-4 mx-4 mb-8 md:mb-8 bg-slate-800/5 rounded-3xl border border-slate-800/20 flex items-center justify-center">
-         <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Opérations Ouvertes</p>
       </div>
     </aside>
   );

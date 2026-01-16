@@ -145,6 +145,34 @@ export interface Retour {
   created_at: string;
 }
 
+export enum PayoutStatus {
+  PAYEE = 'payee',
+  NON_PAYEE = 'non_payee'
+}
+
+export interface Payout {
+  id: string;
+  created_at: string;
+  vendeur: string;
+  orders_count: number;
+  amount_total: number;
+  amount_remaining: number;
+  status: PayoutStatus;
+}
+
+export enum CreditStatus {
+  PAYEE = 'payee',
+  NON_PAYEE = 'non_payee'
+}
+
+export interface Credit {
+  id: string;
+  created_at: string;
+  client: string;
+  amount: number;
+  status: CreditStatus;
+}
+
 export interface CalculatedGros extends CommandeGros {
   cost: number;
   profit_encaisse: number;

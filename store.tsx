@@ -3,6 +3,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import { createClient } from '@supabase/supabase-js';
 import { 
   CommandeGros, CommandeSiteweb, CommandeMerch, Offre, InventoryItem, Charge, MarketingService as MarketingServiceType, MarketingSpend, Retour,
+  Payout, PayoutStatus, Credit, CreditStatus,
   CalculatedGros, CalculatedSiteweb, CalculatedMerch, CalculatedMarketing, DashboardData,
   GrosStatus, SitewebStatus, MerchStatus, OffreType, OffreCategory, MarketingStatus, MarketingSpendSource, MarketingSpendType,
   ChatMessage
@@ -79,6 +80,8 @@ interface AppState {
   marketingServices: MarketingServiceType[];
   marketingSpends: MarketingSpend[];
   retours: Retour[];
+  payouts: Payout[];
+  credits: Credit[];
   dashboardDateStart: string;
   dashboardDateEnd: string;
   isAuthenticated: boolean;
@@ -130,6 +133,12 @@ interface AppState {
   deleteMarketingSpend: (id: string) => Promise<void>;
   addRetour: (reference: string) => Promise<void>;
   deleteRetour: (id: string) => Promise<void>;
+  addPayout: () => Promise<void>;
+  updatePayout: (id: string, field: keyof Payout, value: any) => Promise<void>;
+  deletePayout: (id: string) => Promise<void>;
+  addCredit: () => Promise<void>;
+  updateCredit: (id: string, field: keyof Credit, value: any) => Promise<void>;
+  deleteCredit: (id: string) => Promise<void>;
 }
 
 const AppContext = createContext<AppState | undefined>(undefined);
@@ -150,6 +159,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [marketingServices, setMarketingServices] = useState<MarketingServiceType[]>([]);
   const [marketingSpends, setMarketingSpends] = useState<MarketingSpend[]>([]);
   const [retours, setRetours] = useState<Retour[]>([]);
+  const [payouts, setPayouts] = useState<Payout[]>([]);
+  const [credits, setCredits] = useState<Credit[]>([]);
   
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
 
@@ -165,7 +176,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
     if (!isSilent) setIsSyncing(true);
     try {
-      const [ { data: g }, { data: s }, { data: m_orders }, { data: o }, { data: i }, { data: c }, { data: m }, { data: ms }, { data: r } ] = await Promise.all([
+      const [ { data: g }, { data: s }, { data: m_orders }, { data: o }, { data: i }, { data: c }, { data: m }, { data: ms }, { data: r }, { data: p }, { data: cr } ] = await Promise.all([
         supabase.from('commandes_gros').select('*'),
         supabase.from('commandes_siteweb').select('*'),
         supabase.from('commandes_merch').select('*'),
@@ -174,7 +185,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         supabase.from('charges').select('*'),
         supabase.from('marketing_services').select('*'),
         supabase.from('marketing_spends').select('*'),
-        supabase.from('commandes_retours').select('*')
+        supabase.from('commandes_retours').select('*'),
+        supabase.from('payouts').select('*'),
+        supabase.from('credits').select('*')
       ]);
       if (g) setGros(g); 
       if (s) setSiteweb(s); 
@@ -185,6 +198,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (m) setMarketingServices(m); 
       if (ms) setMarketingSpends(ms);
       if (r) setRetours(r);
+      if (p) setPayouts(p);
+      if (cr) setCredits(cr);
       setLastSynced(new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }));
     } catch (e) { 
       console.error("Supabase fetch error:", e); 
@@ -197,7 +212,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     fetchAllData();
     if (!supabase) return;
-    const tables = ['commandes_gros', 'commandes_siteweb', 'commandes_merch', 'offres', 'inventory', 'charges', 'marketing_services', 'marketing_spends', 'commandes_retours'];
+    const tables = ['commandes_gros', 'commandes_siteweb', 'commandes_merch', 'offres', 'inventory', 'charges', 'marketing_services', 'marketing_spends', 'commandes_retours', 'payouts', 'credits'];
     const channel = supabase.channel('merchdz_realtime');
     tables.forEach(table => {
       channel.on('postgres_changes', { event: '*', schema: 'public', table }, (payload) => {
@@ -243,11 +258,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         supabase.from('inventory').upsert(inventory.map(computeInventoryCalculatedFields)),
         supabase.from('charges').upsert(charges),
         supabase.from('marketing_services').upsert(marketingServices.map(computeMarketingCalculatedFields)),
-        supabase.from('marketing_spends').upsert(marketingSpends)
+        supabase.from('marketing_spends').upsert(marketingSpends),
+        supabase.from('payouts').upsert(payouts),
+        supabase.from('credits').upsert(credits)
       ]);
       setLastSynced(new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }));
     } catch (e) { console.error("Supabase manual sync error:", e); } finally { setIsSyncing(false); }
-  }, [gros, siteweb, merch, offres, inventory, charges, marketingServices, marketingSpends]);
+  }, [gros, siteweb, merch, offres, inventory, charges, marketingServices, marketingSpends, payouts, credits]);
 
   const updateGros = useCallback(async (id: string, updates: Partial<CommandeGros>) => {
     setGros(prev => {
@@ -365,6 +382,38 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const deleteRetour = useCallback(async (id: string) => { if (supabase) { const { error } = await supabase.from('commandes_retours').delete().eq('id', id); if (!error) setRetours(prev => prev.filter(r => r.id !== id)); } }, []);
   const duplicateSiteweb = useCallback(async (id: string) => { const t = siteweb.find(i => String(i.id) === String(id)); if (t) { const { id: _, ...baseRecord } = t; if (supabase) { const { data } = await supabase.from('commandes_siteweb').insert([computeSitewebCalculatedFields({ ...baseRecord, reference: t.reference + '-copy' } as CommandeSiteweb)]).select(); if (data) setSiteweb(p => p.some(o => o.id === data[0].id) ? p : [data[0], ...p]); } else { setSiteweb(p => [{ ...baseRecord, reference: t.reference + '-copy', id: crypto.randomUUID() } as CommandeSiteweb, ...p]); } } }, [siteweb]);
 
+  const addPayout = useCallback(async () => {
+    const baseRecord = { vendeur: '', orders_count: 0, amount_total: 0, amount_remaining: 0, status: PayoutStatus.NON_PAYEE, created_at: new Date().toISOString() };
+    if (supabase) {
+      const { data } = await supabase.from('payouts').insert([baseRecord]).select();
+      if (data) setPayouts(p => [data[0], ...p]);
+    } else { setPayouts(p => [{ ...baseRecord, id: crypto.randomUUID() } as Payout, ...p]); }
+  }, []);
+  const updatePayout = useCallback(async (id: string, field: keyof Payout, value: any) => {
+    setPayouts(p => p.map(i => String(i.id) === String(id) ? { ...i, [field]: value } : i));
+    if (supabase) await supabase.from('payouts').update({ [field]: value }).eq('id', id);
+  }, []);
+  const deletePayout = useCallback(async (id: string) => {
+    if (supabase) await supabase.from('payouts').delete().eq('id', id);
+    setPayouts(p => p.filter(i => String(i.id) !== String(id)));
+  }, []);
+
+  const addCredit = useCallback(async () => {
+    const baseRecord = { client: '', amount: 0, status: CreditStatus.NON_PAYEE, created_at: new Date().toISOString() };
+    if (supabase) {
+      const { data } = await supabase.from('credits').insert([baseRecord]).select();
+      if (data) setCredits(p => [data[0], ...p]);
+    } else { setCredits(p => [{ ...baseRecord, id: crypto.randomUUID() } as Credit, ...p]); }
+  }, []);
+  const updateCredit = useCallback(async (id: string, field: keyof Credit, value: any) => {
+    setCredits(p => p.map(i => String(i.id) === String(id) ? { ...i, [field]: value } : i));
+    if (supabase) await supabase.from('credits').update({ [field]: value }).eq('id', id);
+  }, []);
+  const deleteCredit = useCallback(async (id: string) => {
+    if (supabase) await supabase.from('credits').delete().eq('id', id);
+    setCredits(p => p.filter(i => String(i.id) !== String(id)));
+  }, []);
+
   const importGros = useCallback(async (d: any[]) => { if (supabase) { const { data } = await supabase.from('commandes_gros').insert(d.map(computeGrosCalculatedFields)).select(); if (data) { setGros(prev => { const existingIds = new Set(prev.map(item => item.id)); const newItems = data.filter(item => !existingIds.has(item.id)); return [...newItems, ...prev]; }); } } else { setGros(p => [...d.map(i => ({ ...i, id: crypto.randomUUID() })), ...p]); } }, []);
   const importSiteweb = useCallback(async (d: any[]) => { if (supabase) { const { data } = await supabase.from('commandes_siteweb').insert(d.map(computeSitewebCalculatedFields)).select(); if (data) { setSiteweb(prev => { const existingIds = new Set(prev.map(item => item.id)); const newItems = data.filter(item => !existingIds.has(item.id)); return [...newItems, ...prev]; }); } } else { setSiteweb(p => [...d.map(i => ({ ...i, id: crypto.randomUUID() })), ...p]); } }, []);
   const importOffres = useCallback(async (d: any[]) => { if (supabase) { const { data } = await supabase.from('offres').insert(d).select(); if (data) { setOffres(prev => { const existingIds = new Set(prev.map(item => item.id)); const newItems = data.filter(item => !existingIds.has(item.id)); return [...newItems, ...prev]; }); } } else { setOffres(p => [...d.map(i => ({ ...i, id: crypto.randomUUID() })), ...p]); } }, []);
@@ -376,7 +425,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const getCalculatedMerch = useCallback((): CalculatedMerch[] => merch.map(computeMerchCalculatedFields), [merch]);
   const getCalculatedMarketing = useCallback((): CalculatedMarketing[] => marketingServices.map(i => { const calc = computeMarketingCalculatedFields(i); return { ...i, net_profit: i.status === MarketingStatus.TERMINE ? calc.benefice_net : 0 }; }), [marketingServices]);
 
-  // Fix: Completed getDashboardData implementation
   const getDashboardData = useCallback((startDate?: string, endDate?: string): DashboardData => {
     const cg = getCalculatedGros(); 
     const cs = getCalculatedSiteweb();
@@ -426,9 +474,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   }, [getCalculatedGros, getCalculatedSiteweb, getCalculatedMerch, getCalculatedMarketing, offres, charges, marketingSpends]);
 
-  // Fix: Added return statement for the Provider and exported useAppStore hook
   const value: AppState = {
-    gros, siteweb, merch, offres, inventory, charges, marketingServices, marketingSpends, retours,
+    gros, siteweb, merch, offres, inventory, charges, marketingServices, marketingSpends, retours, payouts, credits,
     dashboardDateStart, dashboardDateEnd, isAuthenticated, isSyncing, isCloudActive, lastSynced, chatHistory,
     addChatMessage, clearChat, login, logout, setDashboardDateRange,
     updateGros, addGros, deleteGros, importGros,
@@ -440,7 +487,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     updateCharge, addCharge, deleteCharge, importCharges,
     updateMarketing, addMarketing, deleteMarketing,
     updateMarketingSpend, addMarketingSpend, deleteMarketingSpend,
-    addRetour, deleteRetour
+    addRetour, deleteRetour,
+    addPayout, updatePayout, deletePayout,
+    addCredit, updateCredit, deleteCredit
   };
 
   return (
