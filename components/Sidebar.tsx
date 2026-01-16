@@ -18,15 +18,18 @@ import {
   Bot,
   RotateCcw,
   X,
-  Store
+  Store,
+  PanelLeftClose
 } from 'lucide-react';
 
 interface SidebarProps {
   isMobileOpen?: boolean;
   onClose?: () => void;
+  isHidden?: boolean;
+  onToggle?: () => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen, onClose }) => {
+const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen, onClose, isHidden, onToggle }) => {
   const { isSyncing, isCloudActive, syncData, lastSynced } = useAppStore();
   
   // Group 1: Finance & Ops
@@ -70,24 +73,36 @@ const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen, onClose }) => {
 
   return (
     <aside className={`
-      fixed inset-y-0 left-0 z-50 w-64 bg-slate-900 text-slate-400 flex flex-col shadow-2xl transition-transform duration-300 ease-in-out
+      fixed inset-y-0 left-0 z-50 w-64 bg-slate-900 text-slate-400 flex flex-col shadow-2xl transition-all duration-300 ease-in-out
       md:relative md:translate-x-0 md:h-screen md:sticky md:top-0
       ${isMobileOpen ? 'translate-x-0' : '-translate-x-full'}
+      ${isHidden ? 'md:w-0 md:opacity-0 md:pointer-events-none md:overflow-hidden md:invisible' : 'md:w-64'}
     `}>
       <div className="p-8 pb-4 flex items-center justify-between pt-[calc(2rem+env(safe-area-inset-top))]">
-        <div className="flex items-center gap-3">
-          <img src="/logo.png" alt="Merch By DZ" className="w-10 h-10 object-contain rounded-xl" />
-          <div>
+        <div className="flex items-center gap-3 overflow-hidden">
+          <img src="/logo.png" alt="Merch By DZ" className="w-10 h-10 object-contain rounded-xl flex-shrink-0" />
+          <div className="whitespace-nowrap">
             <h1 className="font-black text-white text-lg leading-tight tracking-tighter">Merch By DZ</h1>
             <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Cloud OS v3.5</p>
           </div>
         </div>
-        <button 
-          onClick={onClose}
-          className="md:hidden p-2 text-slate-500 hover:text-white transition-colors"
-        >
-          <X size={24} />
-        </button>
+        <div className="flex items-center gap-1">
+          {onToggle && (
+            <button 
+              onClick={onToggle}
+              className="hidden md:block p-2 text-slate-500 hover:text-white hover:bg-slate-800 rounded-xl transition-all"
+              title="Masquer la barre latérale"
+            >
+              <PanelLeftClose size={20} />
+            </button>
+          )}
+          <button 
+            onClick={onClose}
+            className="md:hidden p-2 text-slate-500 hover:text-white transition-colors"
+          >
+            <X size={24} />
+          </button>
+        </div>
       </div>
 
       <nav className="flex-1 px-4 py-4 space-y-1.5 overflow-y-auto">

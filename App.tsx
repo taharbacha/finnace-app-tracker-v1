@@ -14,10 +14,11 @@ import Charges from './pages/Charges.tsx';
 import AIAssistant from './pages/AIAssistant.tsx';
 import Retour from './pages/Retour.tsx';
 import { AppProvider } from './store.tsx';
-import { Menu } from 'lucide-react';
+import { Menu, PanelLeftOpen } from 'lucide-react';
 
 const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isSidebarHidden, setIsSidebarHidden] = useState(false);
   const location = useLocation();
 
   useEffect(() => {
@@ -35,10 +36,23 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
       <Sidebar 
         isMobileOpen={isMobileMenuOpen} 
-        onClose={() => setIsMobileMenuOpen(false)} 
+        onClose={() => setIsMobileMenuOpen(false)}
+        isHidden={isSidebarHidden}
+        onToggle={() => setIsSidebarHidden(!isSidebarHidden)}
       />
 
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 relative">
+        {/* Desktop Show Sidebar Button - Only visible when hidden */}
+        {isSidebarHidden && (
+          <button 
+            onClick={() => setIsSidebarHidden(false)}
+            className="hidden md:flex fixed left-6 top-6 z-50 p-3 bg-white border border-slate-200 text-slate-600 rounded-2xl shadow-xl hover:bg-slate-50 transition-all animate-in slide-in-from-left-4 duration-300"
+            title="Afficher la barre latérale"
+          >
+            <PanelLeftOpen size={20} />
+          </button>
+        )}
+
         <header className="md:hidden bg-white border-b border-slate-100 p-4 sticky top-0 z-30 flex items-center justify-between pt-[calc(1rem+env(safe-area-inset-top))]">
           <button 
             onClick={() => setIsMobileMenuOpen(true)}
@@ -55,7 +69,7 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
           <div className="w-8" />
         </header>
 
-        <main className="flex-1 p-4 md:p-8 overflow-y-auto">
+        <main className={`flex-1 p-4 md:p-8 overflow-y-auto transition-all duration-300 ${isSidebarHidden ? 'md:pt-20' : ''}`}>
           <div className="max-w-[1600px] mx-auto">
             {children}
           </div>
