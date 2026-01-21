@@ -12,12 +12,13 @@ import {
   Package,
   Wallet,
   Globe,
-  Store,
+  UserCheck,
   Megaphone,
   Cloud,
   Bot,
   RotateCcw,
   X,
+  Store,
   PanelLeftClose,
   Banknote,
   CreditCard
@@ -105,9 +106,9 @@ const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen, onClose, isHidden, onTo
 
         {renderNavLink({ to: '/gros', label: 'Commandes Gros', icon: Truck })}
         {renderNavLink({ to: '/detail', label: 'Commandes Vendeurs', icon: Globe })}
-        {renderNavLink({ to: '/merch', label: 'Commandes Merch', icon: Package })}
-        {renderNavLink({ to: '/client-comptoir', label: 'Client Comptoir', icon: Store })}
+        {renderNavLink({ to: '/merch', label: 'Commandes Merch', icon: Store })}
         {renderNavLink({ to: '/offres', label: 'Offres', icon: TrendingUp })}
+        {renderNavLink({ to: '/marketing', label: 'Marketing Clients', icon: UserCheck })}
 
         <div className="my-6 border-t border-slate-800/30 mx-4" />
 

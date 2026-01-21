@@ -6,7 +6,7 @@ import Dashboard from './pages/Dashboard.tsx';
 import CommandesGros from './pages/CommandesGros.tsx';
 import CommandesDetail from './pages/CommandesDetail.tsx';
 import CommandeMerch from './pages/CommandeMerch.tsx';
-import ClientComptoir from './pages/ClientComptoir.tsx';
+import MarketingClient from './pages/MarketingClient.tsx';
 import MarketingSpend from './pages/MarketingSpend.tsx';
 import Inventory from './pages/Inventory.tsx';
 import Offres from './pages/Offres.tsx';
@@ -44,6 +44,7 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       />
 
       <div className="flex-1 flex flex-col min-w-0 relative">
+        {/* Desktop Show Sidebar Button - Only visible when hidden */}
         {isSidebarHidden && (
           <button 
             onClick={() => setIsSidebarHidden(false)}
@@ -87,7 +88,7 @@ const AppRoutes: React.FC = () => {
       <Route path="/gros" element={<AppLayout><CommandesGros /></AppLayout>} />
       <Route path="/detail" element={<AppLayout><CommandesDetail /></AppLayout>} />
       <Route path="/merch" element={<AppLayout><CommandeMerch /></AppLayout>} />
-      <Route path="/client-comptoir" element={<AppLayout><ClientComptoir /></AppLayout>} />
+      <Route path="/marketing" element={<AppLayout><MarketingClient /></AppLayout>} />
       <Route path="/marketing-spend" element={<AppLayout><MarketingSpend /></AppLayout>} />
       <Route path="/inventory" element={<AppLayout><Inventory /></AppLayout>} />
       <Route path="/charges" element={<AppLayout><Charges /></AppLayout>} />
