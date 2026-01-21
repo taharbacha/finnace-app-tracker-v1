@@ -5,45 +5,41 @@ import {
   CartesianGrid, 
   Tooltip, 
   ResponsiveContainer, 
-  BarChart, 
-  Bar, 
   XAxis, 
   YAxis, 
-  AreaChart, 
   Area, 
   Line, 
   ComposedChart,
   Legend,
-  Cell
+  Bar
 } from 'recharts';
 import { 
   Clock, 
   Banknote, 
   Calendar, 
-  Wallet, 
   TrendingUp, 
   Megaphone, 
   RotateCcw, 
   BarChart3, 
   ArrowUpRight, 
-  ArrowDownRight, 
-  LayoutGrid, 
   Truck, 
   ShoppingBag, 
   Zap,
   Target,
-  AlertCircle,
-  Percent,
   Globe,
-  TrendingDown,
-  Activity
+  Activity,
+  Sparkles,
+  Box,
+  BadgeAlert,
+  Coins,
+  Store
 } from 'lucide-react';
-import { OffreType, MarketingSpendSource, MarketingStatus, GrosStatus, SitewebStatus, MerchStatus } from '../types.ts';
+import { OffreType, MarketingSpendSource, MarketingStatus, GrosStatus, SitewebStatus, MerchStatus, ClientComptoirStatus } from '../types.ts';
 
 const formatCurrency = (val: number) => val.toLocaleString('fr-DZ') + ' DA';
 
-const KPICard = ({ title, value, subValues = [], icon: Icon, colorClass, statusCount }: any) => (
-  <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-col justify-between transition-all hover:shadow-md group">
+const KPICard = ({ title, value, subValues = [], icon: Icon, colorClass, statusCount, isMuted }: any) => (
+  <div className={`bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-col justify-between transition-all hover:shadow-md group ${isMuted ? 'opacity-80 border-dashed' : ''}`}>
     <div className="flex justify-between items-start mb-6">
       <div className={`p-4 rounded-2xl ${colorClass.bg}`}>
         <Icon className={colorClass.text} size={24} />
@@ -56,16 +52,16 @@ const KPICard = ({ title, value, subValues = [], icon: Icon, colorClass, statusC
     </div>
     <div>
       <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{title}</p>
-      <h3 className="text-3xl font-black text-slate-900 tracking-tighter">{formatCurrency(value)}</h3>
+      <h3 className={`text-3xl font-black tracking-tighter tabular-nums ${colorClass.valueText || 'text-slate-900'}`}>{typeof value === 'number' ? formatCurrency(value) : value}</h3>
     </div>
     {subValues.length > 0 && (
       <div className="grid grid-cols-2 gap-4 mt-6 pt-6 border-t border-slate-50">
-        {subValues.map((sv: any, i: number) => (
-          <div key={i}>
+        {subValues.map((sv: any, i: number) => (sv && (
+          <div key={i} className={sv.fullWidth ? 'col-span-2' : ''}>
             <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">{sv.label}</p>
             <p className={`text-[11px] font-bold ${sv.color || 'text-slate-700'}`}>{typeof sv.val === 'number' ? formatCurrency(sv.val) : sv.val}</p>
           </div>
-        ))}
+        )))}
       </div>
     )}
   </div>
@@ -93,6 +89,8 @@ const Dashboard: React.FC = () => {
     getCalculatedGros, 
     getCalculatedSiteweb, 
     getCalculatedMerch,
+    getCalculatedClientComptoir,
+    offres,
     marketingSpends,
     dashboardDateStart,
     dashboardDateEnd,
@@ -109,113 +107,122 @@ const Dashboard: React.FC = () => {
     return true;
   };
 
-  // --- GLOBAL KPIS (Top of page) ---
+  // --- REFINED PILLAR FINAL PROFIT ANALYSIS ---
+  const pillarProfitData = useMemo(() => {
+    const cg = getCalculatedGros().filter(i => filterByDate(i.date_created));
+    const cs = getCalculatedSiteweb().filter(i => filterByDate(i.date_created));
+    const cm = getCalculatedMerch().filter(i => filterByDate(i.created_at));
+    const cc = getCalculatedClientComptoir().filter(i => filterByDate(i.date));
+    const mkt = marketingSpends.filter(s => filterByDate(s.date_start));
+
+    const getMktBySource = (src: MarketingSpendSource) => 
+      mkt.filter(s => s.source === src).reduce((a, c) => a + Number(c.amount), 0);
+
+    // Wholesale (Gros)
+    const grosMkt = getMktBySource(MarketingSpendSource.GROS);
+    const grosSuccess = cg.filter(i => [GrosStatus.LIVREE_ENCAISSE, GrosStatus.LIVREE_NON_ENCAISSE].includes(i.status));
+    const grosVentes = grosSuccess.reduce((a,c) => a + c.prix_vente, 0);
+    const grosProd = grosSuccess.reduce((a,c) => a + c.cost, 0);
+    const grosRetours = cg.filter(i => i.status === GrosStatus.RETOUR).reduce((a,c) => a + c.cost, 0);
+    const grosFinalProfit = grosVentes - grosProd - grosRetours - grosMkt;
+
+    // Retail (Vendeurs)
+    const vendMkt = getMktBySource(MarketingSpendSource.SITEWEB);
+    const vendSuccess = cs.filter(i => [SitewebStatus.LIVREE, SitewebStatus.LIVREE_NON_ENCAISSEE].includes(i.status));
+    const vendVentes = vendSuccess.reduce((a,c) => a + c.prix_vente, 0);
+    const vendProd = vendSuccess.reduce((a,c) => a + (c.cout_article + c.cout_impression), 0);
+    const vendRetours = cs.filter(i => i.status === SitewebStatus.RETOUR).reduce((a,c) => a + (c.cout_article + c.cout_impression), 0);
+    const vendComms = vendSuccess.reduce((a,c) => a + Number(c.vendeur_benefice || 0), 0);
+    const vendFinalProfit = vendVentes - vendProd - vendRetours - vendComms - vendMkt;
+
+    // Merch
+    const merchMkt = getMktBySource(MarketingSpendSource.MERCH);
+    const merchSuccess = cm.filter(i => [MerchStatus.LIVREE, MerchStatus.LIVREE_NON_ENCAISSEE].includes(i.status));
+    const merchVentes = merchSuccess.reduce((a,c) => a + c.prix_vente, 0);
+    const merchProd = merchSuccess.reduce((a,c) => a + c.prix_achat, 0);
+    const merchRetours = cm.filter(i => i.status === MerchStatus.RETOUR).reduce((a,c) => a + c.prix_achat, 0);
+    const merchFinalProfit = merchVentes - merchProd - merchRetours - merchMkt;
+
+    // Client Comptoir (Isolated Analytical View: Realized + Expected)
+    const ccSuccess = cc.filter(i => [ClientComptoirStatus.PAYEE, ClientComptoirStatus.NON_PAYEE].includes(i.status));
+    const ccVentes = ccSuccess.reduce((a,c) => a + Number(c.revenue), 0);
+    const ccProd = ccSuccess.reduce((a,c) => a + Number(c.client_charges), 0);
+    const ccFinalProfit = ccVentes - ccProd;
+
+    return {
+      gros: { final: grosFinalProfit, sales: grosVentes, prod: grosProd, ret: grosRetours, mkt: grosMkt },
+      vendeurs: { final: vendFinalProfit, sales: vendVentes, prod: vendProd, ret: vendRetours, comm: vendComms, mkt: vendMkt },
+      merch: { final: merchFinalProfit, sales: merchVentes, prod: merchProd, ret: merchRetours, mkt: merchMkt },
+      comptoir: { final: ccFinalProfit, sales: ccVentes, prod: ccProd }
+    };
+  }, [getCalculatedGros, getCalculatedSiteweb, getCalculatedMerch, getCalculatedClientComptoir, marketingSpends, dashboardDateStart, dashboardDateEnd]);
+
+  // --- REFINED GLOBAL KPIS ---
   const globalKPIs = useMemo(() => {
     const cg = getCalculatedGros().filter(i => filterByDate(i.date_created));
     const cs = getCalculatedSiteweb().filter(i => filterByDate(i.date_created));
     const cm = getCalculatedMerch().filter(i => filterByDate(i.created_at));
+    const cc = getCalculatedClientComptoir().filter(i => filterByDate(i.date));
+    const co = offres.filter(i => filterByDate(i.date));
+    const mkt = marketingSpends.filter(s => filterByDate(s.date_start));
 
-    const totalProd = cg.reduce((a,c) => a + c.cost, 0) + 
-                    cs.reduce((a,c) => a + (c.cout_article + c.cout_impression), 0) + 
-                    cm.reduce((a,c) => a + c.prix_achat, 0);
+    // 1. Production Consolidée (Includes all pillars)
+    const prodGros = cg.reduce((a,c) => a + (Number(c.prix_achat_article) + Number(c.prix_impression)), 0);
+    const prodSw = cs.reduce((a,c) => a + (Number(c.cout_article) + Number(c.cout_impression)), 0);
+    const prodMerch = cm.reduce((a,c) => a + Number(c.prix_achat), 0);
+    const prodCc = cc.reduce((a,c) => a + Number(c.client_charges), 0);
+    const totalProd = prodGros + prodSw + prodMerch + prodCc;
 
-    const totalProfitNet = cg.reduce((a, c) => a + (c.status === GrosStatus.RETOUR ? -c.cost : (c.prix_vente - c.cost)), 0) +
-                           cs.reduce((a, c) => a + (c.status === SitewebStatus.RETOUR ? -(c.cout_article + c.cout_impression) : c.profit_net), 0) +
-                           cm.reduce((a, c) => a + (c.status === MerchStatus.RETOUR ? -c.impact_perte : (c.prix_vente - c.prix_achat)), 0);
+    // 2. Profit Brut Global (CC: PAYEE only as per specific rule)
+    const oRev = co.filter(i => i.type === OffreType.REVENUE).reduce((a, c) => a + Number(c.montant), 0);
+    const oAds = mkt.filter(s => s.source === MarketingSpendSource.OFFRES).reduce((a, c) => a + Number(c.amount), 0);
+    
+    // Core pillar logic
+    const successGros = cg.filter(i => [GrosStatus.LIVREE_ENCAISSE, GrosStatus.LIVREE_NON_ENCAISSE].includes(i.status)).reduce((a,c) => a + (c.prix_vente - c.cost), 0);
+    const successVend = cs.filter(i => [SitewebStatus.LIVREE, SitewebStatus.LIVREE_NON_ENCAISSEE].includes(i.status)).reduce((a,c) => a + c.profit_net, 0);
+    const successMerch = cm.filter(i => [MerchStatus.LIVREE, MerchStatus.LIVREE_NON_ENCAISSEE].includes(i.status)).reduce((a,c) => a + (c.prix_vente - c.prix_achat), 0);
+    const successCc = cc.filter(i => i.status === ClientComptoirStatus.PAYEE).reduce((a,c) => a + c.benefice_net, 0); // PAYEE ONLY
 
-    const lneProfit = cg.filter(i => i.status === GrosStatus.LIVREE_NON_ENCAISSE).reduce((a,c) => a + (c.prix_vente - c.cost), 0) + 
-                     cs.filter(i => i.status === SitewebStatus.LIVREE_NON_ENCAISSEE).reduce((a,c) => a + c.profit_net, 0) + 
-                     cm.filter(i => i.status === MerchStatus.LIVREE_NON_ENCAISSEE).reduce((a,c) => a + (c.prix_vente - c.prix_achat), 0);
+    const lossGros = cg.filter(i => i.status === GrosStatus.RETOUR).reduce((a,c) => a + c.cost, 0);
+    const lossSw = cs.filter(i => i.status === SitewebStatus.RETOUR).reduce((a,c) => a + (c.cout_article + c.cout_impression), 0);
+    const lossMerch = cm.filter(i => i.status === MerchStatus.RETOUR).reduce((a,c) => a + c.prix_achat, 0);
+    const totalRetLoss = lossGros + lossSw + lossMerch;
 
-    const retLoss = cg.filter(i => i.status === GrosStatus.RETOUR).reduce((a,c) => a + c.cost, 0) + 
-                   cs.filter(i => i.status === SitewebStatus.RETOUR).reduce((a,c) => a + (c.cout_article + c.cout_impression), 0) + 
-                   cm.filter(i => i.status === MerchStatus.RETOUR).reduce((a,c) => a + c.prix_achat, 0);
+    const totalMkt = pillarProfitData.gros.mkt + pillarProfitData.vendeurs.mkt + pillarProfitData.merch.mkt;
 
-    return { totalProd, totalProfitNet, lneProfit, retLoss };
-  }, [getCalculatedGros, getCalculatedSiteweb, getCalculatedMerch, dashboardDateStart, dashboardDateEnd]);
+    const profitBrutGlobal = (successGros + successVend + successMerch + successCc + (oRev - oAds)) - totalRetLoss - totalMkt;
 
-  // --- PILLAR REDESIGN DATA ---
-  const pillars = useMemo(() => {
-    const cg = getCalculatedGros().filter(i => filterByDate(i.date_created));
-    const cs = getCalculatedSiteweb().filter(i => filterByDate(i.date_created));
-    const cm = getCalculatedMerch().filter(i => filterByDate(i.created_at));
+    // 3. Livrée Non Encaissée (CC: NON_PAYEE)
+    const lneGros = cg.filter(i => i.status === GrosStatus.LIVREE_NON_ENCAISSE);
+    const lneSw = cs.filter(i => i.status === SitewebStatus.LIVREE_NON_ENCAISSEE);
+    const lneMerch = cm.filter(i => i.status === MerchStatus.LIVREE_NON_ENCAISSEE);
+    const lneCc = cc.filter(i => i.status === ClientComptoirStatus.NON_PAYEE);
 
-    const getPillarMkt = (src: MarketingSpendSource) => 
-      marketingSpends.filter(s => s.source === src && filterByDate(s.date_start)).reduce((a, c) => a + Number(c.amount), 0);
+    const lneProfitTotal = lneGros.reduce((a,c) => a + (c.prix_vente - c.cost), 0) + 
+                           lneSw.reduce((a,c) => a + c.profit_net, 0) + 
+                           lneMerch.reduce((a,c) => a + (c.prix_vente - c.prix_achat), 0) +
+                           lneCc.reduce((a,c) => a + c.benefice_net, 0);
+    const lneCount = lneGros.length + lneSw.length + lneMerch.length + lneCc.length;
 
-    // GROS Pillar
-    const grosMkt = getPillarMkt(MarketingSpendSource.GROS);
-    const grosProfitReal = cg.filter(i => [GrosStatus.LIVREE_ENCAISSE, GrosStatus.LIVREE_NON_ENCAISSE].includes(i.status))
-                           .reduce((a, c) => a + (c.prix_vente - c.cost), 0);
-    const grosProfitPot = cg.filter(i => [GrosStatus.EN_LIVRAISON, GrosStatus.EN_PRODUCTION].includes(i.status))
-                          .reduce((a, c) => a + (c.prix_vente - c.cost), 0);
+    // 4. En Livraison (CC: EN_PROD/EN_LIVR)
+    const potGros = cg.filter(i => [GrosStatus.EN_LIVRAISON, GrosStatus.EN_PRODUCTION].includes(i.status));
+    const potSw = cs.filter(i => i.status === SitewebStatus.EN_LIVRAISON);
+    const potMerch = cm.filter(i => i.status === MerchStatus.EN_LIVRAISON);
+    const potCc = cc.filter(i => [ClientComptoirStatus.EN_PRODUCTION, ClientComptoirStatus.EN_LIVRAISON].includes(i.status));
 
-    // VENDEURS Pillar
-    const vendMkt = getPillarMkt(MarketingSpendSource.SITEWEB);
-    const vendProfitReal = cs.filter(i => [SitewebStatus.LIVREE, SitewebStatus.LIVREE_NON_ENCAISSEE].includes(i.status))
-                           .reduce((a, c) => a + c.profit_net, 0);
-    const vendBenefice = cs.filter(i => [SitewebStatus.LIVREE, SitewebStatus.LIVREE_NON_ENCAISSEE].includes(i.status))
-                         .reduce((a, c) => a + Number(c.vendeur_benefice || 0), 0);
-
-    // MERCH Pillar
-    const merchMkt = getPillarMkt(MarketingSpendSource.MERCH);
-    const merchProfitReal = cm.filter(i => [MerchStatus.LIVREE, MerchStatus.LIVREE_NON_ENCAISSEE].includes(i.status))
-                            .reduce((a, c) => a + (c.prix_vente - c.prix_achat), 0);
-    const merchProdValue = cm.reduce((a, c) => a + c.prix_achat, 0);
-    const merchProfitPot = cm.filter(i => i.status === MerchStatus.EN_LIVRAISON)
-                           .reduce((a, c) => a + (c.prix_vente - c.prix_achat), 0);
-
-    // Time Series Generation for Charts
-    const daily: Record<string, any> = {};
-    const initDate = (d: string) => { 
-      if (!daily[d]) daily[d] = { 
-        date: d, 
-        gProfit: 0, gMkt: 0, gPot: 0,
-        vProfit: 0, vMkt: 0, vCom: 0, vProd: 0,
-        mProfit: 0, mMkt: 0, mProd: 0, mRet: 0
-      }; 
-    };
-
-    cg.forEach(i => {
-      initDate(i.date_created);
-      if ([GrosStatus.LIVREE_ENCAISSE, GrosStatus.LIVREE_NON_ENCAISSE].includes(i.status)) daily[i.date_created].gProfit += (i.prix_vente - i.cost);
-      if ([GrosStatus.EN_LIVRAISON, GrosStatus.EN_PRODUCTION].includes(i.status)) daily[i.date_created].gPot += (i.prix_vente - i.cost);
-    });
-
-    cs.forEach(i => {
-      initDate(i.date_created);
-      if ([SitewebStatus.LIVREE, SitewebStatus.LIVREE_NON_ENCAISSEE].includes(i.status)) {
-        daily[i.date_created].vProfit += i.profit_net;
-        daily[i.date_created].vCom += Number(i.vendeur_benefice || 0);
-        daily[i.date_created].vProd += (i.cout_article + i.cout_impression);
-      }
-    });
-
-    cm.forEach(i => {
-      const d = i.created_at.split('T')[0];
-      initDate(d);
-      if ([MerchStatus.LIVREE, MerchStatus.LIVREE_NON_ENCAISSEE].includes(i.status)) daily[d].mProfit += (i.prix_vente - i.prix_achat);
-      daily[d].mProd += i.prix_achat;
-      if (i.status === MerchStatus.RETOUR) daily[d].mRet += i.prix_achat;
-    });
-
-    marketingSpends.forEach(s => {
-      if (filterByDate(s.date_start)) {
-        initDate(s.date_start);
-        if (s.source === MarketingSpendSource.GROS) daily[s.date_start].gMkt += Number(s.amount);
-        if (s.source === MarketingSpendSource.SITEWEB) daily[s.date_start].vMkt += Number(s.amount);
-        if (s.source === MarketingSpendSource.MERCH) daily[s.date_start].mMkt += Number(s.amount);
-      }
-    });
-
-    const timeline = Object.values(daily).sort((a,b) => a.date.localeCompare(b.date));
+    const potProfitTotal = potGros.reduce((a,c) => a + (c.prix_vente - c.cost), 0) + 
+                           potSw.reduce((a,c) => a + c.profit_net, 0) + 
+                           potMerch.reduce((a,c) => a + (c.prix_vente - c.prix_achat), 0) +
+                           potCc.reduce((a,c) => a + c.benefice_net, 0);
+    const potCount = potGros.length + potSw.length + potMerch.length + potCc.length;
 
     return {
-      gros: { profitReal: grosProfitReal, profitPot: grosProfitPot, mkt: grosMkt, timeline },
-      vendeurs: { profitReal: vendProfitReal, mkt: vendMkt, benefice: vendBenefice, timeline },
-      merch: { profitReal: merchProfitReal, mkt: merchMkt, prod: merchProdValue, profitPot: merchProfitPot, timeline }
+      totalProd,
+      profitBrutGlobal, totalRetLoss,
+      lneProfitTotal, lneCount,
+      potProfitTotal, potCount
     };
-  }, [getCalculatedGros, getCalculatedSiteweb, getCalculatedMerch, marketingSpends, dashboardDateStart, dashboardDateEnd]);
+  }, [getCalculatedGros, getCalculatedSiteweb, getCalculatedMerch, getCalculatedClientComptoir, offres, marketingSpends, pillarProfitData, dashboardDateStart, dashboardDateEnd]);
 
   return (
     <div className="space-y-16 animate-in fade-in duration-500 pb-32">
@@ -256,182 +263,115 @@ const Dashboard: React.FC = () => {
         <TrendingUp size={450} className="absolute -bottom-24 -right-24 text-white/[0.03] rotate-12 pointer-events-none" />
       </div>
 
-      {/* Global Summary Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-8">
-        <KPICard title="Production Consolidée" value={globalKPIs.totalProd} icon={Zap} colorClass={{text: 'text-blue-600', bg: 'bg-blue-50'}} />
-        <KPICard title="Profit Brut Global" value={globalKPIs.totalProfitNet} icon={TrendingUp} colorClass={{text: 'text-emerald-600', bg: 'bg-emerald-50'}} />
-        <KPICard title="Livrée Non Encaissée" value={globalKPIs.lneProfit} icon={Clock} colorClass={{text: 'text-purple-600', bg: 'bg-purple-50'}} />
-        <KPICard title="Pertes de Retours" value={globalKPIs.retLoss} icon={RotateCcw} colorClass={{text: 'text-red-600', bg: 'bg-red-50'}} />
-      </div>
-
-      <div className="h-px bg-slate-100 w-full" />
-
-      {/* --- PILLAR 1: COMMANDES GROS --- */}
-      <section className="space-y-10">
-        <div className="flex items-center gap-4">
-          <div className="p-4 bg-blue-600 rounded-3xl text-white shadow-xl shadow-blue-600/20">
-            <Truck size={32} />
+      {/* PROFIT FINAL RÉEL SECTION */}
+      <section className="space-y-8">
+        <div className="flex items-center gap-4 border-b border-slate-100 pb-4">
+          <div className="p-3 bg-slate-900 rounded-2xl text-white">
+            <Coins size={20} />
           </div>
           <div>
-            <h3 className="text-3xl font-black text-slate-800 tracking-tight">Pilier 1: Commandes GROS</h3>
-            <p className="text-slate-400 font-bold text-xs uppercase tracking-widest">Wholesale & Logistics Accounting</p>
+            <h3 className="text-2xl font-black text-slate-800 tracking-tight">Profit Final Réel (Après Tous Coûts)</h3>
+            <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest">Analyse isolée de rentabilité par flux direct</p>
           </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          <div className="lg:col-span-1 space-y-6">
-            <KPICard 
-              title="Profit Réalisé (LNE + LE)" 
-              value={pillars.gros.profitReal} 
-              icon={Banknote} 
-              colorClass={{text: 'text-emerald-600', bg: 'bg-emerald-50'}}
-              subValues={[
-                { label: 'Marketing Spend', val: pillars.gros.mkt, color: 'text-red-500' },
-                { label: 'Net Final Pilier', val: pillars.gros.profitReal - pillars.gros.mkt, color: 'text-blue-600' }
-              ]}
-            />
-            <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
-               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Profit Potentiel (Non comptabilisé)</p>
-               <h3 className="text-2xl font-black text-slate-400 tabular-nums italic">{formatCurrency(pillars.gros.profitPot)}</h3>
-               <div className="mt-4 flex items-center gap-2 text-[10px] font-bold text-slate-300">
-                  <Activity size={12} /> STATUS: PRODUCTION / EN LIVRAISON
-               </div>
-            </div>
-          </div>
-          
-          <div className="lg:col-span-3">
-            <ChartCard title="Performance Chronologique Wholesale" icon={TrendingUp} colorClass={{text: 'text-blue-600', bg: 'bg-blue-50'}}>
-              <ComposedChart data={pillars.gros.timeline}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis dataKey="date" hide />
-                <YAxis axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#94a3b8'}} />
-                <Tooltip contentStyle={{borderRadius: '16px', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)'}} />
-                <Area type="monotone" dataKey="gProfit" name="Profit Réalisé" stroke="#10b981" fill="#10b981" fillOpacity={0.05} strokeWidth={3} />
-                <Line type="monotone" dataKey="gMkt" name="Investissement Marketing" stroke="#f43f5e" strokeWidth={2} dot={false} />
-                <Line type="monotone" dataKey="gPot" name="Profit Potentiel (En cours)" stroke="#94a3b8" strokeWidth={2} strokeDasharray="5 5" dot={false} />
-                <Legend wrapperStyle={{fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase', paddingTop: '30px'}} />
-              </ComposedChart>
-            </ChartCard>
-          </div>
+          <KPICard 
+            title="Profit Final GROS" 
+            value={pillarProfitData.gros.final} 
+            icon={Truck} 
+            colorClass={{
+              text: 'text-blue-600', bg: 'bg-blue-50', 
+              valueText: pillarProfitData.gros.final >= 0 ? 'text-emerald-600' : 'text-red-600'
+            }}
+            subValues={[
+              { label: 'Ventes', val: pillarProfitData.gros.sales },
+              { label: 'Prod/Ret/Ads', val: -(pillarProfitData.gros.prod + pillarProfitData.gros.ret + pillarProfitData.gros.mkt), color: 'text-red-400' }
+            ]}
+          />
+          <KPICard 
+            title="Profit Final VENDEURS" 
+            value={pillarProfitData.vendeurs.final} 
+            icon={Globe} 
+            colorClass={{
+              text: 'text-indigo-600', bg: 'bg-indigo-50', 
+              valueText: pillarProfitData.vendeurs.final >= 0 ? 'text-emerald-600' : 'text-red-600'
+            }}
+            subValues={[
+              { label: 'Ventes', val: pillarProfitData.vendeurs.sales },
+              { label: 'Tous Coûts', val: -(pillarProfitData.vendeurs.sales - pillarProfitData.vendeurs.final), color: 'text-red-400' }
+            ]}
+          />
+          <KPICard 
+            title="Profit Final MERCH" 
+            value={pillarProfitData.merch.final} 
+            icon={ShoppingBag} 
+            colorClass={{
+              text: 'text-emerald-600', bg: 'bg-emerald-50', 
+              valueText: pillarProfitData.merch.final >= 0 ? 'text-emerald-600' : 'text-red-600'
+            }}
+            subValues={[
+              { label: 'Ventes', val: pillarProfitData.merch.sales },
+              { label: 'Prod/Ret/Ads', val: -(pillarProfitData.merch.sales - pillarProfitData.merch.final), color: 'text-red-400' }
+            ]}
+          />
+          <KPICard 
+            title="Profit CLIENT COMPTOIR" 
+            value={pillarProfitData.comptoir.final} 
+            icon={Store} 
+            colorClass={{
+              text: 'text-amber-600', bg: 'bg-amber-50', 
+              valueText: pillarProfitData.comptoir.final >= 0 ? 'text-emerald-600' : 'text-red-600'
+            }}
+            subValues={[
+              { label: 'Ventes Directes', val: pillarProfitData.comptoir.sales },
+              { label: 'Charges Production', val: -pillarProfitData.comptoir.prod, color: 'text-slate-400' }
+            ]}
+          />
         </div>
       </section>
 
-      {/* --- PILLAR 2: COMMANDES VENDEURS --- */}
-      <section className="space-y-10">
-        <div className="flex items-center gap-4">
-          <div className="p-4 bg-indigo-600 rounded-3xl text-white shadow-xl shadow-indigo-600/20">
-            <Globe size={32} />
-          </div>
-          <div>
-            <h3 className="text-3xl font-black text-slate-800 tracking-tight">Pilier 2: Commandes VENDEURS</h3>
-            <p className="text-slate-400 font-bold text-xs uppercase tracking-widest">Retail & Multi-vendor Commissions</p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          <div className="lg:col-span-1 space-y-6">
-            <KPICard 
-              title="Profit Net (LNE + L)" 
-              value={pillars.vendeurs.profitReal} 
-              icon={TrendingUp} 
-              colorClass={{text: 'text-indigo-600', bg: 'bg-indigo-50'}}
-              subValues={[
-                { label: 'Commission Vendeurs', val: pillars.vendeurs.benefice, color: 'text-purple-500' },
-                { label: 'Net Final Pilier', val: pillars.vendeurs.profitReal - pillars.vendeurs.mkt, color: 'text-blue-600' }
-              ]}
-            />
-            <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-col justify-center">
-               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Dépense Pub Pilier</p>
-               <h3 className="text-2xl font-black text-red-500">{formatCurrency(pillars.vendeurs.mkt)}</h3>
-            </div>
-          </div>
-          
-          <div className="lg:col-span-3">
-            <ChartCard title="Structure des Revenus Retail" icon={BarChart3} colorClass={{text: 'text-indigo-600', bg: 'bg-indigo-50'}}>
-              <ComposedChart data={pillars.vendeurs.timeline}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis dataKey="date" hide />
-                <YAxis axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#94a3b8'}} />
-                <Tooltip contentStyle={{borderRadius: '16px', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)'}} />
-                <Area type="monotone" dataKey="vProfit" name="Profit Net Entreprise" stroke="#6366f1" fill="#6366f1" fillOpacity={0.05} strokeWidth={3} />
-                <Line type="monotone" dataKey="vCom" name="Bénéfice Vendeurs" stroke="#a855f7" strokeWidth={2} dot={false} />
-                <Line type="monotone" dataKey="vProd" name="Coûts Production" stroke="#94a3b8" strokeWidth={2} dot={false} />
-                <Bar dataKey="vMkt" name="Ads Spend" fill="#f43f5e" radius={[4, 4, 0, 0]} barSize={10} />
-                <Legend wrapperStyle={{fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase', paddingTop: '30px'}} />
-              </ComposedChart>
-            </ChartCard>
-          </div>
-        </div>
-      </section>
-
-      {/* --- PILLAR 3: COMMANDES MERCH --- */}
-      <section className="space-y-10">
-        <div className="flex items-center gap-4">
-          <div className="p-4 bg-emerald-600 rounded-3xl text-white shadow-xl shadow-emerald-600/20">
-            <ShoppingBag size={32} />
-          </div>
-          <div>
-            <h3 className="text-3xl font-black text-slate-800 tracking-tight">Pilier 3: Commandes MERCH</h3>
-            <p className="text-slate-400 font-bold text-xs uppercase tracking-widest">Direct-to-Consumer Merchandise</p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          <div className="lg:col-span-1 space-y-6">
-            <KPICard 
-              title="Profit Réalisé" 
-              value={pillars.merch.profitReal} 
-              icon={Activity} 
-              colorClass={{text: 'text-emerald-600', bg: 'bg-emerald-50'}}
-              subValues={[
-                { label: 'Invest. Production', val: pillars.merch.prod, color: 'text-slate-500' },
-                { label: 'Profit Potentiel', val: pillars.merch.profitPot, color: 'text-blue-400' }
-              ]}
-            />
-            <div className="bg-emerald-900 p-8 rounded-[2.5rem] shadow-xl text-white flex flex-col justify-center">
-               <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-1">Solde Net Merch</p>
-               <h3 className="text-3xl font-black tabular-nums">{formatCurrency(pillars.merch.profitReal - pillars.merch.mkt)}</h3>
-            </div>
-          </div>
-          
-          <div className="lg:col-span-3">
-            <ChartCard title="Analyse de Flux Merch" icon={Zap} colorClass={{text: 'text-emerald-600', bg: 'bg-emerald-50'}}>
-              <ComposedChart data={pillars.merch.timeline}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis dataKey="date" hide />
-                <YAxis axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#94a3b8'}} />
-                <Tooltip contentStyle={{borderRadius: '16px', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)'}} />
-                <Area type="monotone" dataKey="mProfit" name="Profit Opérationnel" stroke="#10b981" fill="#10b981" fillOpacity={0.05} strokeWidth={3} />
-                <Line type="monotone" dataKey="mProd" name="Investissement Production" stroke="#94a3b8" strokeWidth={2} dot={false} />
-                <Line type="monotone" dataKey="mRet" name="Pertes de Retours" stroke="#f43f5e" strokeWidth={2} dot={false} />
-                <Line type="monotone" dataKey="mMkt" name="Marketing Spend" stroke="#3b82f6" strokeWidth={2} dot={false} />
-                <Legend wrapperStyle={{fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase', paddingTop: '30px'}} />
-              </ComposedChart>
-            </ChartCard>
-          </div>
-        </div>
-      </section>
-
-      {/* Strategic Footer Insights */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-12 border-t border-slate-100">
-          <div className="flex items-center gap-6 p-8 bg-blue-50/50 rounded-3xl border border-blue-100">
-             <Zap className="text-blue-500 shrink-0" size={32} />
-             <div>
-                <p className="text-[11px] font-black text-blue-600 uppercase tracking-widest">Efficacité Publicitaire</p>
-                <p className="text-base font-bold text-slate-700">
-                  Total {data.total_marketing_spend > 0 ? (globalKPIs.totalProfitNet / data.total_marketing_spend).toFixed(1) + 'x ROI global sur investissement.' : 'Aucun spend marketing enregistré.'}
-                </p>
-             </div>
-          </div>
-          <div className="flex items-center gap-6 p-8 bg-emerald-50/50 rounded-3xl border border-emerald-100">
-             <ArrowUpRight className="text-emerald-500 shrink-0" size={32} />
-             <div>
-                <p className="text-[11px] font-black text-emerald-600 uppercase tracking-widest">Santé du Business</p>
-                <p className="text-base font-bold text-slate-700">
-                  Position de liquidité : {data.profit_net_final > 0 ? 'Excellente.' : 'Action corrective requise.'}
-                </p>
-             </div>
-          </div>
+      {/* Global Summary Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <KPICard 
+          title="Production Consolidée" 
+          value={globalKPIs.totalProd} 
+          icon={Box} 
+          colorClass={{text: 'text-blue-600', bg: 'bg-blue-50'}}
+          subValues={[
+            { label: 'Impact Global', val: 'Coût de Fabrication' }
+          ]}
+        />
+        <KPICard 
+          title="Profit Brut Global" 
+          value={globalKPIs.profitBrutGlobal} 
+          icon={TrendingUp} 
+          colorClass={{text: 'text-emerald-600', bg: 'bg-emerald-50', valueText: 'text-emerald-600'}}
+          subValues={[
+            { label: 'Pertes Retours', val: globalKPIs.totalRetLoss, color: 'text-red-500', fullWidth: true }
+          ]}
+        />
+        <KPICard 
+          title="Revenus non encore encaissés" 
+          value={globalKPIs.lneProfitTotal} 
+          icon={Clock} 
+          colorClass={{text: 'text-purple-600', bg: 'bg-purple-50'}}
+          statusCount={globalKPIs.lneCount}
+          subValues={[
+            { label: 'Statut', val: 'LNE / NON PAYÉ' }
+          ]}
+        />
+        <KPICard 
+          title="Potentiel – Non comptabilisé" 
+          value={globalKPIs.potProfitTotal} 
+          icon={Activity} 
+          colorClass={{text: 'text-slate-400', bg: 'bg-slate-50'}}
+          isMuted={true}
+          statusCount={globalKPIs.potCount}
+          subValues={[
+            { label: 'Profit Est.', val: globalKPIs.potProfitTotal, color: 'text-blue-400', fullWidth: true }
+          ]}
+        />
       </div>
     </div>
   );

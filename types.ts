@@ -27,6 +27,13 @@ export enum MarketingStatus {
   ANNULE = 'annule'
 }
 
+export enum ClientComptoirStatus {
+  EN_PRODUCTION = 'en_production',
+  EN_LIVRAISON = 'en_livraison',
+  PAYEE = 'payee',
+  NON_PAYEE = 'non_payee'
+}
+
 export enum OffreType {
   REVENUE = 'revenue',
   EXPENSE = 'expense'
@@ -120,14 +127,15 @@ export interface CommandeMerch {
   created_at: string;
 }
 
-export interface MarketingService {
+export interface ClientComptoir {
   id: string;
   client_name: string;
   service_description: string;
   date: string;
   revenue: number;
   client_charges: number;
-  status: MarketingStatus;
+  status: ClientComptoirStatus;
+  processed?: boolean;
 }
 
 export interface Offre {
@@ -191,8 +199,10 @@ export interface CalculatedMerch extends CommandeMerch {
   impact_perte: number;
 }
 
-export interface CalculatedMarketing extends MarketingService {
-  net_profit: number;
+export interface CalculatedClientComptoir extends ClientComptoir {
+  benefice_net: number;
+  realized_profit: number;
+  expected_profit: number;
 }
 
 export interface DashboardData {
