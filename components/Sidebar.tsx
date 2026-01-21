@@ -21,7 +21,8 @@ import {
   Store,
   PanelLeftClose,
   Banknote,
-  CreditCard
+  CreditCard,
+  FileBarChart
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -104,14 +105,15 @@ const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen, onClose, isHidden, onTo
 
         <div className="my-4 border-t border-slate-800/30 mx-4" />
 
+        {renderNavLink({ to: '/stats', label: 'Analytique Forensic', icon: FileBarChart })}
         {renderNavLink({ to: '/gros', label: 'Commandes Gros', icon: Truck })}
         {renderNavLink({ to: '/detail', label: 'Commandes Vendeurs', icon: Globe })}
         {renderNavLink({ to: '/merch', label: 'Commandes Merch', icon: Store })}
-        {renderNavLink({ to: '/offres', label: 'Offres', icon: TrendingUp })}
-        {renderNavLink({ to: '/marketing', label: 'Marketing Clients', icon: UserCheck })}
-
+        
         <div className="my-6 border-t border-slate-800/30 mx-4" />
 
+        {renderNavLink({ to: '/offres', label: 'Offres', icon: TrendingUp })}
+        {renderNavLink({ to: '/marketing', label: 'Marketing Clients', icon: UserCheck })}
         {renderNavLink({ to: '/marketing-spend', label: 'Marketing Spend', icon: Megaphone })}
         {renderNavLink({ to: '/charges', label: 'Les Charges', icon: Wallet })}
 

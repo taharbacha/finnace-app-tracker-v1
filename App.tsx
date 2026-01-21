@@ -15,6 +15,7 @@ import AIAssistant from './pages/AIAssistant.tsx';
 import Retour from './pages/Retour.tsx';
 import Payout from './pages/Payout.tsx';
 import Credit from './pages/Credit.tsx';
+import Stats from './pages/Stats.tsx';
 import { AppProvider } from './store.tsx';
 import { Menu, PanelLeftOpen } from 'lucide-react';
 
@@ -85,6 +86,7 @@ const AppRoutes: React.FC = () => {
   return (
     <Routes>
       <Route path="/" element={<AppLayout><Dashboard /></AppLayout>} />
+      <Route path="/stats" element={<AppLayout><Stats /></AppLayout>} />
       <Route path="/gros" element={<AppLayout><CommandesGros /></AppLayout>} />
       <Route path="/detail" element={<AppLayout><CommandesDetail /></AppLayout>} />
       <Route path="/merch" element={<AppLayout><CommandeMerch /></AppLayout>} />
