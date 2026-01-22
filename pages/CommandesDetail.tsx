@@ -1,3 +1,4 @@
+
 import React, { useRef, useState, useMemo } from 'react';
 import { useAppStore } from '../store.tsx';
 import EditableCell from '../components/EditableCell.tsx';
@@ -5,7 +6,7 @@ import { SitewebStatus } from '../types.ts';
 import { 
   Plus, Search, Banknote, Trash2, Copy, Download, Upload, 
   AlertCircle, Clock, Truck, Filter, CheckSquare, Square, 
-  ClipboardCheck, ChevronUp, ChevronDown, Percent, Ban
+  ClipboardCheck, ChevronUp, ChevronDown, Percent, Ban, Users
 } from 'lucide-react';
 
 const CommandesDetail: React.FC = () => {
@@ -41,6 +42,7 @@ const CommandesDetail: React.FC = () => {
         profitNonEncaissée: 0, nonEncA: 0, nonEncI: 0, nonEncV: 0,
         enLivraisonValue: 0, enLivraisonProfit: 0, enLivA: 0, enLivI: 0, enLivV: 0,
         retourLoss: 0, returnRate: 0,
+        commissionsTotales: 0,
         count: 0
       };
     }
@@ -70,12 +72,17 @@ const CommandesDetail: React.FC = () => {
     const retourLoss = retourData.reduce((acc, curr) => acc + (Number(curr.cout_article || 0) + Number(curr.cout_impression || 0)), 0);
     const returnRate = (retourData.length / kpiData.length) * 100;
 
+    const commissionsTotales = kpiData
+      .filter(o => o.status === SitewebStatus.LIVREE || o.status === SitewebStatus.LIVREE_NON_ENCAISSEE)
+      .reduce((acc, curr) => acc + Number(curr.vendeur_benefice || 0), 0);
+
     return { 
       prodTotal, prodA, prodI, 
       profitEncaissée, 
       profitNonEncaissée, nonEncA, nonEncI, nonEncV,
       enLivraisonValue, enLivraisonProfit, enLivA, enLivI, enLivV,
       retourLoss, returnRate,
+      commissionsTotales,
       count: kpiData.length
     };
   }, [kpiData]);
@@ -187,7 +194,7 @@ const CommandesDetail: React.FC = () => {
       {/* KPI Cards Section */}
       {showHeaders && (
         <div className="space-y-6 animate-in fade-in zoom-in-95 duration-300">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
             
             {/* KPI A: Production Totale */}
             <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-col justify-between">
@@ -238,10 +245,20 @@ const CommandesDetail: React.FC = () => {
               </div>
             </div>
 
+            {/* KPI: Commission Vendeurs (NEW) */}
+            <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm">
+              <div className="w-12 h-12 rounded-2xl bg-indigo-50 flex items-center justify-center mb-6">
+                <Users className="text-indigo-600" size={24} />
+              </div>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Commission Vendeurs</p>
+              <h3 className="text-2xl font-black text-indigo-600">{formatPrice(stats.commissionsTotales)}</h3>
+              <p className="text-[9px] font-bold text-slate-400 mt-2 uppercase">Commandes livrées</p>
+            </div>
+
             {/* KPI D: En Livraison */}
             <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-col justify-between">
               <div>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">En Livraison (Valeur)</p>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">En Livraison (Valeur Vente)</p>
                 <h3 className="text-2xl font-black text-blue-600">{formatPrice(stats.enLivraisonValue)}</h3>
               </div>
               <div className="mt-4 space-y-2">
