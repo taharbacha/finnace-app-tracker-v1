@@ -5,13 +5,13 @@ import EditableCell from '../components/EditableCell.tsx';
 import { MerchStatus } from '../types.ts';
 import { MERCH_STATUS_OPTIONS } from '../constants.ts';
 import { 
-  Plus, Search, Banknote, Trash2, Download, Upload, AlertCircle, 
-  Clock, Truck, ShoppingBag, Filter, CheckSquare, Square, 
+  Plus, Search, Banknote, Trash2, Upload, 
+  Clock, ShoppingBag, Filter, CheckSquare, Square, 
   ClipboardCheck, ChevronUp, ChevronDown, Percent, Ban 
 } from 'lucide-react';
 
 const CommandeMerch: React.FC = () => {
-  const { getCalculatedMerch, updateMerch, addMerch, deleteMerch, importMerch } = useAppStore();
+  const { getCalculatedMerch, updateMerch, addMerch, deleteMerch, importMerch, dashboardDateStart, dashboardDateEnd } = useAppStore();
   const allData = getCalculatedMerch();
   
   // UI States
@@ -24,13 +24,16 @@ const CommandeMerch: React.FC = () => {
 
   const filteredData = useMemo(() => {
     return allData.filter(item => {
-      return (item.reference || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-             (item.client_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-             (item.produit || '').toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesSearch = (item.reference || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                            (item.client_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                            (item.produit || '').toLowerCase().includes(searchTerm.toLowerCase());
+      const itemDate = item.created_at.split('T')[0];
+      const matchesStart = !dashboardDateStart || itemDate >= dashboardDateStart;
+      const matchesEnd = !dashboardDateEnd || itemDate <= dashboardDateEnd;
+      return matchesSearch && matchesStart && matchesEnd;
     }).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-  }, [allData, searchTerm]);
+  }, [allData, searchTerm, dashboardDateStart, dashboardDateEnd]);
 
-  // Logic for selection-based KPIs
   const kpiData = useMemo(() => {
     if (!analysisMode) return filteredData;
     return filteredData.filter(item => selectedIds.has(item.id));
@@ -52,7 +55,6 @@ const CommandeMerch: React.FC = () => {
     }
 
     const production = kpiData.reduce((acc, curr) => acc + Number(curr.prix_achat || 0), 0);
-    
     const profitEncaissé = kpiData
       .filter(i => i.status === MerchStatus.LIVREE)
       .reduce((acc, curr) => acc + (Number(curr.prix_vente || 0) - Number(curr.prix_achat || 0)), 0);
@@ -130,14 +132,13 @@ const CommandeMerch: React.FC = () => {
 
   return (
     <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500 pb-20">
-      {/* Header Bar */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="text-3xl font-black text-slate-800 tracking-tight flex items-center gap-3">
             <ShoppingBag className="text-blue-600" size={28} />
             Commande Merch
           </h2>
-          <p className="text-slate-500 text-sm font-medium">Gestion opérationnelle des ventes directes de produits dérivés.</p>
+          <p className="text-slate-500 text-sm font-medium">Gestion opérationnelle des ventes directes.</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <button 
@@ -172,12 +173,9 @@ const CommandeMerch: React.FC = () => {
         </div>
       </div>
 
-      {/* KPI Cards Section */}
       {showHeaders && (
         <div className="space-y-6 animate-in fade-in zoom-in-95 duration-300">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
-            
-            {/* KPI: Production */}
             <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-col justify-between">
               <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center mb-6">
                 <ShoppingBag className="text-blue-600" size={24} />
@@ -188,7 +186,6 @@ const CommandeMerch: React.FC = () => {
               </div>
             </div>
 
-            {/* KPI: Profit Encaissé */}
             <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm">
               <div className="w-12 h-12 rounded-2xl bg-emerald-50 flex items-center justify-center mb-6">
                 <Banknote className="text-emerald-600" size={24} />
@@ -197,7 +194,6 @@ const CommandeMerch: React.FC = () => {
               <h3 className="text-2xl font-black text-emerald-600">{formatPrice(stats.profitEncaissé)}</h3>
             </div>
 
-            {/* KPI: Livrée Non Encaissée */}
             <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm">
               <div className="w-12 h-12 rounded-2xl bg-purple-50 flex items-center justify-center mb-6">
                 <Clock className="text-purple-600" size={24} />
@@ -206,7 +202,6 @@ const CommandeMerch: React.FC = () => {
               <h3 className="text-2xl font-black text-purple-600">{formatPrice(stats.nonEncProduction)}</h3>
             </div>
 
-            {/* KPI: En Livraison */}
             <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-col justify-between">
               <div>
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">En Livraison (Valeur Vente)</p>
@@ -217,14 +212,9 @@ const CommandeMerch: React.FC = () => {
                   <span className="text-slate-400 uppercase tracking-tighter">Profit Potentiel</span>
                   <span className="text-blue-500">{formatPrice(stats.enLivraisonProfit)}</span>
                 </div>
-                <div className="flex justify-between items-center text-[10px] font-bold">
-                  <span className="text-slate-400 uppercase tracking-tighter">Production</span>
-                  <span className="text-slate-600">{formatPrice(stats.enLivraisonProduction)}</span>
-                </div>
               </div>
             </div>
 
-            {/* KPI: Retour */}
             <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-col justify-between">
               <div>
                 <div className="flex justify-between items-start">
@@ -239,26 +229,6 @@ const CommandeMerch: React.FC = () => {
               <div className="mt-4 flex items-center justify-center p-3 bg-red-50/50 rounded-2xl border border-red-100/50">
                 <Ban size={24} className="text-red-300" />
               </div>
-            </div>
-          </div>
-
-          {/* Status Chips Summary */}
-          <div className="flex flex-wrap items-center gap-3 px-2">
-            <div className="text-[10px] font-black text-slate-300 uppercase tracking-widest mr-2">Compteurs:</div>
-            <div className="px-3 py-1 bg-slate-100 rounded-full text-[10px] font-black text-slate-600 border border-slate-200">
-              TOTAL: {stats.counts.total}
-            </div>
-            <div className="px-3 py-1 bg-blue-50 rounded-full text-[10px] font-black text-blue-600 border border-blue-100">
-              LIVRAISON: {stats.counts.enLivraison}
-            </div>
-            <div className="px-3 py-1 bg-emerald-50 rounded-full text-[10px] font-black text-emerald-600 border border-emerald-100">
-              LIVRÉE: {stats.counts.livree}
-            </div>
-            <div className="px-3 py-1 bg-purple-50 rounded-full text-[10px] font-black text-purple-600 border border-purple-100">
-              ATTENTE: {stats.counts.livreeNonEnc}
-            </div>
-            <div className="px-3 py-1 bg-red-50 rounded-full text-[10px] font-black text-red-600 border border-red-100">
-              RETOUR: {stats.counts.retour}
             </div>
           </div>
         </div>
@@ -277,9 +247,11 @@ const CommandeMerch: React.FC = () => {
               className="w-full pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-2xl outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all text-sm font-medium" 
             />
           </div>
-          <div className="flex items-center gap-2 p-1.5 bg-white border border-slate-200 rounded-2xl shadow-sm">
-             <div className="px-3 py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">Affiche: {filteredData.length}</div>
-          </div>
+          {(dashboardDateStart || dashboardDateEnd) && (
+            <div className="bg-blue-50 border border-blue-100 px-4 py-2 rounded-2xl flex items-center gap-2">
+              <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Global Filter Sync</span>
+            </div>
+          )}
         </div>
         
         <div className="overflow-x-auto">

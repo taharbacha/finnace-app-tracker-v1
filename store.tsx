@@ -5,7 +5,7 @@ import {
   CommandeGros, CommandeSiteweb, CommandeMerch, Offre, InventoryItem, Charge, MarketingService as MarketingServiceType, MarketingSpend, Retour,
   Payout, PayoutStatus, Credit, CreditStatus,
   CalculatedGros, CalculatedSiteweb, CalculatedMerch, CalculatedMarketing, DashboardData,
-  GrosStatus, SitewebStatus, MerchStatus, OffreType, OffreCategory, MarketingStatus, MarketingSpendSource, MarketingSpendType,
+  GrosStatus, SitewebStatus, MerchStatus, OffreType, OffreCategory, MarketingStatus, MarketingStatus as MarketingStatusEnum, MarketingSpendSource, MarketingSpendType,
   ChatMessage
 } from './types.ts';
 
@@ -164,8 +164,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
 
-  const [dashboardDateStart, setDashboardDateStart] = useState<string>('');
-  const [dashboardDateEnd, setDashboardDateEnd] = useState<string>('');
+  // Persistent Date Filtering initialized from localStorage
+  const [dashboardDateStart, setDashboardDateStart] = useState<string>(() => localStorage.getItem('app_date_start') || '');
+  const [dashboardDateEnd, setDashboardDateEnd] = useState<string>(() => localStorage.getItem('app_date_end') || '');
 
   const realtimeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -242,7 +243,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, []);
 
   const logout = useCallback(() => setIsAuthenticated(false), []);
-  const setDashboardDateRange = useCallback((start: string, end: string) => { setDashboardDateStart(start); setDashboardDateEnd(end); }, []);
+  
+  // Updated to include persistence
+  const setDashboardDateRange = useCallback((start: string, end: string) => { 
+    setDashboardDateStart(start); 
+    setDashboardDateEnd(end);
+    if (start) localStorage.setItem('app_date_start', start); else localStorage.removeItem('app_date_start');
+    if (end) localStorage.setItem('app_date_end', end); else localStorage.removeItem('app_date_end');
+  }, []);
+
   const addChatMessage = useCallback((role: 'user' | 'assistant', text: string) => { setChatHistory(prev => [...prev, { id: crypto.randomUUID(), role, text }]); }, []);
   const clearChat = useCallback(() => setChatHistory([]), []);
 
@@ -347,7 +356,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, []);
 
   const addMarketing = useCallback(async () => {
-    const baseRecord = { client_name: 'Nouveau Client', service_description: '', date: new Date().toISOString().split('T')[0], revenue: 0, client_charges: 0, status: MarketingStatus.EN_COURS };
+    const baseRecord = { client_name: 'Nouveau Client', service_description: '', date: new Date().toISOString().split('T')[0], revenue: 0, client_charges: 0, status: MarketingStatusEnum.EN_COURS };
     if (supabase) {
       const { data } = await supabase.from('marketing_services').insert([computeMarketingCalculatedFields(baseRecord as MarketingServiceType)]).select();
       if (data) setMarketingServices(p => p.some(o => o.id === data[0].id) ? p : [data[0], ...p]);
@@ -383,7 +392,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const duplicateSiteweb = useCallback(async (id: string) => { const t = siteweb.find(i => String(i.id) === String(id)); if (t) { const { id: _, ...baseRecord } = t; if (supabase) { const { data } = await supabase.from('commandes_siteweb').insert([computeSitewebCalculatedFields({ ...baseRecord, reference: t.reference + '-copy' } as CommandeSiteweb)]).select(); if (data) setSiteweb(p => p.some(o => o.id === data[0].id) ? p : [data[0], ...p]); } else { setSiteweb(p => [{ ...baseRecord, reference: t.reference + '-copy', id: crypto.randomUUID() } as CommandeSiteweb, ...p]); } } }, [siteweb]);
 
   const addPayout = useCallback(async () => {
-    // UPDATED: Use schema-compliant field names (somme, reste)
     const dbRecord = { 
       vendeur: '', 
       orders_count: 0, 
@@ -411,7 +419,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, []);
 
   const addCredit = useCallback(async () => {
-    // UPDATED: Use schema-compliant field name (somme)
     const dbRecord = { 
       client: '', 
       somme: 0, 
@@ -445,7 +452,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const getCalculatedGros = useCallback((): CalculatedGros[] => gros.map(i => { const calc = computeGrosCalculatedFields(i); return { ...i, cost: calc.total_cout, profit_encaisse: i.status === GrosStatus.LIVREE_ENCAISSE ? calc.benefice_net : 0, profit_attendu: i.status === GrosStatus.LIVREE_NON_ENCAISSE ? calc.benefice_net : 0, perte: i.status === GrosStatus.RETOUR ? calc.total_cout : 0 }; }), [gros]);
   const getCalculatedSiteweb = useCallback((): CalculatedSiteweb[] => siteweb.map(i => ({ ...i, profit_net: computeSitewebCalculatedFields(i).benefice_net })), [siteweb]);
   const getCalculatedMerch = useCallback((): CalculatedMerch[] => merch.map(computeMerchCalculatedFields), [merch]);
-  const getCalculatedMarketing = useCallback((): CalculatedMarketing[] => marketingServices.map(i => { const calc = computeMarketingCalculatedFields(i); return { ...i, net_profit: i.status === MarketingStatus.TERMINE ? calc.benefice_net : 0 }; }), [marketingServices]);
+  const getCalculatedMarketing = useCallback((): CalculatedMarketing[] => marketingServices.map(i => { const calc = computeMarketingCalculatedFields(i); return { ...i, net_profit: i.status === MarketingStatusEnum.TERMINE ? calc.benefice_net : 0 }; }), [marketingServices]);
 
   const getDashboardData = useCallback((startDate?: string, endDate?: string): DashboardData => {
     const cg = getCalculatedGros(); 

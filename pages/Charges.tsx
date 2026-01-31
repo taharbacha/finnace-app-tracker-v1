@@ -19,10 +19,8 @@ const PRESET_LABELS = [
 ];
 
 const Charges: React.FC = () => {
-  const { charges, updateCharge, addCharge, deleteCharge, importCharges } = useAppStore();
+  const { charges, updateCharge, addCharge, deleteCharge, importCharges, dashboardDateStart, dashboardDateEnd } = useAppStore();
   const [searchTerm, setSearchTerm] = useState('');
-  const [dateStart, setDateStart] = useState('');
-  const [dateEnd, setDateEnd] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const filteredData = useMemo(() => {
@@ -30,11 +28,11 @@ const Charges: React.FC = () => {
       const matchesSearch = item.label.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           item.note.toLowerCase().includes(searchTerm.toLowerCase());
       const itemDate = item.date;
-      const matchesStart = !dateStart || itemDate >= dateStart;
-      const matchesEnd = !dateEnd || itemDate <= dateEnd;
+      const matchesStart = !dashboardDateStart || itemDate >= dashboardDateStart;
+      const matchesEnd = !dashboardDateEnd || itemDate <= dashboardDateEnd;
       return matchesSearch && matchesStart && matchesEnd;
     }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [charges, searchTerm, dateStart, dateEnd]);
+  }, [charges, searchTerm, dashboardDateStart, dashboardDateEnd]);
 
   const stats = useMemo(() => {
     const total = filteredData.reduce((acc, curr) => acc + Number(curr.montant), 0);
@@ -138,6 +136,11 @@ const Charges: React.FC = () => {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
             <input type="text" placeholder="Rechercher par label ou note..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 transition-all text-sm font-medium" />
           </div>
+          {(dashboardDateStart || dashboardDateEnd) && (
+            <div className="px-4 py-2 bg-blue-50 text-blue-600 text-[10px] font-black uppercase rounded-xl border border-blue-100">
+              Analyse Temporelle
+            </div>
+          )}
         </div>
         
         <div className="overflow-x-auto">

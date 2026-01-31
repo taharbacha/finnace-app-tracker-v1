@@ -1,12 +1,10 @@
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useAppStore } from '../store.tsx';
 import { 
   CartesianGrid, 
   Tooltip, 
   ResponsiveContainer, 
-  BarChart, 
-  Bar, 
   XAxis, 
   YAxis, 
   AreaChart, 
@@ -14,31 +12,24 @@ import {
   Line, 
   ComposedChart,
   Legend,
-  Cell
+  Bar
 } from 'recharts';
 import { 
   Clock, 
   Banknote, 
   Calendar, 
-  Wallet, 
   TrendingUp, 
-  Megaphone, 
   RotateCcw, 
   BarChart3, 
-  ArrowUpRight, 
-  ArrowDownRight, 
-  LayoutGrid, 
-  Truck, 
-  ShoppingBag, 
-  Zap,
   Target,
-  AlertCircle,
-  Percent,
+  Zap,
+  Activity,
+  Truck,
   Globe,
-  TrendingDown,
-  Activity
+  ShoppingBag,
+  Check
 } from 'lucide-react';
-import { OffreType, MarketingSpendSource, MarketingStatus, GrosStatus, SitewebStatus, MerchStatus } from '../types.ts';
+import { OffreType, MarketingSpendSource, GrosStatus, SitewebStatus, MerchStatus } from '../types.ts';
 
 const formatCurrency = (val: number) => val.toLocaleString('fr-DZ') + ' DA';
 
@@ -99,6 +90,15 @@ const Dashboard: React.FC = () => {
     setDashboardDateRange
   } = useAppStore();
 
+  const [tempStart, setTempStart] = useState(dashboardDateStart);
+  const [tempEnd, setTempEnd] = useState(dashboardDateEnd);
+
+  // Sync temp dates if global state changes externally
+  useEffect(() => {
+    setTempStart(dashboardDateStart);
+    setTempEnd(dashboardDateEnd);
+  }, [dashboardDateStart, dashboardDateEnd]);
+
   const data = getDashboardData(dashboardDateStart, dashboardDateEnd);
   
   const filterByDate = (dateStr: string) => {
@@ -107,6 +107,16 @@ const Dashboard: React.FC = () => {
     if (dashboardDateStart && cleanDate < dashboardDateStart) return false;
     if (dashboardDateEnd && cleanDate > dashboardDateEnd) return false;
     return true;
+  };
+
+  const handleApplyFilter = () => {
+    setDashboardDateRange(tempStart, tempEnd);
+  };
+
+  const handleResetFilter = () => {
+    setTempStart('');
+    setTempEnd('');
+    setDashboardDateRange('', '');
   };
 
   // --- GLOBAL KPIS (Top of page) ---
@@ -143,21 +153,18 @@ const Dashboard: React.FC = () => {
     const getPillarMkt = (src: MarketingSpendSource) => 
       marketingSpends.filter(s => s.source === src && filterByDate(s.date_start)).reduce((a, c) => a + Number(c.amount), 0);
 
-    // GROS Pillar
     const grosMkt = getPillarMkt(MarketingSpendSource.GROS);
     const grosProfitReal = cg.filter(i => [GrosStatus.LIVREE_ENCAISSE, GrosStatus.LIVREE_NON_ENCAISSE].includes(i.status))
                            .reduce((a, c) => a + (c.prix_vente - c.cost), 0);
     const grosProfitPot = cg.filter(i => [GrosStatus.EN_LIVRAISON, GrosStatus.EN_PRODUCTION].includes(i.status))
                           .reduce((a, c) => a + (c.prix_vente - c.cost), 0);
 
-    // VENDEURS Pillar
     const vendMkt = getPillarMkt(MarketingSpendSource.SITEWEB);
     const vendProfitReal = cs.filter(i => [SitewebStatus.LIVREE, SitewebStatus.LIVREE_NON_ENCAISSEE].includes(i.status))
                            .reduce((a, c) => a + c.profit_net, 0);
     const vendBenefice = cs.filter(i => [SitewebStatus.LIVREE, SitewebStatus.LIVREE_NON_ENCAISSEE].includes(i.status))
                          .reduce((a, c) => a + Number(c.vendeur_benefice || 0), 0);
 
-    // MERCH Pillar
     const merchMkt = getPillarMkt(MarketingSpendSource.MERCH);
     const merchProfitReal = cm.filter(i => [MerchStatus.LIVREE, MerchStatus.LIVREE_NON_ENCAISSEE].includes(i.status))
                             .reduce((a, c) => a + (c.prix_vente - c.prix_achat), 0);
@@ -165,7 +172,6 @@ const Dashboard: React.FC = () => {
     const merchProfitPot = cm.filter(i => i.status === MerchStatus.EN_LIVRAISON)
                            .reduce((a, c) => a + (c.prix_vente - c.prix_achat), 0);
 
-    // Time Series Generation for Charts
     const daily: Record<string, any> = {};
     const initDate = (d: string) => { 
       if (!daily[d]) daily[d] = { 
@@ -217,6 +223,8 @@ const Dashboard: React.FC = () => {
     };
   }, [getCalculatedGros, getCalculatedSiteweb, getCalculatedMerch, marketingSpends, dashboardDateStart, dashboardDateEnd]);
 
+  const hasChanges = tempStart !== dashboardDateStart || tempEnd !== dashboardDateEnd;
+
   return (
     <div className="space-y-16 animate-in fade-in duration-500 pb-32">
       {/* Executive Header */}
@@ -229,12 +237,26 @@ const Dashboard: React.FC = () => {
         <div className="flex flex-wrap items-center gap-3 p-2 bg-white border border-slate-100 rounded-3xl shadow-sm">
           <div className="flex items-center gap-2 px-4 py-2 bg-slate-50 rounded-2xl border border-slate-100 transition-all hover:border-blue-200">
             <Calendar size={14} className="text-blue-500" />
-            <input type="date" value={dashboardDateStart} onChange={(e) => setDashboardDateRange(e.target.value, dashboardDateEnd)} className="bg-transparent border-none text-[10px] font-black text-slate-800 outline-none w-28" />
+            <input type="date" value={tempStart} onChange={(e) => setTempStart(e.target.value)} className="bg-transparent border-none text-[10px] font-black text-slate-800 outline-none w-28" />
             <span className="text-[10px] font-black text-slate-300 uppercase px-1">AU</span>
-            <input type="date" value={dashboardDateEnd} onChange={(e) => setDashboardDateRange(dashboardDateStart, e.target.value)} className="bg-transparent border-none text-[10px] font-black text-slate-800 outline-none w-28" />
+            <input type="date" value={tempEnd} onChange={(e) => setTempEnd(e.target.value)} className="bg-transparent border-none text-[10px] font-black text-slate-800 outline-none w-28" />
           </div>
-          {(dashboardDateStart || dashboardDateEnd) && (
-            <button onClick={() => setDashboardDateRange('', '')} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all">
+          
+          <button 
+            onClick={handleApplyFilter}
+            disabled={!hasChanges}
+            className={`flex items-center gap-2 px-4 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all
+              ${hasChanges ? 'bg-blue-600 text-white shadow-lg' : 'bg-slate-50 text-slate-300 cursor-not-allowed'}`}
+          >
+            <Check size={14} /> Appliquer
+          </button>
+
+          {(tempStart || tempEnd || dashboardDateStart || dashboardDateEnd) && (
+            <button 
+              onClick={handleResetFilter} 
+              className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
+              title="Réinitialiser les filtres"
+            >
               <RotateCcw size={16} />
             </button>
           )}
@@ -411,28 +433,6 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
       </section>
-
-      {/* Strategic Footer Insights */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-12 border-t border-slate-100">
-          <div className="flex items-center gap-6 p-8 bg-blue-50/50 rounded-3xl border border-blue-100">
-             <Zap className="text-blue-500 shrink-0" size={32} />
-             <div>
-                <p className="text-[11px] font-black text-blue-600 uppercase tracking-widest">Efficacité Publicitaire</p>
-                <p className="text-base font-bold text-slate-700">
-                  Total {data.total_marketing_spend > 0 ? (globalKPIs.totalProfitNet / data.total_marketing_spend).toFixed(1) + 'x ROI global sur investissement.' : 'Aucun spend marketing enregistré.'}
-                </p>
-             </div>
-          </div>
-          <div className="flex items-center gap-6 p-8 bg-emerald-50/50 rounded-3xl border border-emerald-100">
-             <ArrowUpRight className="text-emerald-500 shrink-0" size={32} />
-             <div>
-                <p className="text-[11px] font-black text-emerald-600 uppercase tracking-widest">Santé du Business</p>
-                <p className="text-base font-bold text-slate-700">
-                  Position de liquidité : {data.profit_net_final > 0 ? 'Excellente.' : 'Action corrective requise.'}
-                </p>
-             </div>
-          </div>
-      </div>
     </div>
   );
 };

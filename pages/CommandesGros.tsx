@@ -1,22 +1,20 @@
+
 import React, { useRef, useState, useMemo } from 'react';
 import { useAppStore } from '../store.tsx';
 import EditableCell from '../components/EditableCell.tsx';
 import { GROS_STATUS_OPTIONS } from '../constants.ts';
 import { GrosStatus, CalculatedGros } from '../types.ts';
 import { 
-  Plus, Search, Truck, Banknote, AlertCircle, Calendar, 
-  Trash2, Download, Upload, Clock, Ban, ChevronUp, ChevronDown, 
+  Plus, Search, Truck, Banknote, Trash2, Upload, Clock, Ban, ChevronUp, ChevronDown, 
   Filter, CheckSquare, Square, ClipboardCheck
 } from 'lucide-react';
 
 const CommandesGros: React.FC = () => {
-  const { getCalculatedGros, updateGros, addGros, deleteGros, importGros } = useAppStore();
+  const { getCalculatedGros, updateGros, addGros, deleteGros, importGros, dashboardDateStart, dashboardDateEnd } = useAppStore();
   const allData = getCalculatedGros();
   
   // UI-ONLY State
   const [searchTerm, setSearchTerm] = useState('');
-  const [dateStart, setDateStart] = useState('');
-  const [dateEnd, setDateEnd] = useState('');
   const [analysisMode, setAnalysisMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showHeaders, setShowHeaders] = useState(true);
@@ -28,11 +26,11 @@ const CommandesGros: React.FC = () => {
       const matchesSearch = item.client_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           item.reference.toLowerCase().includes(searchTerm.toLowerCase());
       const itemDate = item.date_created;
-      const matchesStart = !dateStart || itemDate >= dateStart;
-      const matchesEnd = !dateEnd || itemDate <= dateEnd;
+      const matchesStart = !dashboardDateStart || itemDate >= dashboardDateStart;
+      const matchesEnd = !dashboardDateEnd || itemDate <= dashboardDateEnd;
       return matchesSearch && matchesStart && matchesEnd;
     }).sort((a, b) => new Date(b.date_created).getTime() - new Date(a.date_created).getTime());
-  }, [allData, searchTerm, dateStart, dateEnd]);
+  }, [allData, searchTerm, dashboardDateStart, dashboardDateEnd]);
 
   // Subset for KPI calculations based on Analysis Mode
   const kpiData = useMemo(() => {
@@ -49,7 +47,6 @@ const CommandesGros: React.FC = () => {
       .filter(o => o.status === GrosStatus.LIVREE_ENCAISSE)
       .reduce((acc, curr) => acc + (curr.prix_vente - curr.cost), 0);
       
-    // New Calculation: Livrée Non Encaissé
     const nonEncaisseData = kpiData.filter(o => o.status === GrosStatus.LIVREE_NON_ENCAISSE);
     const profitNonEncaisse = nonEncaisseData.reduce((acc, curr) => acc + (curr.prix_vente - curr.cost), 0);
     const totalANonEncaisse = nonEncaisseData.reduce((acc, curr) => acc + Number(curr.prix_achat_article || 0), 0);
@@ -67,11 +64,11 @@ const CommandesGros: React.FC = () => {
       .filter(o => o.status === GrosStatus.RETOUR)
       .reduce((acc, curr) => acc + curr.cost, 0);
 
-    // Status Counters
     const counts = {
       total: kpiData.length,
       enLivraison: kpiData.filter(o => o.status === GrosStatus.EN_LIVRAISON).length,
       livreeEncaissée: kpiData.filter(o => o.status === GrosStatus.LIVREE_ENCAISSE).length,
+      // Fix: Use correct GrosStatus enum property LIVREE_NON_ENCAISSE (singular E as defined in types.ts)
       livreeNonEncaissée: kpiData.filter(o => o.status === GrosStatus.LIVREE_NON_ENCAISSE).length,
       retour: kpiData.filter(o => o.status === GrosStatus.RETOUR).length,
     };
@@ -182,7 +179,6 @@ const CommandesGros: React.FC = () => {
       {showHeaders && (
         <div className="space-y-6 animate-in fade-in zoom-in-95 duration-300">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
-            {/* KPI A: Production */}
             <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-col justify-between">
               <div>
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Production (Total)</p>
@@ -200,7 +196,6 @@ const CommandesGros: React.FC = () => {
               </div>
             </div>
 
-            {/* KPI B: Profit Encaissé */}
             <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm">
               <div className="w-12 h-12 rounded-2xl bg-emerald-50 flex items-center justify-center mb-6">
                 <Banknote className="text-emerald-600" size={24} />
@@ -209,7 +204,6 @@ const CommandesGros: React.FC = () => {
               <h3 className="text-2xl font-black text-emerald-600">{formatPrice(stats.profitEncaisse)}</h3>
             </div>
 
-            {/* NEW KPI: Profit Livrée Non Encaissé */}
             <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-col justify-between">
               <div>
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Profit Livré (Non Encaissé)</p>
@@ -227,7 +221,6 @@ const CommandesGros: React.FC = () => {
               </div>
             </div>
 
-            {/* KPI C: En Livraison */}
             <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-col justify-between">
               <div>
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">En Livraison (Valeur)</p>
@@ -239,7 +232,6 @@ const CommandesGros: React.FC = () => {
               </div>
             </div>
 
-            {/* KPI D: Retour */}
             <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm">
               <div className="w-12 h-12 rounded-2xl bg-red-50 flex items-center justify-center mb-6">
                 <Ban className="text-red-600" size={24} />
@@ -248,30 +240,10 @@ const CommandesGros: React.FC = () => {
               <h3 className="text-2xl font-black text-red-600">{formatPrice(stats.costRetour)}</h3>
             </div>
           </div>
-
-          {/* Status Chips Summary */}
-          <div className="flex flex-wrap items-center gap-3 px-2">
-            <div className="text-[10px] font-black text-slate-300 uppercase tracking-widest mr-2">Compteurs:</div>
-            <div className="px-3 py-1 bg-slate-100 rounded-full text-[10px] font-black text-slate-600 border border-slate-200">
-              TOTAL: {stats.counts.total}
-            </div>
-            <div className="px-3 py-1 bg-blue-50 rounded-full text-[10px] font-black text-blue-600 border border-blue-100">
-              LIVRAISON: {stats.counts.enLivraison}
-            </div>
-            <div className="px-3 py-1 bg-emerald-50 rounded-full text-[10px] font-black text-emerald-600 border border-emerald-100">
-              ENCAISSÉ: {stats.counts.livreeEncaissée}
-            </div>
-            <div className="px-3 py-1 bg-purple-50 rounded-full text-[10px] font-black text-purple-600 border border-purple-100">
-              ATTENTE: {stats.counts.livreeNonEncaissée}
-            </div>
-            <div className="px-3 py-1 bg-red-50 rounded-full text-[10px] font-black text-red-600 border border-red-100">
-              RETOUR: {stats.counts.retour}
-            </div>
-          </div>
         </div>
       )}
 
-      {/* Main Container */}
+      {/* Main Table Container */}
       <div className="bg-white border border-slate-100 rounded-[2.5rem] shadow-sm overflow-hidden min-h-[500px]">
         <div className="p-6 border-b border-slate-50 bg-slate-50/30 flex flex-col lg:flex-row lg:items-center gap-4">
           <div className="relative flex-1">
@@ -284,12 +256,11 @@ const CommandesGros: React.FC = () => {
               className="w-full pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-2xl outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all text-sm font-medium" 
             />
           </div>
-          <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-2xl px-4 py-2 shadow-sm">
-            <Calendar size={14} className="text-blue-500" />
-            <input type="date" value={dateStart} onChange={(e) => setDateStart(e.target.value)} className="text-xs outline-none bg-transparent font-bold text-slate-700" />
-            <span className="text-slate-300 font-bold text-[10px] uppercase">Au</span>
-            <input type="date" value={dateEnd} onChange={(e) => setDateEnd(e.target.value)} className="text-xs outline-none bg-transparent font-bold text-slate-700" />
-          </div>
+          {(dashboardDateStart || dashboardDateEnd) && (
+            <div className="bg-blue-50 border border-blue-100 px-4 py-2 rounded-2xl flex items-center gap-2">
+              <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Filtre Temporel Actif</span>
+            </div>
+          )}
         </div>
         
         <div className="overflow-x-auto">
@@ -363,7 +334,7 @@ const CommandesGros: React.FC = () => {
                       >
                         <ClipboardCheck size={18} />
                       </button>
-                      <button onClick={(e) => handleDelete(e, item.id)} className="p-2 text-slate-300 hover:text-red-500 transition-all rounded-lg hover:bg-red-50">
+                      <button onClick={(e) => handleDelete(e, item.id)} className="p-2 text-slate-300 hover:text-red-500 rounded-lg hover:bg-red-50">
                         <Trash2 size={18} />
                       </button>
                     </div>

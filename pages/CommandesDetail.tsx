@@ -4,13 +4,13 @@ import { useAppStore } from '../store.tsx';
 import EditableCell from '../components/EditableCell.tsx';
 import { SitewebStatus } from '../types.ts';
 import { 
-  Plus, Search, Banknote, Trash2, Copy, Download, Upload, 
-  AlertCircle, Clock, Truck, Filter, CheckSquare, Square, 
+  Plus, Search, Banknote, Trash2, Copy, Upload, 
+  Clock, Truck, Filter, CheckSquare, Square, 
   ClipboardCheck, ChevronUp, ChevronDown, Percent, Ban, Users
 } from 'lucide-react';
 
 const CommandesDetail: React.FC = () => {
-  const { getCalculatedSiteweb, updateSiteweb, addSiteweb, deleteSiteweb, duplicateSiteweb, importSiteweb } = useAppStore();
+  const { getCalculatedSiteweb, updateSiteweb, addSiteweb, deleteSiteweb, duplicateSiteweb, importSiteweb, dashboardDateStart, dashboardDateEnd } = useAppStore();
   const allData = getCalculatedSiteweb();
   
   // UI States
@@ -23,12 +23,15 @@ const CommandesDetail: React.FC = () => {
 
   const filteredData = useMemo(() => {
     return allData.filter(item => {
-      return (item.reference || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-             (item.vendeur_name || '').toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesSearch = (item.reference || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                            (item.vendeur_name || '').toLowerCase().includes(searchTerm.toLowerCase());
+      const itemDate = item.date_created;
+      const matchesStart = !dashboardDateStart || itemDate >= dashboardDateStart;
+      const matchesEnd = !dashboardDateEnd || itemDate <= dashboardDateEnd;
+      return matchesSearch && matchesStart && matchesEnd;
     }).sort((a, b) => new Date(b.date_created).getTime() - new Date(a.date_created).getTime());
-  }, [allData, searchTerm]);
+  }, [allData, searchTerm, dashboardDateStart, dashboardDateEnd]);
 
-  // Logic for selection-based KPIs
   const kpiData = useMemo(() => {
     if (!analysisMode) return filteredData;
     return filteredData.filter(item => selectedIds.has(item.id));
@@ -195,8 +198,6 @@ const CommandesDetail: React.FC = () => {
       {showHeaders && (
         <div className="space-y-6 animate-in fade-in zoom-in-95 duration-300">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
-            
-            {/* KPI A: Production Totale */}
             <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-col justify-between">
               <div>
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Production Totale</p>
@@ -214,7 +215,6 @@ const CommandesDetail: React.FC = () => {
               </div>
             </div>
 
-            {/* KPI B: Profit Encaissé */}
             <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm">
               <div className="w-12 h-12 rounded-2xl bg-emerald-50 flex items-center justify-center mb-6">
                 <Banknote className="text-emerald-600" size={24} />
@@ -223,7 +223,6 @@ const CommandesDetail: React.FC = () => {
               <h3 className="text-2xl font-black text-emerald-600">{formatPrice(stats.profitEncaissée)}</h3>
             </div>
 
-            {/* KPI C: Livrée Non Encaissée */}
             <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-col justify-between">
               <div>
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Profit Livré (Non Encaissé)</p>
@@ -245,7 +244,6 @@ const CommandesDetail: React.FC = () => {
               </div>
             </div>
 
-            {/* KPI: Commission Vendeurs (NEW) */}
             <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm">
               <div className="w-12 h-12 rounded-2xl bg-indigo-50 flex items-center justify-center mb-6">
                 <Users className="text-indigo-600" size={24} />
@@ -255,7 +253,6 @@ const CommandesDetail: React.FC = () => {
               <p className="text-[9px] font-bold text-slate-400 mt-2 uppercase">Commandes livrées</p>
             </div>
 
-            {/* KPI D: En Livraison */}
             <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-col justify-between">
               <div>
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">En Livraison (Valeur Vente)</p>
@@ -266,15 +263,9 @@ const CommandesDetail: React.FC = () => {
                   <Clock size={12} />
                   <span className="text-[10px] font-black uppercase tracking-tighter">Profit Attendu: {formatPrice(stats.enLivraisonProfit)}</span>
                 </div>
-                <div className="flex gap-1.5 overflow-x-auto pb-1 no-scrollbar">
-                  <span className="bg-slate-50 px-2 py-0.5 rounded text-[8px] font-bold text-slate-500 whitespace-nowrap">A: {formatPrice(stats.enLivA)}</span>
-                  <span className="bg-blue-50 px-2 py-0.5 rounded text-[8px] font-bold text-blue-500 whitespace-nowrap">I: {formatPrice(stats.enLivI)}</span>
-                  <span className="bg-purple-50 px-2 py-0.5 rounded text-[8px] font-bold text-purple-500 whitespace-nowrap">V: {formatPrice(stats.enLivV)}</span>
-                </div>
               </div>
             </div>
 
-            {/* KPI E: Retour */}
             <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-col justify-between">
               <div>
                 <div className="flex justify-between items-start">
@@ -307,9 +298,11 @@ const CommandesDetail: React.FC = () => {
               className="w-full pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-2xl outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all text-sm font-medium" 
             />
           </div>
-          <div className="flex items-center gap-2 p-1.5 bg-white border border-slate-200 rounded-2xl shadow-sm">
-             <div className="px-3 py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">Compteur: {filteredData.length}</div>
-          </div>
+          {(dashboardDateStart || dashboardDateEnd) && (
+            <div className="bg-blue-50 border border-blue-100 px-4 py-2 rounded-2xl flex items-center gap-2">
+              <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Global Date Active</span>
+            </div>
+          )}
         </div>
         
         <div className="overflow-x-auto">
@@ -394,16 +387,6 @@ const CommandesDetail: React.FC = () => {
                   </td>
                 </tr>
               ))}
-              {filteredData.length === 0 && (
-                <tr>
-                  <td colSpan={9} className="p-32 text-center">
-                    <div className="flex flex-col items-center gap-4 text-slate-200">
-                      <Truck size={64} />
-                      <p className="text-sm font-black uppercase tracking-widest text-slate-300">Aucune commande Retail trouvée</p>
-                    </div>
-                  </td>
-                </tr>
-              )}
             </tbody>
           </table>
         </div>

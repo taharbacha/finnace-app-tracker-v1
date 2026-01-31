@@ -5,18 +5,22 @@ import EditableCell from '../components/EditableCell.tsx';
 import StatCard from '../components/StatCard.tsx';
 import { MarketingSpendSource, MarketingSpendType } from '../types.ts';
 import { MARKETING_SPEND_SOURCE_OPTIONS, MARKETING_SPEND_TYPE_OPTIONS } from '../constants.ts';
-import { Plus, Search, Megaphone, Target, Trash2, Calendar, DollarSign } from 'lucide-react';
+import { Plus, Search, Megaphone, Target, Trash2, DollarSign } from 'lucide-react';
 
 const MarketingSpend: React.FC = () => {
-  const { marketingSpends, updateMarketingSpend, addMarketingSpend, deleteMarketingSpend } = useAppStore();
+  const { marketingSpends, updateMarketingSpend, addMarketingSpend, deleteMarketingSpend, dashboardDateStart, dashboardDateEnd } = useAppStore();
   const [searchTerm, setSearchTerm] = useState('');
 
   const filteredData = useMemo(() => {
     return marketingSpends.filter(item => {
-      return (item.note || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-             (item.source || '').toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesSearch = (item.note || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                            (item.source || '').toLowerCase().includes(searchTerm.toLowerCase());
+      const itemDate = item.date_start;
+      const matchesStart = !dashboardDateStart || itemDate >= dashboardDateStart;
+      const matchesEnd = !dashboardDateEnd || itemDate <= dashboardDateEnd;
+      return matchesSearch && matchesStart && matchesEnd;
     }).sort((a, b) => new Date(b.date_start).getTime() - new Date(a.date_start).getTime());
-  }, [marketingSpends, searchTerm]);
+  }, [marketingSpends, searchTerm, dashboardDateStart, dashboardDateEnd]);
 
   const stats = useMemo(() => {
     const totalAds = filteredData.filter(i => i.type === MarketingSpendType.ADS).reduce((acc, curr) => acc + Number(curr.amount), 0);
@@ -55,8 +59,8 @@ const MarketingSpend: React.FC = () => {
       </div>
 
       <div className="bg-white border border-slate-100 rounded-[2rem] shadow-sm overflow-hidden">
-        <div className="p-6 border-b border-slate-50 bg-slate-50/30">
-          <div className="relative max-w-xl">
+        <div className="p-6 border-b border-slate-50 bg-slate-50/30 flex items-center justify-between">
+          <div className="relative max-w-xl flex-1">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
             <input 
               type="text" 
@@ -66,6 +70,11 @@ const MarketingSpend: React.FC = () => {
               className="w-full pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-2xl outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all text-sm font-medium" 
             />
           </div>
+          {(dashboardDateStart || dashboardDateEnd) && (
+            <div className="ml-4 px-4 py-2 bg-blue-50 text-blue-600 text-[10px] font-black uppercase rounded-2xl border border-blue-100">
+              Audit Actif
+            </div>
+          )}
         </div>
 
         <div className="overflow-x-auto">
