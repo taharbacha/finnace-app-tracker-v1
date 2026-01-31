@@ -87,6 +87,9 @@ const Dashboard: React.FC = () => {
     getCalculatedSiteweb, 
     getCalculatedMerch,
     marketingSpends,
+    charges,
+    payouts,
+    credits,
     dashboardDateStart,
     dashboardDateEnd,
     setDashboardDateRange
@@ -164,7 +167,6 @@ const Dashboard: React.FC = () => {
     const vendMkt = getPillarMkt(MarketingSpendSource.SITEWEB);
     const vendProfitReal = cs.filter(i => [SitewebStatus.LIVREE, SitewebStatus.LIVREE_NON_ENCAISSEE].includes(i.status))
                            .reduce((a, c) => a + c.profit_net, 0);
-    // Fix: Changed 'item.vendeur_benefice' to 'c.vendeur_benefice' to use the correct callback argument.
     const vendBenefice = cs.filter(i => [SitewebStatus.LIVREE, SitewebStatus.LIVREE_NON_ENCAISSEE].includes(i.status))
                          .reduce((a, c) => a + Number(c.vendeur_benefice || 0), 0);
 
@@ -293,6 +295,12 @@ const Dashboard: React.FC = () => {
             pillars={pillars} 
             dateRange={{ start: dashboardDateStart, end: dashboardDateEnd }}
             counts={pillars.counts}
+            rawLists={{
+              charges: charges.filter(i => filterByDate(i.date)),
+              marketingSpends: marketingSpends.filter(i => filterByDate(i.date_start)),
+              payouts: payouts.slice(0, 20),
+              credits: credits.slice(0, 20)
+            }}
           />
         </div>
       </div>
