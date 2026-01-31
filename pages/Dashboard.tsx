@@ -27,9 +27,11 @@ import {
   Truck,
   Globe,
   ShoppingBag,
-  Check
+  Check,
+  FileText
 } from 'lucide-react';
 import { OffreType, MarketingSpendSource, GrosStatus, SitewebStatus, MerchStatus } from '../types.ts';
+import ExportDashboardPDF from '../components/ExportDashboardPDF.tsx';
 
 const formatCurrency = (val: number) => val.toLocaleString('fr-DZ') + ' DA';
 
@@ -162,6 +164,7 @@ const Dashboard: React.FC = () => {
     const vendMkt = getPillarMkt(MarketingSpendSource.SITEWEB);
     const vendProfitReal = cs.filter(i => [SitewebStatus.LIVREE, SitewebStatus.LIVREE_NON_ENCAISSEE].includes(i.status))
                            .reduce((a, c) => a + c.profit_net, 0);
+    // Fix: Changed 'item.vendeur_benefice' to 'c.vendeur_benefice' to use the correct callback argument.
     const vendBenefice = cs.filter(i => [SitewebStatus.LIVREE, SitewebStatus.LIVREE_NON_ENCAISSEE].includes(i.status))
                          .reduce((a, c) => a + Number(c.vendeur_benefice || 0), 0);
 
@@ -216,10 +219,30 @@ const Dashboard: React.FC = () => {
 
     const timeline = Object.values(daily).sort((a,b) => a.date.localeCompare(b.date));
 
+    // Count distributions for PDF
+    const counts = {
+      gros: { 
+        prod: cg.filter(i => i.status === GrosStatus.EN_PRODUCTION).length,
+        liv: cg.filter(i => i.status === GrosStatus.EN_LIVRAISON).length,
+        ret: cg.filter(i => i.status === GrosStatus.RETOUR).length
+      },
+      vendeurs: {
+        liv: cs.filter(i => i.status === SitewebStatus.EN_LIVRAISON).length,
+        ok: cs.filter(i => [SitewebStatus.LIVREE, SitewebStatus.LIVREE_NON_ENCAISSEE].includes(i.status)).length,
+        ret: cs.filter(i => i.status === SitewebStatus.RETOUR).length
+      },
+      merch: {
+        liv: cm.filter(i => i.status === MerchStatus.EN_LIVRAISON).length,
+        ok: cm.filter(i => [MerchStatus.LIVREE, MerchStatus.LIVREE_NON_ENCAISSEE].includes(i.status)).length,
+        ret: cm.filter(i => i.status === MerchStatus.RETOUR).length
+      }
+    };
+
     return {
       gros: { profitReal: grosProfitReal, profitPot: grosProfitPot, mkt: grosMkt, timeline },
       vendeurs: { profitReal: vendProfitReal, mkt: vendMkt, benefice: vendBenefice, timeline },
-      merch: { profitReal: merchProfitReal, mkt: merchMkt, prod: merchProdValue, profitPot: merchProfitPot, timeline }
+      merch: { profitReal: merchProfitReal, mkt: merchMkt, prod: merchProdValue, profitPot: merchProfitPot, timeline },
+      counts
     };
   }, [getCalculatedGros, getCalculatedSiteweb, getCalculatedMerch, marketingSpends, dashboardDateStart, dashboardDateEnd]);
 
@@ -260,6 +283,17 @@ const Dashboard: React.FC = () => {
               <RotateCcw size={16} />
             </button>
           )}
+
+          <div className="h-8 w-px bg-slate-100 mx-1 hidden sm:block" />
+
+          {/* PDF EXPORT INTEGRATION */}
+          <ExportDashboardPDF 
+            data={data} 
+            globalKPIs={globalKPIs} 
+            pillars={pillars} 
+            dateRange={{ start: dashboardDateStart, end: dashboardDateEnd }}
+            counts={pillars.counts}
+          />
         </div>
       </div>
 

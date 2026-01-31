@@ -1,17 +1,18 @@
 
+import { GoogleGenAI } from "@google/genai";
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', ['POST']);
     return res.status(405).json({ error: `Method ${req.method} not allowed.` });
   }
 
-  const apiKey = process.env.OPENROUTER_API_KEY;
-  const siteUrl = "https://finnace-app-tracker-v1.vercel.app/";
-  const siteTitle = "Merch DZ Finance Tracker";
-
   try {
     const { messages, context } = req.body;
 
+    // Use Gemini 3 Pro for complex business strategic analysis as per guidelines
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    
     const systemPrompt = `You are MERCHO, a virtual executive finance assistant for an e-commerce printing company.
 
 Role & Scope:
@@ -48,36 +49,29 @@ Constraints:
 CURRENT BUSINESS DATA CONTEXT:
 ${context || 'No data provided.'}`;
 
-    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${apiKey}`,
-        "HTTP-Referer": siteUrl,
-        "X-Title": siteTitle,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        "model": "google/gemma-3-27b-it:free",
-        "messages": [
-          { "role": "system", "content": systemPrompt },
-          ...messages
-        ],
-        "temperature": 0.3
-      })
+    // Map messages to Gemini format (user/model)
+    const geminiContents = messages.map(m => ({
+      role: m.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: m.content }]
+    }));
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-pro-preview',
+      contents: geminiContents,
+      config: {
+        systemInstruction: systemPrompt,
+        temperature: 0.3,
+      }
     });
 
-    const data = await response.json();
+    const aiContent = response.text || "MERCHO is currently unavailable.";
 
-    if (!response.ok) {
-      throw new Error(data.error?.message || "OpenRouter API error");
-    }
-
-    // Return mandatory OpenAI-compatible shape
+    // Return mandatory OpenAI-compatible shape for the frontend
     return res.status(200).json({
       choices: [
         {
           message: {
-            content: data.choices?.[0]?.message?.content || "MERCHO is currently unavailable."
+            content: aiContent
           }
         }
       ]
