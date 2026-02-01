@@ -28,7 +28,8 @@ import {
   Globe,
   ShoppingBag,
   Check,
-  FileText
+  FileText,
+  TrendingDown
 } from 'lucide-react';
 import { OffreType, MarketingSpendSource, GrosStatus, SitewebStatus, MerchStatus } from '../types.ts';
 import ExportDashboardPDF from '../components/ExportDashboardPDF.tsx';
@@ -64,22 +65,6 @@ const KPICard = ({ title, value, subValues = [], icon: Icon, colorClass, statusC
   </div>
 );
 
-const ChartCard = ({ title, children, icon: Icon, colorClass }: any) => (
-  <div className="bg-white p-8 rounded-[3rem] border border-slate-100 shadow-sm flex flex-col h-[500px]">
-    <div className="flex items-center gap-3 mb-8">
-      <div className={`p-3 rounded-2xl ${colorClass.bg}`}>
-        <Icon className={colorClass.text} size={18} />
-      </div>
-      <h4 className="font-black text-slate-800 text-xs tracking-widest uppercase">{title}</h4>
-    </div>
-    <div className="flex-1 min-h-0">
-      <ResponsiveContainer width="100%" height="100%">
-        {children}
-      </ResponsiveContainer>
-    </div>
-  </div>
-);
-
 const Dashboard: React.FC = () => {
   const { 
     getDashboardData, 
@@ -99,7 +84,6 @@ const Dashboard: React.FC = () => {
   const [tempStart, setTempStart] = useState(dashboardDateStart);
   const [tempEnd, setTempEnd] = useState(dashboardDateEnd);
 
-  // Sync temp dates if global state changes externally
   useEffect(() => {
     setTempStart(dashboardDateStart);
     setTempEnd(dashboardDateEnd);
@@ -125,46 +109,32 @@ const Dashboard: React.FC = () => {
     setDashboardDateRange('', '');
   };
 
-  // --- GLOBAL KPIS (Top of page) ---
   const globalKPIs = useMemo(() => {
     const cg = getCalculatedGros().filter(i => filterByDate(i.date_created));
     const cs = getCalculatedSiteweb().filter(i => filterByDate(i.date_created));
     const cm = getCalculatedMerch().filter(i => filterByDate(i.created_at));
     const fo = offres.filter(i => filterByDate(i.date));
 
-    // Consolidate Production COGS
     const totalProd = cg.reduce((a,c) => a + c.cost, 0) + 
                     cs.reduce((a,c) => a + (c.cout_article + c.cout_impression), 0) + 
                     cm.reduce((a,c) => a + c.prix_achat, 0);
 
-    // Calculate Net balance of Offres module
     const soldeOffres = fo.reduce((a, c) => a + (c.type === OffreType.REVENUE ? Number(c.montant) : -Number(c.montant)), 0);
 
-    // FIXED Profit Brut Global Calculation
-    // Logic: Only delivered profit included, returns deducted as COGS loss, transit excluded.
     const totalProfitNet = 
       cg.reduce((a, c) => {
-        // Include only delivered statuses
         if ([GrosStatus.LIVREE_ENCAISSE, GrosStatus.LIVREE_NON_ENCAISSE].includes(c.status)) return a + (c.prix_vente - c.cost);
-        // Include returns as loss
         if (c.status === GrosStatus.RETOUR) return a - c.cost;
-        // Exclude EN_PRODUCTION, EN_LIVRAISON
         return a;
       }, 0) +
       cs.reduce((a, c) => {
-        // Include only delivered statuses
         if ([SitewebStatus.LIVREE, SitewebStatus.LIVREE_NON_ENCAISSEE].includes(c.status)) return a + c.profit_net;
-        // Include returns as loss
         if (c.status === SitewebStatus.RETOUR) return a - (c.cout_article + c.cout_impression);
-        // Exclude EN_LIVRAISON
         return a;
       }, 0) +
       cm.reduce((a, c) => {
-        // Include only delivered statuses
         if ([MerchStatus.LIVREE, MerchStatus.LIVREE_NON_ENCAISSEE].includes(c.status)) return a + (c.prix_vente - c.prix_achat);
-        // Include returns as loss
         if (c.status === MerchStatus.RETOUR) return a - c.impact_perte;
-        // Exclude EN_LIVRAISON
         return a;
       }, 0) +
       soldeOffres;
@@ -180,11 +150,11 @@ const Dashboard: React.FC = () => {
     return { totalProd, totalProfitNet, lneProfit, retLoss };
   }, [getCalculatedGros, getCalculatedSiteweb, getCalculatedMerch, offres, dashboardDateStart, dashboardDateEnd]);
 
-  // --- PILLAR REDESIGN DATA ---
   const pillars = useMemo(() => {
     const cg = getCalculatedGros().filter(i => filterByDate(i.date_created));
     const cs = getCalculatedSiteweb().filter(i => filterByDate(i.date_created));
     const cm = getCalculatedMerch().filter(i => filterByDate(i.created_at));
+    const fo = offres.filter(i => filterByDate(i.date));
 
     const getPillarMkt = (src: MarketingSpendSource) => 
       marketingSpends.filter(s => s.source === src && filterByDate(s.date_start)).reduce((a, c) => a + Number(c.amount), 0);
@@ -206,12 +176,16 @@ const Dashboard: React.FC = () => {
                             .reduce((a, c) => a + (Number(c.prix_vente) - Number(c.prix_achat)), 0);
     const merchProd = cm.reduce((a, c) => a + c.prix_achat, 0);
 
+    const offresRev = fo.filter(o => o.type === OffreType.REVENUE).reduce((a, c) => a + Number(c.montant), 0);
+    const offresExp = fo.filter(o => o.type === OffreType.EXPENSE).reduce((a, c) => a + Number(c.montant), 0);
+
     return {
       gros: { mkt: grosMkt, profitReal: grosProfitReal, profitPot: grosProfitPot },
       vendeurs: { mkt: vendMkt, profitReal: vendProfitReal, benefice: vendBenef },
-      merch: { mkt: merchMkt, profitReal: merchProfitReal, prod: merchProd }
+      merch: { mkt: merchMkt, profitReal: merchProfitReal, prod: merchProd },
+      offres: { rev: offresRev, exp: offresExp, net: offresRev - offresExp }
     };
-  }, [getCalculatedGros, getCalculatedSiteweb, getCalculatedMerch, marketingSpends, dashboardDateStart, dashboardDateEnd]);
+  }, [getCalculatedGros, getCalculatedSiteweb, getCalculatedMerch, marketingSpends, offres, dashboardDateStart, dashboardDateEnd]);
 
   const counts = useMemo(() => {
     const cg = getCalculatedGros().filter(i => filterByDate(i.date_created));
@@ -240,7 +214,6 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="space-y-12 pb-20 animate-in fade-in duration-700">
-      {/* Header & Date Filters */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
         <div>
           <h2 className="text-4xl font-black text-slate-900 tracking-tight flex items-center gap-4">
@@ -266,11 +239,10 @@ const Dashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Global KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <KPICard 
-          title="Profit Net Final" 
-          value={data.profit_net_final} 
+          title="Profit Net Global" 
+          value={globalKPIs.totalProfitNet} 
           icon={Zap} 
           colorClass={{bg: 'bg-blue-600', text: 'text-white'}}
           subValues={[
@@ -301,8 +273,7 @@ const Dashboard: React.FC = () => {
         />
       </div>
 
-      {/* Pillars Summary Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
          {/* Wholesale Pillar */}
          <div className="bg-white p-8 rounded-[3rem] border border-slate-100 shadow-sm flex flex-col justify-between group hover:shadow-xl transition-all">
             <div className="space-y-8">
@@ -343,8 +314,48 @@ const Dashboard: React.FC = () => {
             </div>
          </div>
 
+         {/* Merch Pillar */}
+         <div className="bg-white p-8 rounded-[3rem] border border-slate-100 shadow-sm flex flex-col justify-between group hover:shadow-xl transition-all">
+            <div className="space-y-8">
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-emerald-50 text-emerald-600 rounded-2xl group-hover:scale-110 transition-transform"><ShoppingBag size={20}/></div>
+                <h4 className="font-black text-xs uppercase tracking-widest text-slate-400">Pillier Merch</h4>
+              </div>
+              <div className="space-y-4">
+                 <div className="flex justify-between items-end border-b border-slate-50 pb-4">
+                    <p className="text-[10px] font-black text-slate-400 uppercase">Profit Réalisé</p>
+                    <p className="text-xl font-black text-slate-900">{formatCurrency(pillars.merch.profitReal)}</p>
+                 </div>
+                 <div className="flex justify-between items-end">
+                    <p className="text-[10px] font-black text-slate-400 uppercase">Coût Production</p>
+                    <p className="font-bold text-slate-600">{formatCurrency(pillars.merch.prod)}</p>
+                 </div>
+              </div>
+            </div>
+         </div>
+
+         {/* Offres Pillar */}
+         <div className="bg-white p-8 rounded-[3rem] border border-slate-100 shadow-sm flex flex-col justify-between group hover:shadow-xl transition-all">
+            <div className="space-y-8">
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-amber-50 text-amber-600 rounded-2xl group-hover:scale-110 transition-transform"><TrendingUp size={20}/></div>
+                <h4 className="font-black text-xs uppercase tracking-widest text-slate-400">Pillier Offres</h4>
+              </div>
+              <div className="space-y-4">
+                 <div className="flex justify-between items-end border-b border-slate-50 pb-4">
+                    <p className="text-[10px] font-black text-slate-400 uppercase">Revenus Plans</p>
+                    <p className="text-xl font-black text-slate-900">{formatCurrency(pillars.offres.rev)}</p>
+                 </div>
+                 <div className="flex justify-between items-end">
+                    <p className="text-[10px] font-black text-slate-400 uppercase">Dépenses Directes</p>
+                    <p className="font-bold text-orange-500">{formatCurrency(pillars.offres.exp)}</p>
+                 </div>
+              </div>
+            </div>
+         </div>
+
          {/* Report & Export Column */}
-         <div className="bg-slate-900 rounded-[3rem] p-8 text-white flex flex-col justify-between overflow-hidden relative shadow-2xl">
+         <div className="bg-slate-900 rounded-[3rem] p-8 text-white flex flex-col justify-between overflow-hidden relative shadow-2xl col-span-1 md:col-span-2 lg:col-span-1">
             <div className="absolute top-0 right-0 w-32 h-32 bg-blue-600 rounded-full blur-[60px] opacity-20 -mr-16 -mt-16" />
             <div className="relative z-10">
                <FileText size={32} className="text-blue-500 mb-6" />
