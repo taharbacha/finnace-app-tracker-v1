@@ -194,91 +194,95 @@ const CommandesDetail: React.FC = () => {
         </div>
       </div>
 
-      {/* KPI Cards Section */}
+      {/* KPI Cards Section - Redesigned to 3x2 Grid for Desktop */}
       {showHeaders && (
         <div className="space-y-6 animate-in fade-in zoom-in-95 duration-300">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
-            <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-col justify-between">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-col justify-between hover:shadow-md transition-all">
               <div>
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Production Totale</p>
                 <h3 className="text-2xl font-black text-slate-900">{formatPrice(stats.prodTotal)}</h3>
               </div>
-              <div className="flex gap-2 mt-4">
-                <div className="flex-1 bg-slate-50 p-3 rounded-2xl border border-slate-100">
+              <div className="flex gap-4 mt-6">
+                <div className="flex-1 bg-slate-50 p-4 rounded-2xl border border-slate-100">
                   <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">Article (A)</p>
                   <p className="text-xs font-bold text-slate-700">{formatPrice(stats.prodA)}</p>
                 </div>
-                <div className="flex-1 bg-blue-50/50 p-3 rounded-2xl border border-blue-100/50">
+                <div className="flex-1 bg-blue-50/50 p-4 rounded-2xl border border-blue-100/50">
                   <p className="text-[9px] font-black text-blue-400 uppercase tracking-tighter">Impr. (I)</p>
                   <p className="text-xs font-bold text-blue-700">{formatPrice(stats.prodI)}</p>
                 </div>
               </div>
             </div>
 
-            <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm">
-              <div className="w-12 h-12 rounded-2xl bg-emerald-50 flex items-center justify-center mb-6">
-                <Banknote className="text-emerald-600" size={24} />
+            <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-col justify-between hover:shadow-md transition-all">
+              <div className="w-14 h-14 rounded-2xl bg-emerald-50 flex items-center justify-center mb-6">
+                <Banknote className="text-emerald-600" size={28} />
               </div>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Profit Encaissé (LIVRÉE)</p>
-              <h3 className="text-2xl font-black text-emerald-600">{formatPrice(stats.profitEncaissée)}</h3>
+              <div>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Profit Encaissé (LIVRÉE)</p>
+                <h3 className="text-2xl font-black text-emerald-600">{formatPrice(stats.profitEncaissée)}</h3>
+              </div>
             </div>
 
-            <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-col justify-between">
+            <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-col justify-between hover:shadow-md transition-all">
               <div>
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Profit Livré (Non Encaissé)</p>
                 <h3 className="text-2xl font-black text-purple-600">{formatPrice(stats.profitNonEncaissée)}</h3>
               </div>
-              <div className="grid grid-cols-3 gap-1.5 mt-4">
-                <div className="bg-slate-50 p-2 rounded-xl border border-slate-100 text-center">
+              <div className="grid grid-cols-3 gap-2 mt-6">
+                <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 text-center">
                   <p className="text-[8px] font-black text-slate-400 uppercase tracking-tighter">Art.</p>
                   <p className="text-[10px] font-bold text-slate-700">{formatPrice(stats.nonEncA)}</p>
                 </div>
-                <div className="bg-blue-50/50 p-2 rounded-xl border border-blue-100/50 text-center">
+                <div className="bg-blue-50/50 p-3 rounded-xl border border-blue-100/50 text-center">
                   <p className="text-[8px] font-black text-blue-400 uppercase tracking-tighter">Imp.</p>
                   <p className="text-[10px] font-bold text-blue-700">{formatPrice(stats.nonEncI)}</p>
                 </div>
-                <div className="bg-purple-50/50 p-2 rounded-xl border border-purple-100/50 text-center">
+                <div className="bg-purple-50/50 p-3 rounded-xl border border-purple-100/50 text-center">
                   <p className="text-[8px] font-black text-purple-400 uppercase tracking-tighter">Vend.</p>
                   <p className="text-[10px] font-bold text-purple-700">{formatPrice(stats.nonEncV)}</p>
                 </div>
               </div>
             </div>
 
-            <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm">
-              <div className="w-12 h-12 rounded-2xl bg-indigo-50 flex items-center justify-center mb-6">
-                <Users className="text-indigo-600" size={24} />
+            <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-col justify-between hover:shadow-md transition-all">
+              <div className="w-14 h-14 rounded-2xl bg-indigo-50 flex items-center justify-center mb-6">
+                <Users className="text-indigo-600" size={28} />
               </div>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Commission Vendeurs</p>
-              <h3 className="text-2xl font-black text-indigo-600">{formatPrice(stats.commissionsTotales)}</h3>
-              <p className="text-[9px] font-bold text-slate-400 mt-2 uppercase">Commandes livrées</p>
+              <div>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Commission Vendeurs</p>
+                <h3 className="text-2xl font-black text-indigo-600">{formatPrice(stats.commissionsTotales)}</h3>
+                <p className="text-[9px] font-bold text-slate-400 mt-2 uppercase">Commandes livrées</p>
+              </div>
             </div>
 
-            <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-col justify-between">
+            <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-col justify-between hover:shadow-md transition-all">
               <div>
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">En Livraison (Valeur Vente)</p>
                 <h3 className="text-2xl font-black text-blue-600">{formatPrice(stats.enLivraisonValue)}</h3>
               </div>
-              <div className="mt-4 space-y-2">
+              <div className="mt-6 pt-6 border-t border-slate-50">
                 <div className="flex items-center gap-2 text-blue-400">
-                  <Clock size={12} />
+                  <Clock size={16} />
                   <span className="text-[10px] font-black uppercase tracking-tighter">Profit Attendu: {formatPrice(stats.enLivraisonProfit)}</span>
                 </div>
               </div>
             </div>
 
-            <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-col justify-between">
+            <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-col justify-between hover:shadow-md transition-all">
               <div>
                 <div className="flex justify-between items-start">
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Cout Retours (Pertes)</p>
-                  <div className="flex items-center gap-1 text-red-500 bg-red-50 px-2 py-0.5 rounded-full">
+                  <div className="flex items-center gap-1 text-red-500 bg-red-50 px-3 py-1 rounded-full">
                     <Percent size={10} />
                     <span className="text-[10px] font-black">{stats.returnRate.toFixed(1)}%</span>
                   </div>
                 </div>
                 <h3 className="text-2xl font-black text-red-600">{formatPrice(stats.retourLoss)}</h3>
               </div>
-              <div className="mt-4 flex items-center justify-center p-3 bg-red-50/50 rounded-2xl border border-red-100/50">
-                <Ban size={24} className="text-red-300" />
+              <div className="mt-6 flex items-center justify-center p-4 bg-red-50/50 rounded-2xl border border-red-100/50">
+                <Ban size={28} className="text-red-300" />
               </div>
             </div>
           </div>
