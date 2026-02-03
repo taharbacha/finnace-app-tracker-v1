@@ -7,7 +7,7 @@ import {
   CalculatedGros, CalculatedSiteweb, CalculatedMerch, CalculatedMarketing, DashboardData,
   GrosStatus, SitewebStatus, MerchStatus, OffreType, OffreCategory, MarketingStatus, MarketingStatus as MarketingStatusEnum, MarketingSpendSource, MarketingSpendType,
   ChatMessage,
-  FournisseurLedger, FournisseurName, FournisseurForWho, FournisseurType
+  FournisseurLedger, FournisseurName, FournisseurForWho
 } from './types.ts';
 
 /**
@@ -252,7 +252,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const logout = useCallback(() => setIsAuthenticated(false), []);
   
-  // Updated to include persistence
   const setDashboardDateRange = useCallback((start: string, end: string) => { 
     setDashboardDateStart(start); 
     setDashboardDateEnd(end);
@@ -458,18 +457,38 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       amount: 0, 
       fournisseur: FournisseurName.YASSIN, 
       for_who: FournisseurForWho.GROS_ARTICLE, 
-      type: FournisseurType.OWED, 
-      notes: '' 
+      notes: '',
+      created_at: new Date().toISOString()
     };
     if (supabase) {
-      const { data } = await supabase.from('fournisseurs').insert([baseRecord]).select();
-      if (data) setFournisseurLedger(p => [data[0], ...p]);
-    } else { setFournisseurLedger(p => [{ ...baseRecord, id: crypto.randomUUID() } as FournisseurLedger, ...p]); }
+      try {
+        const { data, error } = await supabase
+          .from('fournisseurs')
+          .insert([baseRecord])
+          .select();
+        
+        if (error) {
+          console.error("Supabase Insert Error (Fournisseurs):", error.message);
+          return;
+        }
+        
+        if (data && data.length > 0) {
+          setFournisseurLedger(prev => [data[0], ...prev]);
+        }
+      } catch (err) {
+        console.error("Unexpected error adding fournisseur entry:", err);
+      }
+    } else { 
+      setFournisseurLedger(p => [{ ...baseRecord, id: crypto.randomUUID() } as FournisseurLedger, ...p]); 
+    }
   }, []);
 
   const updateFournisseurLedger = useCallback(async (id: string, field: keyof FournisseurLedger, value: any) => {
     setFournisseurLedger(p => p.map(i => String(i.id) === String(id) ? { ...i, [field]: value } : i));
-    if (supabase) await supabase.from('fournisseurs').update({ [field]: value }).eq('id', id);
+    if (supabase) {
+      const { error } = await supabase.from('fournisseurs').update({ [field]: value }).eq('id', id);
+      if (error) console.error("Supabase Update Error (Fournisseurs):", error.message);
+    }
   }, []);
 
   const deleteFournisseurLedger = useCallback(async (id: string) => {

@@ -211,35 +211,28 @@ export interface ChatMessage {
   text: string;
 }
 
-// --- New Fournisseurs Module Types ---
+// --- Fournisseurs Module Types ---
 
 export enum FournisseurName {
   YASSIN = 'Yassin',
   CSS = 'CSS',
   EMPRINTE = 'Emprinte',
-  BIVALENT = 'Bivalent',
-  OTHER = 'Other'
+  BIVALENT = 'Bivalent'
 }
 
 export enum FournisseurForWho {
   GROS_ARTICLE = 'GROS Article',
   GROS_IMPRESSION = 'GROS Impression',
   MERCH = 'MERCH',
-  VENDEURS_ARTICLE = 'VENDEURS Article',
-  VENDEURS_IMPRESSION = 'VENDEURS Impression'
+  VENDEURS = 'VENDEURS'
 }
 
-export enum FournisseurType {
-  OWED = 'Owed',
-  PAID = 'Paid'
-}
-
+// Type is fixed to "Paid" for the ledger as it tracks payment outflows
 export interface FournisseurLedger {
   id: string;
   date: string;
   amount: number;
   fournisseur: FournisseurName;
   for_who: FournisseurForWho;
-  type: FournisseurType;
   notes: string;
 }
