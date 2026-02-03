@@ -227,7 +227,6 @@ export enum FournisseurForWho {
   VENDEURS = 'VENDEURS'
 }
 
-// Type is fixed to "Paid" for the ledger as it tracks payment outflows
 export interface FournisseurLedger {
   id: string;
   date: string;
@@ -235,4 +234,5 @@ export interface FournisseurLedger {
   fournisseur: FournisseurName;
   for_who: FournisseurForWho;
   notes: string;
+  type: 'Owed' | 'Paid';
 }

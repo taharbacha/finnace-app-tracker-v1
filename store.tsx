@@ -457,7 +457,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       amount: 0, 
       fournisseur: FournisseurName.YASSIN, 
       for_who: FournisseurForWho.GROS_ARTICLE, 
-      notes: ''
+      notes: '',
+      type: 'Paid'
     };
     if (supabase) {
       try {
