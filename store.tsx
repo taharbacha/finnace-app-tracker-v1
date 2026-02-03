@@ -457,8 +457,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       amount: 0, 
       fournisseur: FournisseurName.YASSIN, 
       for_who: FournisseurForWho.GROS_ARTICLE, 
-      notes: '',
-      created_at: new Date().toISOString()
+      notes: ''
     };
     if (supabase) {
       try {
@@ -469,6 +468,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         
         if (error) {
           console.error("Supabase Insert Error (Fournisseurs):", error.message);
+          alert("Erreur lors de l'ajout du paiement: " + error.message);
           return;
         }
         
@@ -477,6 +477,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
       } catch (err) {
         console.error("Unexpected error adding fournisseur entry:", err);
+        alert("Une erreur inattendue est survenue.");
       }
     } else { 
       setFournisseurLedger(p => [{ ...baseRecord, id: crypto.randomUUID() } as FournisseurLedger, ...p]); 
