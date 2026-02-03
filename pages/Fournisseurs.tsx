@@ -128,7 +128,7 @@ const Fournisseurs: React.FC = () => {
 
   const filteredData = useMemo(() => {
     return fournisseurLedger.filter(item => {
-      return (item.note || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      return (item.notes || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
              (item.fournisseur || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
              (item.for_who || '').toLowerCase().includes(searchTerm.toLowerCase());
     }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
@@ -240,7 +240,7 @@ const Fournisseurs: React.FC = () => {
                     </button>
                   </td>
                   <td className="p-3">
-                    <EditableCell value={item.note} onSave={(v) => updateFournisseurLedger(item.id, 'note', v)} className="italic text-xs text-slate-400" />
+                    <EditableCell value={item.notes} onSave={(v) => updateFournisseurLedger(item.id, 'notes', v)} className="italic text-xs text-slate-400" />
                   </td>
                   <td className="p-3 text-center">
                     <button 

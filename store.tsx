@@ -195,7 +195,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         supabase.from('commandes_retours').select('*'),
         supabase.from('payouts').select('*'),
         supabase.from('credits').select('*'),
-        supabase.from('fournisseur_ledger').select('*')
+        supabase.from('fournisseurs').select('*')
       ]);
       if (g) setGros(g); 
       if (s) setSiteweb(s); 
@@ -221,7 +221,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     fetchAllData();
     if (!supabase) return;
-    const tables = ['commandes_gros', 'commandes_siteweb', 'commandes_merch', 'offres', 'inventory', 'charges', 'marketing_services', 'marketing_spends', 'commandes_retours', 'payouts', 'credits', 'fournisseur_ledger'];
+    const tables = ['commandes_gros', 'commandes_siteweb', 'commandes_merch', 'offres', 'inventory', 'charges', 'marketing_services', 'marketing_spends', 'commandes_retours', 'payouts', 'credits', 'fournisseurs'];
     const channel = supabase.channel('merchdz_realtime');
     tables.forEach(table => {
       channel.on('postgres_changes', { event: '*', schema: 'public', table }, (payload) => {
@@ -278,7 +278,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         supabase.from('marketing_spends').upsert(marketingSpends),
         supabase.from('payouts').upsert(payouts),
         supabase.from('credits').upsert(credits),
-        supabase.from('fournisseur_ledger').upsert(fournisseurLedger)
+        supabase.from('fournisseurs').upsert(fournisseurLedger)
       ]);
       setLastSynced(new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }));
     } catch (e) { console.error("Supabase manual sync error:", e); } finally { setIsSyncing(false); }
@@ -459,21 +459,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       fournisseur: FournisseurName.YASSIN, 
       for_who: FournisseurForWho.GROS_ARTICLE, 
       type: FournisseurType.OWED, 
-      note: '' 
+      notes: '' 
     };
     if (supabase) {
-      const { data } = await supabase.from('fournisseur_ledger').insert([baseRecord]).select();
+      const { data } = await supabase.from('fournisseurs').insert([baseRecord]).select();
       if (data) setFournisseurLedger(p => [data[0], ...p]);
     } else { setFournisseurLedger(p => [{ ...baseRecord, id: crypto.randomUUID() } as FournisseurLedger, ...p]); }
   }, []);
 
   const updateFournisseurLedger = useCallback(async (id: string, field: keyof FournisseurLedger, value: any) => {
     setFournisseurLedger(p => p.map(i => String(i.id) === String(id) ? { ...i, [field]: value } : i));
-    if (supabase) await supabase.from('fournisseur_ledger').update({ [field]: value }).eq('id', id);
+    if (supabase) await supabase.from('fournisseurs').update({ [field]: value }).eq('id', id);
   }, []);
 
   const deleteFournisseurLedger = useCallback(async (id: string) => {
-    if (supabase) await supabase.from('fournisseur_ledger').delete().eq('id', id);
+    if (supabase) await supabase.from('fournisseurs').delete().eq('id', id);
     setFournisseurLedger(p => p.filter(i => String(i.id) !== String(id)));
   }, []);
 

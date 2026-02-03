@@ -230,8 +230,8 @@ export enum FournisseurForWho {
 }
 
 export enum FournisseurType {
-  OWED = 'owed',
-  PAID = 'paid'
+  OWED = 'Owed',
+  PAID = 'Paid'
 }
 
 export interface FournisseurLedger {
@@ -241,5 +241,5 @@ export interface FournisseurLedger {
   fournisseur: FournisseurName;
   for_who: FournisseurForWho;
   type: FournisseurType;
-  note: string;
+  notes: string;
 }
