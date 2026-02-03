@@ -210,3 +210,36 @@ export interface ChatMessage {
   role: 'user' | 'assistant';
   text: string;
 }
+
+// --- New Fournisseurs Module Types ---
+
+export enum FournisseurName {
+  YASSIN = 'Yassin',
+  CSS = 'CSS',
+  EMPRINTE = 'Emprinte',
+  BIVALENT = 'Bivalent',
+  OTHER = 'Other'
+}
+
+export enum FournisseurForWho {
+  GROS_ARTICLE = 'GROS Article',
+  GROS_IMPRESSION = 'GROS Impression',
+  MERCH = 'MERCH',
+  VENDEURS_ARTICLE = 'VENDEURS Article',
+  VENDEURS_IMPRESSION = 'VENDEURS Impression'
+}
+
+export enum FournisseurType {
+  OWED = 'owed',
+  PAID = 'paid'
+}
+
+export interface FournisseurLedger {
+  id: string;
+  date: string;
+  amount: number;
+  fournisseur: FournisseurName;
+  for_who: FournisseurForWho;
+  type: FournisseurType;
+  note: string;
+}

@@ -22,7 +22,8 @@ import {
   PanelLeftClose,
   Banknote,
   CreditCard,
-  FileBarChart
+  FileBarChart,
+  Users
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -120,6 +121,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen, onClose, isHidden, onTo
         <div className="my-6 border-t border-slate-800/30 mx-4" />
 
         {renderNavLink({ to: '/retour', label: 'Retours', icon: RotateCcw })}
+        {renderNavLink({ to: '/fournisseurs', label: 'Fournisseurs', icon: Users })}
         {renderNavLink({ to: '/payout', label: 'Payout', icon: Banknote })}
         {renderNavLink({ to: '/credit', label: 'Crédit', icon: CreditCard })}
 

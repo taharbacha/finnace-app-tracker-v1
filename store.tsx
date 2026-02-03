@@ -6,7 +6,8 @@ import {
   Payout, PayoutStatus, Credit, CreditStatus,
   CalculatedGros, CalculatedSiteweb, CalculatedMerch, CalculatedMarketing, DashboardData,
   GrosStatus, SitewebStatus, MerchStatus, OffreType, OffreCategory, MarketingStatus, MarketingStatus as MarketingStatusEnum, MarketingSpendSource, MarketingSpendType,
-  ChatMessage
+  ChatMessage,
+  FournisseurLedger, FournisseurName, FournisseurForWho, FournisseurType
 } from './types.ts';
 
 /**
@@ -82,6 +83,7 @@ interface AppState {
   retours: Retour[];
   payouts: Payout[];
   credits: Credit[];
+  fournisseurLedger: FournisseurLedger[];
   dashboardDateStart: string;
   dashboardDateEnd: string;
   isAuthenticated: boolean;
@@ -139,6 +141,9 @@ interface AppState {
   addCredit: () => Promise<void>;
   updateCredit: (id: string, field: keyof Credit, value: any) => Promise<void>;
   deleteCredit: (id: string) => Promise<void>;
+  addFournisseurLedger: () => Promise<void>;
+  updateFournisseurLedger: (id: string, field: keyof FournisseurLedger, value: any) => Promise<void>;
+  deleteFournisseurLedger: (id: string) => Promise<void>;
 }
 
 const AppContext = createContext<AppState | undefined>(undefined);
@@ -161,6 +166,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [retours, setRetours] = useState<Retour[]>([]);
   const [payouts, setPayouts] = useState<Payout[]>([]);
   const [credits, setCredits] = useState<Credit[]>([]);
+  const [fournisseurLedger, setFournisseurLedger] = useState<FournisseurLedger[]>([]);
   
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
 
@@ -177,7 +183,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
     if (!isSilent) setIsSyncing(true);
     try {
-      const [ { data: g }, { data: s }, { data: m_orders }, { data: o }, { data: i }, { data: c }, { data: m }, { data: ms }, { data: r }, { data: p }, { data: cr } ] = await Promise.all([
+      const [ { data: g }, { data: s }, { data: m_orders }, { data: o }, { data: i }, { data: c }, { data: m }, { data: ms }, { data: r }, { data: p }, { data: cr }, { data: fl } ] = await Promise.all([
         supabase.from('commandes_gros').select('*'),
         supabase.from('commandes_siteweb').select('*'),
         supabase.from('commandes_merch').select('*'),
@@ -188,7 +194,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         supabase.from('marketing_spends').select('*'),
         supabase.from('commandes_retours').select('*'),
         supabase.from('payouts').select('*'),
-        supabase.from('credits').select('*')
+        supabase.from('credits').select('*'),
+        supabase.from('fournisseur_ledger').select('*')
       ]);
       if (g) setGros(g); 
       if (s) setSiteweb(s); 
@@ -201,6 +208,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (r) setRetours(r);
       if (p) setPayouts(p);
       if (cr) setCredits(cr);
+      if (fl) setFournisseurLedger(fl);
       setLastSynced(new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }));
     } catch (e) { 
       console.error("Supabase fetch error:", e); 
@@ -213,7 +221,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     fetchAllData();
     if (!supabase) return;
-    const tables = ['commandes_gros', 'commandes_siteweb', 'commandes_merch', 'offres', 'inventory', 'charges', 'marketing_services', 'marketing_spends', 'commandes_retours', 'payouts', 'credits'];
+    const tables = ['commandes_gros', 'commandes_siteweb', 'commandes_merch', 'offres', 'inventory', 'charges', 'marketing_services', 'marketing_spends', 'commandes_retours', 'payouts', 'credits', 'fournisseur_ledger'];
     const channel = supabase.channel('merchdz_realtime');
     tables.forEach(table => {
       channel.on('postgres_changes', { event: '*', schema: 'public', table }, (payload) => {
@@ -269,11 +277,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         supabase.from('marketing_services').upsert(marketingServices.map(computeMarketingCalculatedFields)),
         supabase.from('marketing_spends').upsert(marketingSpends),
         supabase.from('payouts').upsert(payouts),
-        supabase.from('credits').upsert(credits)
+        supabase.from('credits').upsert(credits),
+        supabase.from('fournisseur_ledger').upsert(fournisseurLedger)
       ]);
       setLastSynced(new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }));
     } catch (e) { console.error("Supabase manual sync error:", e); } finally { setIsSyncing(false); }
-  }, [gros, siteweb, merch, offres, inventory, charges, marketingServices, marketingSpends, payouts, credits]);
+  }, [gros, siteweb, merch, offres, inventory, charges, marketingServices, marketingSpends, payouts, credits, fournisseurLedger]);
 
   const updateGros = useCallback(async (id: string, updates: Partial<CommandeGros>) => {
     setGros(prev => {
@@ -443,6 +452,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setCredits(p => p.filter(i => String(i.id) !== String(id)));
   }, []);
 
+  const addFournisseurLedger = useCallback(async () => {
+    const baseRecord = { 
+      date: new Date().toISOString().split('T')[0], 
+      amount: 0, 
+      fournisseur: FournisseurName.YASSIN, 
+      for_who: FournisseurForWho.GROS_ARTICLE, 
+      type: FournisseurType.OWED, 
+      note: '' 
+    };
+    if (supabase) {
+      const { data } = await supabase.from('fournisseur_ledger').insert([baseRecord]).select();
+      if (data) setFournisseurLedger(p => [data[0], ...p]);
+    } else { setFournisseurLedger(p => [{ ...baseRecord, id: crypto.randomUUID() } as FournisseurLedger, ...p]); }
+  }, []);
+
+  const updateFournisseurLedger = useCallback(async (id: string, field: keyof FournisseurLedger, value: any) => {
+    setFournisseurLedger(p => p.map(i => String(i.id) === String(id) ? { ...i, [field]: value } : i));
+    if (supabase) await supabase.from('fournisseur_ledger').update({ [field]: value }).eq('id', id);
+  }, []);
+
+  const deleteFournisseurLedger = useCallback(async (id: string) => {
+    if (supabase) await supabase.from('fournisseur_ledger').delete().eq('id', id);
+    setFournisseurLedger(p => p.filter(i => String(i.id) !== String(id)));
+  }, []);
+
   const importGros = useCallback(async (d: any[]) => { if (supabase) { const { data } = await supabase.from('commandes_gros').insert(d.map(computeGrosCalculatedFields)).select(); if (data) { setGros(prev => { const existingIds = new Set(prev.map(item => item.id)); const newItems = data.filter(item => !existingIds.has(item.id)); return [...newItems, ...prev]; }); } } else { setGros(p => [...d.map(i => ({ ...i, id: crypto.randomUUID() })), ...p]); } }, []);
   const importSiteweb = useCallback(async (d: any[]) => { if (supabase) { const { data } = await supabase.from('commandes_siteweb').insert(d.map(computeSitewebCalculatedFields)).select(); if (data) { setSiteweb(prev => { const existingIds = new Set(prev.map(item => item.id)); const newItems = data.filter(item => !existingIds.has(item.id)); return [...newItems, ...prev]; }); } } else { setSiteweb(p => [...d.map(i => ({ ...i, id: crypto.randomUUID() })), ...p]); } }, []);
   const importOffres = useCallback(async (d: any[]) => { if (supabase) { const { data } = await supabase.from('offres').insert(d).select(); if (data) { setOffres(prev => { const existingIds = new Set(prev.map(item => item.id)); const newItems = data.filter(item => !existingIds.has(item.id)); return [...newItems, ...prev]; }); } } else { setOffres(p => [...d.map(i => ({ ...i, id: crypto.randomUUID() })), ...p]); } }, []);
@@ -504,7 +538,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [getCalculatedGros, getCalculatedSiteweb, getCalculatedMerch, getCalculatedMarketing, offres, charges, marketingSpends]);
 
   const value: AppState = {
-    gros, siteweb, merch, offres, inventory, charges, marketingServices, marketingSpends, retours, payouts, credits,
+    gros, siteweb, merch, offres, inventory, charges, marketingServices, marketingSpends, retours, payouts, credits, fournisseurLedger,
     dashboardDateStart, dashboardDateEnd, isAuthenticated, isSyncing, isCloudActive, lastSynced, chatHistory,
     addChatMessage, clearChat, login, logout, setDashboardDateRange,
     updateGros, addGros, deleteGros, importGros,
@@ -518,7 +552,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     updateMarketingSpend, addMarketingSpend, deleteMarketingSpend,
     addRetour, deleteRetour,
     addPayout, updatePayout, deletePayout,
-    addCredit, updateCredit, deleteCredit
+    addCredit, updateCredit, deleteCredit,
+    addFournisseurLedger, updateFournisseurLedger, deleteFournisseurLedger
   };
 
   return (

@@ -16,6 +16,7 @@ import Retour from './pages/Retour.tsx';
 import Payout from './pages/Payout.tsx';
 import Credit from './pages/Credit.tsx';
 import Stats from './pages/Stats.tsx';
+import Fournisseurs from './pages/Fournisseurs.tsx';
 import { AppProvider } from './store.tsx';
 import { Menu, PanelLeftOpen } from 'lucide-react';
 
@@ -97,6 +98,7 @@ const AppRoutes: React.FC = () => {
       <Route path="/offres" element={<AppLayout><Offres /></AppLayout>} />
       <Route path="/ai" element={<AppLayout><AIAssistant /></AppLayout>} />
       <Route path="/retour" element={<AppLayout><Retour /></AppLayout>} />
+      <Route path="/fournisseurs" element={<AppLayout><Fournisseurs /></AppLayout>} />
       <Route path="/payout" element={<AppLayout><Payout /></AppLayout>} />
       <Route path="/credit" element={<AppLayout><Credit /></AppLayout>} />
       <Route path="*" element={<Navigate to="/" replace />} />
