@@ -1,133 +1,85 @@
 export default async function handler(req, res) {
-  // Enable CORS
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
-
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: `Method ${req.method} not allowed. Please use POST.` });
+    return res.status(405).json({
+      error: 'Method not allowed. Use POST.'
+    });
   }
 
   try {
-    const { messages } = req.body;
-
-    // Validate input
-    if (!messages || !Array.isArray(messages) || messages.length === 0) {
-      return res.status(400).json({ 
-        choices: [{
-          message: {
-            role: 'assistant',
-            content: 'Erreur: Format de message invalide. Veuillez réessayer.'
-          }
-        }]
-      });
-    }
-
-    // Check API key
     if (!process.env.OPENROUTER_API_KEY) {
-      console.error('OPENROUTER_API_KEY not configured');
-      return res.status(500).json({ 
-        choices: [{
-          message: {
-            role: 'assistant',
-            content: 'Erreur de configuration: La clé API n\'est pas configurée.'
-          }
-        }]
-      });
+      throw new Error("OPENROUTER_API_KEY missing.");
     }
 
-    const systemPrompt = "You are the Merch By DZ Assistant, a professional AI specialized in helping with e-commerce operations, marketing strategies, and business optimization. You are helpful, concise, and professional.";
+    const { messages = [] } = req.body;
 
-    // Format messages for OpenRouter API
-    const formattedMessages = [
-      { role: 'system', content: systemPrompt }
-    ];
-
-    // Add conversation history
-    for (const msg of messages) {
-      formattedMessages.push({
-        role: msg.role === 'user' ? 'user' : 'assistant',
-        content: msg.content || ''
-      });
+    if (!Array.isArray(messages)) {
+      throw new Error("Invalid messages format.");
     }
 
-    console.log('Calling OpenRouter API with google/gemma-3-27b-it:free');
+    const systemPrompt = `
+You are the Merch By DZ Assistant.
+You help with e-commerce operations, logistics, marketing strategy, and business optimization.
+Be concise, practical, and professional.
+`;
 
-    // Call OpenRouter API with a working free model
-    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-      method: 'POST',
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
       headers: {
-        'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
-        'Content-Type': 'application/json',
-        'HTTP-Referer': 'https://finnace-app-tracker-v1.vercel.app/',
-        'X-Title': 'Merch By DZ Assistant'
+        Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
+        "Content-Type": "application/json",
+        "HTTP-Referer": "https://finnace-app-tracker-v1.vercel.app/",
+        "X-Title": "Merch By DZ Assistant"
       },
       body: JSON.stringify({
-        model: 'google/gemma-3-27b-it:free',
-        messages: formattedMessages,
+        model: "arcee-ai/trinity-large-preview:free",
         temperature: 0.7,
-        max_tokens: 2000
+        max_tokens: 1500,
+        messages: [
+          { role: "system", content: systemPrompt },
+          ...messages
+        ]
       })
     });
 
-    console.log('OpenRouter response status:', response.status);
+    const rawText = await response.text();
+    let data;
 
-    // Handle API errors
+    try {
+      data = JSON.parse(rawText);
+    } catch {
+      throw new Error("Invalid JSON returned from OpenRouter: " + rawText);
+    }
+
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error("OpenRouter API Error:", response.status, errorText);
-      
-      return res.status(200).json({ 
-        choices: [{
-          message: {
-            role: 'assistant',
-            content: `Erreur OpenRouter (${response.status}): Le service AI est temporairement indisponible. Veuillez réessayer.`
-          }
-        }]
-      });
+      throw new Error(data?.error?.message || "OpenRouter request failed.");
     }
 
-    const data = await response.json();
-    console.log('OpenRouter response received successfully');
-    
-    // Validate response structure
-    if (!data.choices || !data.choices[0] || !data.choices[0].message) {
-      console.error("Invalid API response structure:", JSON.stringify(data));
-      
-      return res.status(200).json({ 
-        choices: [{
-          message: {
-            role: 'assistant',
-            content: 'Erreur: Réponse invalide de l\'API. Veuillez réessayer.'
-          }
-        }]
-      });
+    if (!data.choices?.[0]?.message?.content) {
+      throw new Error("Invalid AI response structure.");
     }
 
-    // Return in the correct format expected by the frontend
     return res.status(200).json({
-      choices: [{
-        message: {
-          role: 'assistant',
-          content: data.choices[0].message.content
+      choices: [
+        {
+          message: {
+            content: data.choices[0].message.content
+          }
         }
-      }]
+      ]
     });
 
   } catch (error) {
-    console.error("Merch By DZ Assistant Error:", error.message);
-    
-    return res.status(200).json({ 
-      choices: [{
-        message: {
-          role: 'assistant',
-          content: `Erreur système: ${error.message}. Veuillez réessayer.`
+    console.error("Assistant API ERROR:", error.message);
+
+    return res.status(200).json({
+      choices: [
+        {
+          message: {
+            content:
+              "L’assistant est temporairement indisponible. Vérifiez la configuration OpenRouter."
+          }
         }
-      }]
+      ]
     });
   }
 }
