@@ -4,13 +4,10 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: `Method ${req.method} not allowed.` });
   }
 
-  // Fix: Initializing GoogleGenAI with process.env.API_KEY
-  const ai = new GoogleGenAI({ apiKey: process.env.OPENROUTER_API_KEY });
-
   try {
     const { messages, context } = req.body;
 
-    const systemPrompt = ` You are MERCHO, a virtual finance assistant for an e-commerce printing company. 
+    const systemPrompt = `You are MERCHO, a virtual finance assistant for an e-commerce printing company. 
       You analyze financial data (sales, marketing spend, charges/costs, inventory, and returns) and provide strategic insights to the CEO. 
       Role & Data Scope Use only the provided business context and data. 
       Do not assume or use any external information. Use any provided context (e.g., company goals or recent events) to frame the analysis. 
@@ -38,29 +35,40 @@ export default async function handler(req, res) {
       Business Context Data:
       ${context}`;
 
-    // Fix: Using gemini-3-pro-preview with thinking budget for complex financial analysis
-    const response = await ai.models.generateContent({
-      model: 'gemini-3-pro-preview',
-      contents: messages.map(m => ({
-        role: m.role === 'user' ? 'user' : 'model',
-        parts: [{ text: m.content }]
-      })),
-      config: {
-        systemInstruction: systemPrompt,
-        thinkingConfig: { thinkingBudget: 32768 }
-      }
+    // Prepare messages with system prompt as first user message
+    const formattedMessages = [
+      { role: 'user', content: systemPrompt },
+      { role: 'assistant', content: 'Understood. I am MERCHO, your financial advisor. I will analyze the data and provide strategic insights.' },
+      ...messages
+    ];
+
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': 'https://finnace-app-tracker-v1.vercel.app/',
+        'X-Title': 'Merch By DZ Finance Tracker'
+      },
+      body: JSON.stringify({
+        model: 'google/gemma-3-27b-it:free',
+        messages: formattedMessages
+      })
     });
 
-    // Fix: Extracting generated text using the .text property to return the expected format
-    return res.status(200).json({
-      choices: [{
-        message: {
-          content: response.text
-        }
-      }]
-    });
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error?.message || 'OpenRouter API request failed');
+    }
+
+    const data = await response.json();
+    return res.status(200).json(data);
+
   } catch (error) {
-    console.error("Gemini Advisor Error:", error);
-    return res.status(500).json({ error: 'Failed to reach AI service.' });
+    console.error("AI Advisor Error:", error);
+    return res.status(500).json({ 
+      error: 'Failed to reach AI service.',
+      details: error.message 
+    });
   }
 }
