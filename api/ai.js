@@ -7,21 +7,23 @@ export default async function handler(req, res) {
   try {
     const { messages } = req.body;
 
+    // Validate input
     if (!messages || !Array.isArray(messages)) {
       return res.status(400).json({ error: 'Invalid messages format' });
     }
 
     const systemPrompt = "You are the Merch By DZ Assistant, a professional AI specialized in helping with e-commerce operations, marketing strategies, and business optimization. You are helpful, concise, and professional.";
 
-    // Format messages for OpenRouter
+    // Format messages for OpenRouter API
     const formattedMessages = [
       { role: 'system', content: systemPrompt },
       ...messages.map(m => ({
-        role: m.role,
+        role: m.role === 'user' ? 'user' : 'assistant',
         content: m.content
       }))
     ];
 
+    // Call OpenRouter API
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -38,24 +40,26 @@ export default async function handler(req, res) {
       })
     });
 
+    // Handle API errors
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("OpenRouter Error:", errorText);
-      throw new Error(`OpenRouter API Error: ${response.status} - ${errorText}`);
+      console.error("OpenRouter API Error:", response.status, errorText);
+      throw new Error(`OpenRouter API Error: ${response.status}`);
     }
 
     const data = await response.json();
     
-    // Verify response structure
+    // Validate response structure
     if (!data.choices || !data.choices[0] || !data.choices[0].message) {
-      console.error("Invalid response structure:", data);
+      console.error("Invalid API response structure:", JSON.stringify(data));
       throw new Error('Invalid response from AI service');
     }
 
+    // Return in expected format
     return res.status(200).json(data);
 
   } catch (error) {
-    console.error("AI Assistant Error:", error);
+    console.error("Merch By DZ Assistant Error:", error);
     return res.status(500).json({ 
       error: 'Failed to process AI request',
       details: error.message 
