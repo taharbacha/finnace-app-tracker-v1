@@ -12,17 +12,11 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: `Method ${req.method} not allowed. Please use POST.` });
   }
 
-  // Log everything for debugging
-  console.log('=== AI.JS DEBUG START ===');
-  console.log('Request body:', JSON.stringify(req.body));
-  console.log('API Key present:', !!process.env.OPENROUTER_API_KEY);
-
   try {
     const { messages } = req.body;
 
     // Validate input
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
-      console.error('Invalid messages format');
       return res.status(400).json({ 
         choices: [{
           message: {
@@ -61,19 +55,9 @@ export default async function handler(req, res) {
       });
     }
 
-    console.log('Formatted messages count:', formattedMessages.length);
-    console.log('Calling OpenRouter API...');
+    console.log('Calling OpenRouter API with meta-llama/llama-3.2-3b-instruct:free');
 
-    const requestBody = {
-      model: 'google/gemma-2-9b-it:free',
-      messages: formattedMessages,
-      temperature: 0.7,
-      max_tokens: 2000
-    };
-
-    console.log('Request to OpenRouter:', JSON.stringify(requestBody, null, 2));
-
-    // Call OpenRouter API
+    // Call OpenRouter API with a working free model
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -82,7 +66,12 @@ export default async function handler(req, res) {
         'HTTP-Referer': 'https://finnace-app-tracker-v1.vercel.app/',
         'X-Title': 'Merch By DZ Assistant'
       },
-      body: JSON.stringify(requestBody)
+      body: JSON.stringify({
+        model: 'meta-llama/llama-3.2-3b-instruct:free',
+        messages: formattedMessages,
+        temperature: 0.7,
+        max_tokens: 2000
+      })
     });
 
     console.log('OpenRouter response status:', response.status);
@@ -96,31 +85,28 @@ export default async function handler(req, res) {
         choices: [{
           message: {
             role: 'assistant',
-            content: `Erreur OpenRouter (${response.status}): Veuillez réessayer.`
+            content: `Erreur OpenRouter (${response.status}): Le service AI est temporairement indisponible. Veuillez réessayer.`
           }
         }]
       });
     }
 
     const data = await response.json();
-    console.log('OpenRouter full response:', JSON.stringify(data, null, 2));
+    console.log('OpenRouter response received successfully');
     
     // Validate response structure
     if (!data.choices || !data.choices[0] || !data.choices[0].message) {
-      console.error("Invalid API response structure:", data);
+      console.error("Invalid API response structure:", JSON.stringify(data));
       
       return res.status(200).json({ 
         choices: [{
           message: {
             role: 'assistant',
-            content: 'Erreur: Réponse invalide de l\'API.'
+            content: 'Erreur: Réponse invalide de l\'API. Veuillez réessayer.'
           }
         }]
       });
     }
-
-    console.log('Success! Returning response');
-    console.log('=== AI.JS DEBUG END ===');
 
     // Return in the correct format expected by the frontend
     return res.status(200).json({
@@ -133,15 +119,13 @@ export default async function handler(req, res) {
     });
 
   } catch (error) {
-    console.error("=== FATAL ERROR IN AI.JS ===");
-    console.error("Error:", error.message);
-    console.error("Stack:", error.stack);
+    console.error("Merch By DZ Assistant Error:", error.message);
     
     return res.status(200).json({ 
       choices: [{
         message: {
           role: 'assistant',
-          content: `Erreur système: ${error.message}`
+          content: `Erreur système: ${error.message}. Veuillez réessayer.`
         }
       }]
     });
