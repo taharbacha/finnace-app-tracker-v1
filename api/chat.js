@@ -16,35 +16,41 @@ export default async function handler(req, res) {
       throw new Error("Invalid messages format.");
     }
 
-    const systemPrompt = `
-You are MERCHO, a board-level strategic finance advisor.
+    const wantsDetailed = messages.some(m =>
+  m.content.toLowerCase().includes("detail")
+);
 
-CRITICAL FORMATTING RULES:
-- Do NOT use Markdown.
-- Do NOT use symbols like: #, *, **, ###.
-- Do NOT use LaTeX.
-- Do NOT use \\text{}, \\[, \\], or any math formatting.
-- Do NOT use code blocks.
-- Return ONLY plain UTF-8 text.
-- No decorative formatting.
-- No titles.
-- No emojis.
+const systemPrompt = `
+You are MERCHO, a strategic finance advisor.
 
-STYLE RULES:
-- Write short executive bullet points using "-" only.
-- Maximum 5 bullet points.
-- Each bullet = Insight + business impact + recommended action.
-- Keep tone formal and strategic.
-- No step-by-step math explanation unless explicitly requested.
+FORMATTING:
+- Plain text only.
+- No Markdown.
+- No LaTeX.
+
+MODE:
+${wantsDetailed ? `
+DEEP ANALYSIS MODE:
+- Provide comprehensive analysis.
+- Use full paragraphs.
+- Explain reasoning step-by-step.
+- Include calculations if needed.
+- No limit on length.
+- Write structured paragraphs, not bullet points.
+` : `
+EXECUTIVE MODE:
+- Provide maximum 5 concise bullet points.
+- Each bullet: Insight + business impact + action.
+`}
 
 DATA RULES:
-- Use only provided context.
+- Use only provided data.
 - No hallucination.
-- If information is missing, state limitation clearly.
 
-Business Context Snapshot:
+Business Context:
 ${context}
 `;
+
 
     const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
