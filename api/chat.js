@@ -12,23 +12,38 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: `Method ${req.method} not allowed.` });
   }
 
+  // Log everything for debugging
+  console.log('=== CHAT.JS DEBUG START ===');
+  console.log('Request body:', JSON.stringify(req.body));
+  console.log('API Key present:', !!process.env.OPENROUTER_API_KEY);
+  console.log('API Key length:', process.env.OPENROUTER_API_KEY?.length);
+
   try {
     const { messages, context } = req.body;
 
     // Validate input
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
+      console.error('Invalid messages format');
       return res.status(400).json({ 
-        error: 'Invalid request',
-        details: 'Messages array is required and must not be empty'
+        choices: [{
+          message: {
+            role: 'assistant',
+            content: 'Erreur: Format de message invalide. Veuillez réessayer.'
+          }
+        }]
       });
     }
 
     // Check API key
     if (!process.env.OPENROUTER_API_KEY) {
-      console.error("OPENROUTER_API_KEY is not set");
+      console.error('OPENROUTER_API_KEY not configured');
       return res.status(500).json({ 
-        error: 'Configuration error',
-        details: 'API key not configured'
+        choices: [{
+          message: {
+            role: 'assistant',
+            content: 'Erreur de configuration: La clé API n\'est pas configurée. Veuillez contacter l\'administrateur.'
+          }
+        }]
       });
     }
 
@@ -86,7 +101,17 @@ ${context || 'No specific context provided. Please provide financial data for an
       });
     }
 
+    console.log('Formatted messages count:', formattedMessages.length);
     console.log('Calling OpenRouter API...');
+
+    const requestBody = {
+      model: 'google/gemma-2-9b-it:free',
+      messages: formattedMessages,
+      temperature: 0.3,
+      max_tokens: 2000
+    };
+
+    console.log('Request body to OpenRouter:', JSON.stringify(requestBody, null, 2));
 
     // Call OpenRouter API
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
@@ -97,41 +122,46 @@ ${context || 'No specific context provided. Please provide financial data for an
         'HTTP-Referer': 'https://finnace-app-tracker-v1.vercel.app/',
         'X-Title': 'Merch By DZ Finance Tracker'
       },
-      body: JSON.stringify({
-        model: 'google/gemma-2-9b-it:free',
-        messages: formattedMessages,
-        temperature: 0.3,
-        max_tokens: 2000,
-        top_p: 1,
-        frequency_penalty: 0,
-        presence_penalty: 0
-      })
+      body: JSON.stringify(requestBody)
     });
+
+    console.log('OpenRouter response status:', response.status);
+    console.log('OpenRouter response headers:', Object.fromEntries(response.headers));
 
     // Handle API errors
     if (!response.ok) {
       const errorText = await response.text();
       console.error("OpenRouter API Error:", response.status, errorText);
       
-      return res.status(response.status).json({ 
-        error: 'AI service error',
-        details: `API returned ${response.status}`,
-        message: errorText
+      return res.status(200).json({ 
+        choices: [{
+          message: {
+            role: 'assistant',
+            content: `Erreur OpenRouter (${response.status}): ${errorText.substring(0, 200)}. Veuillez réessayer ou contacter le support.`
+          }
+        }]
       });
     }
 
     const data = await response.json();
-    console.log('OpenRouter Response:', JSON.stringify(data, null, 2));
+    console.log('OpenRouter full response:', JSON.stringify(data, null, 2));
     
     // Validate response structure
     if (!data.choices || !data.choices[0] || !data.choices[0].message) {
       console.error("Invalid API response structure:", data);
       
-      return res.status(500).json({ 
-        error: 'Invalid AI response',
-        details: 'Unexpected response format from AI service'
+      return res.status(200).json({ 
+        choices: [{
+          message: {
+            role: 'assistant',
+            content: 'Erreur: Réponse invalide de l\'API. Structure de données inattendue.'
+          }
+        }]
       });
     }
+
+    console.log('Success! Returning response to frontend');
+    console.log('=== CHAT.JS DEBUG END ===');
 
     // Return in the correct format expected by the frontend
     return res.status(200).json({
@@ -144,12 +174,18 @@ ${context || 'No specific context provided. Please provide financial data for an
     });
 
   } catch (error) {
-    console.error("MERCHO Advisor Error:", error);
+    console.error("=== FATAL ERROR IN CHAT.JS ===");
+    console.error("Error name:", error.name);
+    console.error("Error message:", error.message);
+    console.error("Error stack:", error.stack);
     
-    return res.status(500).json({ 
-      error: 'Internal server error',
-      details: error.message,
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    return res.status(200).json({ 
+      choices: [{
+        message: {
+          role: 'assistant',
+          content: `Erreur système: ${error.message}. Veuillez vérifier les logs Vercel pour plus de détails.`
+        }
+      }]
     });
   }
 }
