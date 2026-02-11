@@ -94,7 +94,7 @@ ${context || 'No specific context provided. Please provide financial data for an
       });
     }
 
-    console.log('Calling OpenRouter API with meta-llama/llama-3.2-3b-instruct:free');
+    console.log('Calling OpenRouter API with google/gemma-3-27b-it:free');
 
     // Call OpenRouter API with a working free model
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
@@ -106,7 +106,7 @@ ${context || 'No specific context provided. Please provide financial data for an
         'X-Title': 'Merch By DZ Finance Tracker'
       },
       body: JSON.stringify({
-        model: 'meta-llama/llama-3.2-3b-instruct:free',
+        model: 'google/gemma-3-27b-it:free',
         messages: formattedMessages,
         temperature: 0.3,
         max_tokens: 2000
