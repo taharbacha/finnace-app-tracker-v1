@@ -32,14 +32,17 @@ export default async function handler(req, res) {
       If data is missing, explicitly note any limitations in your analysis. 
       Ultra-Brief Summary (if needed) If maximum brevity is requested, provide an additional summary with no more than 5 bullet points. 
       This ultra-brief variant should include only the highest-priority insights and recommendations.
+      
       Business Context Data:
       ${context}`;
 
-    // Prepare messages with system prompt as first user message
+    // Format messages for OpenRouter
     const formattedMessages = [
-      { role: 'user', content: systemPrompt },
-      { role: 'assistant', content: 'Understood. I am MERCHO, your financial advisor. I will analyze the data and provide strategic insights.' },
-      ...messages
+      { role: 'system', content: systemPrompt },
+      ...messages.map(m => ({
+        role: m.role,
+        content: m.content
+      }))
     ];
 
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
@@ -51,17 +54,27 @@ export default async function handler(req, res) {
         'X-Title': 'Merch By DZ Finance Tracker'
       },
       body: JSON.stringify({
-        model: 'google/gemma-3-27b-it:free',
-        messages: formattedMessages
+        model: 'google/gemma-2-9b-it:free',
+        messages: formattedMessages,
+        temperature: 0.7,
+        max_tokens: 2000
       })
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error?.message || 'OpenRouter API request failed');
+      const errorText = await response.text();
+      console.error("OpenRouter Error:", errorText);
+      throw new Error(`OpenRouter API Error: ${response.status} - ${errorText}`);
     }
 
     const data = await response.json();
+    
+    // Verify response structure
+    if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+      console.error("Invalid response structure:", data);
+      throw new Error('Invalid response from AI service');
+    }
+
     return res.status(200).json(data);
 
   } catch (error) {
