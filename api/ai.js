@@ -55,7 +55,7 @@ export default async function handler(req, res) {
       });
     }
 
-    console.log('Calling OpenRouter API with meta-llama/llama-3.2-3b-instruct:free');
+    console.log('Calling OpenRouter API with google/gemma-3-27b-it:free');
 
     // Call OpenRouter API with a working free model
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
@@ -67,7 +67,7 @@ export default async function handler(req, res) {
         'X-Title': 'Merch By DZ Assistant'
       },
       body: JSON.stringify({
-        model: 'meta-llama/llama-3.2-3b-instruct:free',
+        model: 'google/gemma-3-27b-it:free',
         messages: formattedMessages,
         temperature: 0.7,
         max_tokens: 2000
