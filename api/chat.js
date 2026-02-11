@@ -12,18 +12,11 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: `Method ${req.method} not allowed.` });
   }
 
-  // Log everything for debugging
-  console.log('=== CHAT.JS DEBUG START ===');
-  console.log('Request body:', JSON.stringify(req.body));
-  console.log('API Key present:', !!process.env.OPENROUTER_API_KEY);
-  console.log('API Key length:', process.env.OPENROUTER_API_KEY?.length);
-
   try {
     const { messages, context } = req.body;
 
     // Validate input
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
-      console.error('Invalid messages format');
       return res.status(400).json({ 
         choices: [{
           message: {
@@ -41,7 +34,7 @@ export default async function handler(req, res) {
         choices: [{
           message: {
             role: 'assistant',
-            content: 'Erreur de configuration: La clé API n\'est pas configurée. Veuillez contacter l\'administrateur.'
+            content: 'Erreur de configuration: La clé API n\'est pas configurée.'
           }
         }]
       });
@@ -101,19 +94,9 @@ ${context || 'No specific context provided. Please provide financial data for an
       });
     }
 
-    console.log('Formatted messages count:', formattedMessages.length);
-    console.log('Calling OpenRouter API...');
+    console.log('Calling OpenRouter API with meta-llama/llama-3.2-3b-instruct:free');
 
-    const requestBody = {
-      model: 'google/gemma-2-9b-it:free',
-      messages: formattedMessages,
-      temperature: 0.3,
-      max_tokens: 2000
-    };
-
-    console.log('Request body to OpenRouter:', JSON.stringify(requestBody, null, 2));
-
-    // Call OpenRouter API
+    // Call OpenRouter API with a working free model
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -122,11 +105,15 @@ ${context || 'No specific context provided. Please provide financial data for an
         'HTTP-Referer': 'https://finnace-app-tracker-v1.vercel.app/',
         'X-Title': 'Merch By DZ Finance Tracker'
       },
-      body: JSON.stringify(requestBody)
+      body: JSON.stringify({
+        model: 'meta-llama/llama-3.2-3b-instruct:free',
+        messages: formattedMessages,
+        temperature: 0.3,
+        max_tokens: 2000
+      })
     });
 
     console.log('OpenRouter response status:', response.status);
-    console.log('OpenRouter response headers:', Object.fromEntries(response.headers));
 
     // Handle API errors
     if (!response.ok) {
@@ -137,31 +124,28 @@ ${context || 'No specific context provided. Please provide financial data for an
         choices: [{
           message: {
             role: 'assistant',
-            content: `Erreur OpenRouter (${response.status}): ${errorText.substring(0, 200)}. Veuillez réessayer ou contacter le support.`
+            content: `Erreur OpenRouter (${response.status}): Le service AI est temporairement indisponible. Veuillez réessayer dans quelques instants.`
           }
         }]
       });
     }
 
     const data = await response.json();
-    console.log('OpenRouter full response:', JSON.stringify(data, null, 2));
+    console.log('OpenRouter response received successfully');
     
     // Validate response structure
     if (!data.choices || !data.choices[0] || !data.choices[0].message) {
-      console.error("Invalid API response structure:", data);
+      console.error("Invalid API response structure:", JSON.stringify(data));
       
       return res.status(200).json({ 
         choices: [{
           message: {
             role: 'assistant',
-            content: 'Erreur: Réponse invalide de l\'API. Structure de données inattendue.'
+            content: 'Erreur: Réponse invalide de l\'API. Veuillez réessayer.'
           }
         }]
       });
     }
-
-    console.log('Success! Returning response to frontend');
-    console.log('=== CHAT.JS DEBUG END ===');
 
     // Return in the correct format expected by the frontend
     return res.status(200).json({
@@ -174,16 +158,13 @@ ${context || 'No specific context provided. Please provide financial data for an
     });
 
   } catch (error) {
-    console.error("=== FATAL ERROR IN CHAT.JS ===");
-    console.error("Error name:", error.name);
-    console.error("Error message:", error.message);
-    console.error("Error stack:", error.stack);
+    console.error("MERCHO Advisor Error:", error.message);
     
     return res.status(200).json({ 
       choices: [{
         message: {
           role: 'assistant',
-          content: `Erreur système: ${error.message}. Veuillez vérifier les logs Vercel pour plus de détails.`
+          content: `Erreur système: ${error.message}. Veuillez réessayer.`
         }
       }]
     });
