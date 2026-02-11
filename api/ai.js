@@ -7,13 +7,19 @@ export default async function handler(req, res) {
   try {
     const { messages } = req.body;
 
+    if (!messages || !Array.isArray(messages)) {
+      return res.status(400).json({ error: 'Invalid messages format' });
+    }
+
     const systemPrompt = "You are the Merch By DZ Assistant, a professional AI specialized in helping with e-commerce operations, marketing strategies, and business optimization. You are helpful, concise, and professional.";
 
-    // Prepare messages with system prompt
+    // Format messages for OpenRouter
     const formattedMessages = [
-      { role: 'user', content: systemPrompt },
-      { role: 'assistant', content: 'Hello! I am your Merch By DZ Assistant. How can I help you today?' },
-      ...messages
+      { role: 'system', content: systemPrompt },
+      ...messages.map(m => ({
+        role: m.role,
+        content: m.content
+      }))
     ];
 
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
@@ -25,21 +31,31 @@ export default async function handler(req, res) {
         'X-Title': 'Merch By DZ Assistant'
       },
       body: JSON.stringify({
-        model: 'google/gemma-3-27b-it:free',
-        messages: formattedMessages
+        model: 'google/gemma-2-9b-it:free',
+        messages: formattedMessages,
+        temperature: 0.7,
+        max_tokens: 2000
       })
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error?.message || 'OpenRouter API request failed');
+      const errorText = await response.text();
+      console.error("OpenRouter Error:", errorText);
+      throw new Error(`OpenRouter API Error: ${response.status} - ${errorText}`);
     }
 
     const data = await response.json();
+    
+    // Verify response structure
+    if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+      console.error("Invalid response structure:", data);
+      throw new Error('Invalid response from AI service');
+    }
+
     return res.status(200).json(data);
 
   } catch (error) {
-    console.error("Gemini API Proxy Error:", error);
+    console.error("AI Assistant Error:", error);
     return res.status(500).json({ 
       error: 'Failed to process AI request',
       details: error.message 
