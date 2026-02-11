@@ -50,7 +50,7 @@ ${context || 'No data provided.'}`;
       headers: {
         "Authorization": `Bearer ${apiKey}`,
         "Content-Type": "application/json",
-        "HTTP-Referer": "https://merch-by-dz.vercel.app",
+        "HTTP-Referer": "https://finnace-app-tracker-v1.vercel.app/",
         "X-Title": "MerchByDZ Backoffice"
       },
       body: JSON.stringify({
