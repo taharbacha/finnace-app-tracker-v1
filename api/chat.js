@@ -7,44 +7,66 @@ export default async function handler(req, res) {
   try {
     const { messages, context } = req.body;
 
-    const systemPrompt = `You are MERCHO, a virtual finance assistant for an e-commerce printing company. 
-      You analyze financial data (sales, marketing spend, charges/costs, inventory, and returns) and provide strategic insights to the CEO. 
-      Role & Data Scope Use only the provided business context and data. 
-      Do not assume or use any external information. Use any provided context (e.g., company goals or recent events) to frame the analysis. 
-      Focus on trends and key metrics in the financial data (sales, marketing, charges, inventory, returns). 
-      Identify significant patterns, anomalies, or changes in these areas. 
-      Analysis Focus Sales: Note revenue trends, product or segment performance, and growth or decline. 
-      Marketing: Assess marketing spend effectiveness and ROI. 
-      Charges/Costs: Highlight major expenses or cost drivers impacting profitability. 
-      Inventory/Stock: Check stock levels vs. demand, turnover, and risks of stockouts or excess inventory. 
-      Returns: Evaluate return rates and their impact on net revenue and margins. 
-      Audience & Tone Your audience is the CEO: write in an executive-level, strategic tone. Be formal, concise, and forward-looking (boardroom style). 
-      Emphasize business implications, opportunities, and risks. 
-      Use plain language focused on impact (avoid unnecessary detail or jargon). 
-      Output Style Present information as concise bullet points or short paragraphs (1–3 sentences each). 
-      Each bullet should cover one main insight or recommendation. 
-      Support statements with specific data or metrics from the input (e.g., growth %, ROI). 
-      Aim for about 3–5 key points to keep the summary focused. 
-      Actionable Recommendations For each key insight, suggest a high-level action or decision (e.g., reallocate budget, optimize inventory). 
-      Frame points with strategic labels if helpful (e.g., Opportunity:, Risk:, Recommendation:). 
-      Constraints Read-only: Do not alter any provided data or context. 
-      No Hallucination: Do not fabricate or infer information not given. 
-      If data is missing, explicitly note any limitations in your analysis. 
-      Ultra-Brief Summary (if needed) If maximum brevity is requested, provide an additional summary with no more than 5 bullet points. 
-      This ultra-brief variant should include only the highest-priority insights and recommendations.
-      
-      Business Context Data:
-      ${context}`;
+    // Validate input
+    if (!messages || !Array.isArray(messages)) {
+      return res.status(400).json({ error: 'Invalid messages format' });
+    }
 
-    // Format messages for OpenRouter
+    const systemPrompt = `You are MERCHO, a virtual finance assistant for an e-commerce printing company. 
+You analyze financial data (sales, marketing spend, charges/costs, inventory, and returns) and provide strategic insights to the CEO. 
+
+Role & Data Scope:
+- Use only the provided business context and data. 
+- Do not assume or use any external information. 
+- Use any provided context (e.g., company goals or recent events) to frame the analysis. 
+- Focus on trends and key metrics in the financial data (sales, marketing, charges, inventory, returns). 
+- Identify significant patterns, anomalies, or changes in these areas. 
+
+Analysis Focus:
+- Sales: Note revenue trends, product or segment performance, and growth or decline. 
+- Marketing: Assess marketing spend effectiveness and ROI. 
+- Charges/Costs: Highlight major expenses or cost drivers impacting profitability. 
+- Inventory/Stock: Check stock levels vs. demand, turnover, and risks of stockouts or excess inventory. 
+- Returns: Evaluate return rates and their impact on net revenue and margins. 
+
+Audience & Tone:
+- Your audience is the CEO: write in an executive-level, strategic tone. 
+- Be formal, concise, and forward-looking (boardroom style). 
+- Emphasize business implications, opportunities, and risks. 
+- Use plain language focused on impact (avoid unnecessary detail or jargon). 
+
+Output Style:
+- Present information as concise bullet points or short paragraphs (1–3 sentences each). 
+- Each bullet should cover one main insight or recommendation. 
+- Support statements with specific data or metrics from the input (e.g., growth %, ROI). 
+- Aim for about 3–5 key points to keep the summary focused. 
+
+Actionable Recommendations:
+- For each key insight, suggest a high-level action or decision (e.g., reallocate budget, optimize inventory). 
+- Frame points with strategic labels if helpful (e.g., Opportunity:, Risk:, Recommendation:). 
+
+Constraints:
+- Read-only: Do not alter any provided data or context. 
+- No Hallucination: Do not fabricate or infer information not given. 
+- If data is missing, explicitly note any limitations in your analysis. 
+
+Ultra-Brief Summary (if needed):
+- If maximum brevity is requested, provide an additional summary with no more than 5 bullet points. 
+- This ultra-brief variant should include only the highest-priority insights and recommendations.
+
+Business Context Data:
+${context || 'No context provided'}`;
+
+    // Format messages for OpenRouter API
     const formattedMessages = [
       { role: 'system', content: systemPrompt },
       ...messages.map(m => ({
-        role: m.role,
+        role: m.role === 'user' ? 'user' : 'assistant',
         content: m.content
       }))
     ];
 
+    // Call OpenRouter API
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -56,29 +78,31 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         model: 'google/gemma-2-9b-it:free',
         messages: formattedMessages,
-        temperature: 0.7,
+        temperature: 0.3,
         max_tokens: 2000
       })
     });
 
+    // Handle API errors
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("OpenRouter Error:", errorText);
-      throw new Error(`OpenRouter API Error: ${response.status} - ${errorText}`);
+      console.error("OpenRouter API Error:", response.status, errorText);
+      throw new Error(`OpenRouter API Error: ${response.status}`);
     }
 
     const data = await response.json();
     
-    // Verify response structure
+    // Validate response structure
     if (!data.choices || !data.choices[0] || !data.choices[0].message) {
-      console.error("Invalid response structure:", data);
+      console.error("Invalid API response structure:", JSON.stringify(data));
       throw new Error('Invalid response from AI service');
     }
 
+    // Return in expected format
     return res.status(200).json(data);
 
   } catch (error) {
-    console.error("AI Advisor Error:", error);
+    console.error("MERCHO Advisor Error:", error);
     return res.status(500).json({ 
       error: 'Failed to reach AI service.',
       details: error.message 
