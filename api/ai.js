@@ -1,85 +1,44 @@
+
+import { GoogleGenAI } from "@google/genai";
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
-    return res.status(405).json({
-      error: 'Method not allowed. Use POST.'
-    });
+    res.setHeader('Allow', ['POST']);
+    return res.status(405).json({ error: `Method ${req.method} not allowed.` });
   }
 
   try {
-    if (!process.env.OPENROUTER_API_KEY) {
-      throw new Error("OPENROUTER_API_KEY missing.");
-    }
+    const { messages } = req.body;
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
-    const { messages = [] } = req.body;
+    const systemPrompt = `You are MERCHO, a virtual executive finance assistant for an e-commerce printing company. Use a formal, boardroom-level tone. Focus on ROI, profitability, and operational efficiency.`;
 
-    if (!Array.isArray(messages)) {
-      throw new Error("Invalid messages format.");
-    }
+    const geminiContents = messages.map(m => ({
+      role: m.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: m.content }]
+    }));
 
-    const systemPrompt = `
-You are the Merch By DZ Assistant.
-You help with e-commerce operations, logistics, marketing strategy, and business optimization.
-Be concise, practical, and professional.
-`;
-
-    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
-        "Content-Type": "application/json",
-        "HTTP-Referer": "https://finnace-app-tracker-v1.vercel.app/",
-        "X-Title": "Merch By DZ Assistant"
-      },
-      body: JSON.stringify({
-        model: "arcee-ai/trinity-large-preview:free",
-        temperature: 0.7,
-        max_tokens: 1500,
-        messages: [
-          { role: "system", content: systemPrompt },
-          ...messages
-        ]
-      })
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-pro-preview',
+      contents: geminiContents,
+      config: {
+        systemInstruction: systemPrompt,
+        temperature: 0.3
+      }
     });
-
-    const rawText = await response.text();
-    let data;
-
-    try {
-      data = JSON.parse(rawText);
-    } catch {
-      throw new Error("Invalid JSON returned from OpenRouter: " + rawText);
-    }
-
-    if (!response.ok) {
-      throw new Error(data?.error?.message || "OpenRouter request failed.");
-    }
-
-    if (!data.choices?.[0]?.message?.content) {
-      throw new Error("Invalid AI response structure.");
-    }
 
     return res.status(200).json({
       choices: [
         {
           message: {
-            content: data.choices[0].message.content
+            content: response.text || "Service unavailable."
           }
         }
       ]
     });
 
   } catch (error) {
-    console.error("Assistant API ERROR:", error.message);
-
-    return res.status(200).json({
-      choices: [
-        {
-          message: {
-            content:
-              "L’assistant est temporairement indisponible. Vérifiez la configuration OpenRouter."
-          }
-        }
-      ]
-    });
+    console.error("AI routing failure:", error);
+    return res.status(500).json({ error: 'AI routing failure.' });
   }
 }

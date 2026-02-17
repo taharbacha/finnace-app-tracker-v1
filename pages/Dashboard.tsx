@@ -29,35 +29,39 @@ import {
   ShoppingBag,
   Check,
   FileText,
-  TrendingDown
+  TrendingDown,
+  ShieldCheck,
+  Fuel
 } from 'lucide-react';
 import { OffreType, MarketingSpendSource, GrosStatus, SitewebStatus, MerchStatus } from '../types.ts';
 import ExportDashboardPDF from '../components/ExportDashboardPDF.tsx';
 
-const formatCurrency = (val: number) => val.toLocaleString('fr-DZ') + ' DA';
+const formatCurrency = (val: number) => Math.round(val).toLocaleString('fr-DZ') + ' DA';
 
 const KPICard = ({ title, value, subValues = [], icon: Icon, colorClass, statusCount }: any) => (
-  <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-col justify-between transition-all hover:shadow-md group">
+  <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-col justify-between transition-all hover:shadow-md group">
     <div className="flex justify-between items-start mb-6">
-      <div className={`p-4 rounded-2xl ${colorClass.bg}`}>
-        <Icon className={colorClass.text} size={24} />
+      <div className={`p-3.5 rounded-2xl ${colorClass.bg}`}>
+        <Icon className={colorClass.text} size={22} />
       </div>
       {statusCount !== undefined && (
-        <span className="bg-slate-50 px-4 py-1.5 rounded-full text-[10px] font-black text-slate-400 border border-slate-100">
+        <span className="bg-slate-50 px-3 py-1 rounded-full text-[9px] font-black text-slate-400 border border-slate-100">
           {statusCount} OBJETS
         </span>
       )}
     </div>
     <div>
-      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{title}</p>
-      <h3 className="text-3xl font-black text-slate-900 tracking-tighter">{formatCurrency(value)}</h3>
+      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">{title}</p>
+      <h3 className={`text-2xl font-black tracking-tighter ${value < 0 ? 'text-red-600' : 'text-slate-900'}`}>
+        {formatCurrency(value)}
+      </h3>
     </div>
     {subValues.length > 0 && (
-      <div className="grid grid-cols-2 gap-4 mt-6 pt-6 border-t border-slate-50">
+      <div className="grid grid-cols-2 gap-3 mt-5 pt-5 border-t border-slate-50">
         {subValues.map((sv: any, i: number) => (
           <div key={i}>
-            <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">{sv.label}</p>
-            <p className={`text-[11px] font-bold ${sv.color || 'text-slate-700'}`}>{typeof sv.val === 'number' ? formatCurrency(sv.val) : sv.val}</p>
+            <p className="text-[8px] font-black text-slate-400 uppercase tracking-tighter">{sv.label}</p>
+            <p className={`text-[10px] font-bold ${sv.color || 'text-slate-700'}`}>{typeof sv.val === 'number' ? formatCurrency(sv.val) : sv.val}</p>
           </div>
         ))}
       </div>
@@ -220,7 +224,7 @@ const Dashboard: React.FC = () => {
             <Activity className="text-blue-600" size={36} />
             Global Dashboard
           </h2>
-          <p className="text-slate-500 font-bold uppercase tracking-widest text-xs mt-2">Vue d'ensemble de la performance opérationnelle.</p>
+          <p className="text-slate-500 font-bold uppercase tracking-widest text-xs mt-2">OS v5.1 — Analyse Financière & Opérationnelle.</p>
         </div>
         
         <div className="flex items-center gap-4 bg-white p-4 rounded-3xl border border-slate-100 shadow-sm">
@@ -239,15 +243,25 @@ const Dashboard: React.FC = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
         <KPICard 
-          title="Profit Net Global" 
+          title="Profit Net Final" 
+          value={data.profit_net_final} 
+          icon={ShieldCheck} 
+          colorClass={{bg: 'bg-emerald-600', text: 'text-white'}}
+          subValues={[
+            {label: 'Cash In (Encaissé+Offres)', val: data.encaisse_reel + Math.max(0, data.net_offres), color: 'text-emerald-600'},
+            {label: 'Charges + Ads', val: data.total_charges + data.total_marketing_spend, color: 'text-rose-500'}
+          ]}
+        />
+        <KPICard 
+          title="Profit Net Global (Ops)" 
           value={globalKPIs.totalProfitNet} 
           icon={Zap} 
           colorClass={{bg: 'bg-blue-600', text: 'text-white'}}
           subValues={[
             {label: 'Encaissé Réel', val: data.encaisse_reel},
-            {label: 'Charges Fixes', val: data.total_charges, color: 'text-red-500'}
+            {label: 'Charges Fixes', val: data.total_charges, color: 'text-rose-400'}
           ]}
         />
         <KPICard 
@@ -260,16 +274,22 @@ const Dashboard: React.FC = () => {
           ]}
         />
         <KPICard 
-          title="Investissement Marketing" 
+          title="Fuel Marketing" 
           value={data.total_marketing_spend} 
-          icon={Target} 
+          icon={Fuel} 
           colorClass={{bg: 'bg-purple-50', text: 'text-purple-600'}}
+          subValues={[
+            {label: 'Marketing ROI (Est.)', val: data.total_marketing_spend > 0 ? (globalKPIs.totalProfitNet / data.total_marketing_spend).toFixed(2) + 'x' : 'N/A'}
+          ]}
         />
         <KPICard 
           title="Valeur de Production" 
           value={globalKPIs.totalProd} 
           icon={TrendingUp} 
-          colorClass={{bg: 'bg-emerald-50', text: 'text-emerald-600'}}
+          colorClass={{bg: 'bg-slate-50', text: 'text-slate-600'}}
+          subValues={[
+            {label: 'Capital en Circulation', val: globalKPIs.totalProd}
+          ]}
         />
       </div>
 

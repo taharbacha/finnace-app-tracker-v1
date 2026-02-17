@@ -1,115 +1,84 @@
+
+import { GoogleGenAI } from "@google/genai";
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
-    return res.status(405).json({
-      error: 'Method not allowed. Use POST.'
-    });
+    res.setHeader('Allow', ['POST']);
+    return res.status(405).json({ error: `Method ${req.method} not allowed.` });
   }
 
   try {
-    if (!process.env.OPENROUTER_API_KEY) {
-      throw new Error("OPENROUTER_API_KEY missing.");
-    }
+    const { messages, context } = req.body;
 
-    const { messages = [], context = "" } = req.body;
+    // Use Gemini 3 Pro for complex business strategic analysis as per guidelines
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    
+    const systemPrompt = `You are MERCHO, a virtual executive finance assistant for an e-commerce printing company.
 
-    if (!Array.isArray(messages)) {
-      throw new Error("Invalid messages format.");
-    }
+Role & Scope:
+- Analyze provided financial and operational data only.
+- Never assume, guess, or hallucinate missing information.
+- Operate strictly in read-only advisory mode.
 
-    const wantsDetailed = messages.some(m =>
-  m.content.toLowerCase().includes("detail")
-);
+Analysis Focus:
+- Sales & revenue trends
+- Marketing spend efficiency and ROI
+- Charges and cost structure
+- Inventory / production investment
+- Returns and their impact on profitability
+- Cashflow risks and opportunities
 
-const systemPrompt = `
-You are MERCHO, a strategic finance advisor.
+Audience & Tone:
+- Your audience is the CEO.
+- Use a formal, strategic, boardroom-level tone.
+- Be concise, precise, and impact-focused.
 
-FORMATTING:
-- Plain text only.
-- No Markdown.
-- No LaTeX.
+Output Rules:
+- 3 to 5 bullet points maximum
+- Each bullet contains:
+  • Insight (what is happening)
+  • Business implication (why it matters)
+  • Actionable recommendation (what to do)
+- If data is insufficient, explicitly state the limitation.
 
-MODE:
-${wantsDetailed ? `
-DEEP ANALYSIS MODE:
-- Provide comprehensive analysis.
-- Use full paragraphs.
-- Explain reasoning step-by-step.
-- Include calculations if needed.
-- No limit on length.
-- Write structured paragraphs, not bullet points.
-` : `
-EXECUTIVE MODE:
-- Provide maximum 5 concise bullet points.
-- Each bullet: Insight + business impact + action.
-`}
+Constraints:
+- No external knowledge
+- No data modification
+- No speculation
 
-DATA RULES:
-- Use only provided data.
-- No hallucination.
+CURRENT BUSINESS DATA CONTEXT:
+${context || 'No data provided.'}`;
 
-Business Context:
-${context}
-`;
+    // Map messages to Gemini format (user/model)
+    const geminiContents = messages.map(m => ({
+      role: m.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: m.content }]
+    }));
 
-
-    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
-        "Content-Type": "application/json",
-        "HTTP-Referer": "https://finnace-app-tracker-v1.vercel.app/",
-        "X-Title": "MERCHO Strategic Advisor"
-      },
-      body: JSON.stringify({
-        model: "arcee-ai/trinity-large-preview:free",
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-pro-preview',
+      contents: geminiContents,
+      config: {
+        systemInstruction: systemPrompt,
         temperature: 0.3,
-        max_tokens: 1500,
-        messages: [
-          { role: "system", content: systemPrompt },
-          ...messages
-        ]
-      })
+      }
     });
 
-    const rawText = await response.text();
-    let data;
+    const aiContent = response.text || "MERCHO is currently unavailable.";
 
-    try {
-      data = JSON.parse(rawText);
-    } catch {
-      throw new Error("Invalid JSON returned from OpenRouter: " + rawText);
-    }
-
-    if (!response.ok) {
-      throw new Error(data?.error?.message || "OpenRouter request failed.");
-    }
-
-    if (!data.choices?.[0]?.message?.content) {
-      throw new Error("Invalid AI response structure.");
-    }
-
+    // Return mandatory OpenAI-compatible shape for the frontend
     return res.status(200).json({
       choices: [
         {
           message: {
-            content: data.choices[0].message.content
+            content: aiContent
           }
         }
       ]
     });
 
   } catch (error) {
-    console.error("MERCHO API ERROR:", error.message);
-
-    return res.status(200).json({
-      choices: [
-        {
-          message: {
-            content:
-              "Le conseiller stratégique est temporairement indisponible. Vérifiez la configuration OpenRouter."
-          }
-        }
-      ]
-    });
+    console.error("MERCHO Backend Error:", error);
+    return res.status(500).json({ error: 'Failed to process strategic analysis.' });
   }
 }
