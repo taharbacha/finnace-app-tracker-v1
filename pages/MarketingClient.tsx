@@ -3,20 +3,37 @@ import React, { useState, useMemo } from 'react';
 import { useAppStore } from '../store.tsx';
 import EditableCell from '../components/EditableCell.tsx';
 import StatCard from '../components/StatCard.tsx';
-import { MarketingStatus } from '../types.ts';
-import { Plus, Search, UserCheck, Wallet, Zap, Trash2, Calendar, Target } from 'lucide-react';
+import { MarketingStatus, GlobalStatus } from '../types.ts';
+import { Plus, Search, UserCheck, Wallet, Zap, Trash2, Calendar, Target, LayoutList } from 'lucide-react';
 
 const MarketingClient: React.FC = () => {
-  const { getCalculatedMarketing, updateMarketing, addMarketing, deleteMarketing } = useAppStore();
+  const { 
+    getCalculatedMarketing, 
+    updateMarketing, 
+    addMarketing, 
+    deleteMarketing,
+    globalStatusFilter,
+    setGlobalStatusFilter
+  } = useAppStore();
   const allData = getCalculatedMarketing();
   const [searchTerm, setSearchTerm] = useState('');
 
   const filteredData = useMemo(() => {
     return allData.filter(item => {
-      return (item.client_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-             (item.service_description || '').toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesSearch = (item.client_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           (item.service_description || '').toLowerCase().includes(searchTerm.toLowerCase());
+      
+      let matchesStatus = true;
+      if (globalStatusFilter !== GlobalStatus.ALL) {
+        if (globalStatusFilter === GlobalStatus.EN_COURS) matchesStatus = item.status === MarketingStatus.EN_COURS;
+        else if (globalStatusFilter === GlobalStatus.LIVREE) matchesStatus = item.status === MarketingStatus.TERMINE;
+        else if (globalStatusFilter === GlobalStatus.RETOUR) matchesStatus = item.status === MarketingStatus.ANNULE;
+        else matchesStatus = false;
+      }
+
+      return matchesSearch && matchesStatus;
     }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [allData, searchTerm]);
+  }, [allData, searchTerm, globalStatusFilter]);
 
   const stats = useMemo(() => {
     // Only count revenue and charges for completed projects for the KPI cards as per the new rules
@@ -60,8 +77,8 @@ const MarketingClient: React.FC = () => {
       </div>
 
       <div className="bg-white border border-slate-100 rounded-[2rem] shadow-sm overflow-hidden">
-        <div className="p-6 border-b border-slate-50 bg-slate-50/30">
-          <div className="relative max-w-xl">
+        <div className="p-6 border-b border-slate-50 bg-slate-50/30 flex flex-col lg:flex-row lg:items-center gap-4">
+          <div className="relative flex-1">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
             <input 
               type="text" 
@@ -70,6 +87,20 @@ const MarketingClient: React.FC = () => {
               onChange={(e) => setSearchTerm(e.target.value)} 
               className="w-full pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-2xl outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all text-sm font-medium" 
             />
+          </div>
+
+          <div className="flex items-center gap-2 bg-white border border-slate-200 p-1.5 rounded-2xl">
+            <LayoutList size={16} className="ml-2 text-slate-400" />
+            <select 
+              value={globalStatusFilter}
+              onChange={(e) => setGlobalStatusFilter(e.target.value as GlobalStatus)}
+              className="text-xs font-black uppercase tracking-widest border-none bg-transparent outline-none pr-8 cursor-pointer text-slate-700"
+            >
+              <option value={GlobalStatus.ALL}>Tous les Status</option>
+              <option value={GlobalStatus.EN_COURS}>En Cours</option>
+              <option value={GlobalStatus.LIVREE}>Terminé (OK)</option>
+              <option value={GlobalStatus.RETOUR}>Annulé (RETOUR)</option>
+            </select>
           </div>
         </div>
 

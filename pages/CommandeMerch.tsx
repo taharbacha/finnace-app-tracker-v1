@@ -2,16 +2,26 @@
 import React, { useRef, useState, useMemo } from 'react';
 import { useAppStore } from '../store.tsx';
 import EditableCell from '../components/EditableCell.tsx';
-import { MerchStatus } from '../types.ts';
+import { MerchStatus, GlobalStatus } from '../types.ts';
 import { MERCH_STATUS_OPTIONS } from '../constants.ts';
 import { 
   Plus, Search, Banknote, Trash2, Upload, 
   Clock, ShoppingBag, Filter, CheckSquare, Square, 
-  ClipboardCheck, ChevronUp, ChevronDown, Percent, Ban 
+  ClipboardCheck, ChevronUp, ChevronDown, Percent, Ban, LayoutList
 } from 'lucide-react';
 
 const CommandeMerch: React.FC = () => {
-  const { getCalculatedMerch, updateMerch, addMerch, deleteMerch, importMerch, dashboardDateStart, dashboardDateEnd } = useAppStore();
+  const { 
+    getCalculatedMerch, 
+    updateMerch, 
+    addMerch, 
+    deleteMerch, 
+    importMerch, 
+    dashboardDateStart, 
+    dashboardDateEnd,
+    globalStatusFilter,
+    setGlobalStatusFilter
+  } = useAppStore();
   const allData = getCalculatedMerch();
   
   // UI States
@@ -30,13 +40,22 @@ const CommandeMerch: React.FC = () => {
       const itemDate = item.created_at.split('T')[0];
       const matchesStart = !dashboardDateStart || itemDate >= dashboardDateStart;
       const matchesEnd = !dashboardDateEnd || itemDate <= dashboardDateEnd;
-      return matchesSearch && matchesStart && matchesEnd;
+      
+      let matchesStatus = true;
+      if (globalStatusFilter !== GlobalStatus.ALL) {
+        if (globalStatusFilter === GlobalStatus.EN_LIVRAISON) matchesStatus = item.status === MerchStatus.EN_LIVRAISON;
+        else if (globalStatusFilter === GlobalStatus.LIVREE) matchesStatus = [MerchStatus.LIVREE, MerchStatus.LIVREE_NON_ENCAISSEE].includes(item.status);
+        else if (globalStatusFilter === GlobalStatus.RETOUR) matchesStatus = item.status === MerchStatus.RETOUR;
+        else matchesStatus = false;
+      }
+
+      return matchesSearch && matchesStart && matchesEnd && matchesStatus;
     }).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-  }, [allData, searchTerm, dashboardDateStart, dashboardDateEnd]);
+  }, [allData, searchTerm, dashboardDateStart, dashboardDateEnd, globalStatusFilter]);
 
   const kpiData = useMemo(() => {
-    if (!analysisMode) return filteredData;
-    return filteredData.filter(item => selectedIds.has(item.id));
+    if (analysisMode) return filteredData.filter(item => selectedIds.has(item.id));
+    return filteredData;
   }, [filteredData, analysisMode, selectedIds]);
 
   const stats = useMemo(() => {
@@ -247,6 +266,21 @@ const CommandeMerch: React.FC = () => {
               className="w-full pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-2xl outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all text-sm font-medium" 
             />
           </div>
+
+          <div className="flex items-center gap-2 bg-white border border-slate-200 p-1.5 rounded-2xl">
+            <LayoutList size={16} className="ml-2 text-slate-400" />
+            <select 
+              value={globalStatusFilter}
+              onChange={(e) => setGlobalStatusFilter(e.target.value as GlobalStatus)}
+              className="text-xs font-black uppercase tracking-widest border-none bg-transparent outline-none pr-8 cursor-pointer text-slate-700"
+            >
+              <option value={GlobalStatus.ALL}>Tous les Status</option>
+              <option value={GlobalStatus.EN_LIVRAISON}>En Livraison</option>
+              <option value={GlobalStatus.LIVREE}>Livrée (OK)</option>
+              <option value={GlobalStatus.RETOUR}>Retour</option>
+            </select>
+          </div>
+
           {(dashboardDateStart || dashboardDateEnd) && (
             <div className="bg-blue-50 border border-blue-100 px-4 py-2 rounded-2xl flex items-center gap-2">
               <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Global Filter Sync</span>

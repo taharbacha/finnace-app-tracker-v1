@@ -7,7 +7,8 @@ import {
   CalculatedGros, CalculatedSiteweb, CalculatedMerch, CalculatedMarketing, DashboardData,
   GrosStatus, SitewebStatus, MerchStatus, OffreType, OffreCategory, MarketingStatus, MarketingStatus as MarketingStatusEnum, MarketingSpendSource, MarketingSpendType,
   ChatMessage,
-  FournisseurLedger, FournisseurName, FournisseurForWho
+  FournisseurLedger, FournisseurName, FournisseurForWho,
+  GlobalStatus
 } from './types.ts';
 
 /**
@@ -91,6 +92,8 @@ interface AppState {
   isCloudActive: boolean;
   lastSynced: string | null;
   chatHistory: ChatMessage[];
+  globalStatusFilter: GlobalStatus;
+  setGlobalStatusFilter: (status: GlobalStatus) => void;
   addChatMessage: (role: 'user' | 'assistant', text: string) => void;
   clearChat: () => void;
   login: (password: string) => Promise<boolean>;
@@ -169,6 +172,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [fournisseurLedger, setFournisseurLedger] = useState<FournisseurLedger[]>([]);
   
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
+  const [globalStatusFilter, setGlobalStatusFilter] = useState<GlobalStatus>(GlobalStatus.ALL);
 
   // Persistent Date Filtering initialized from localStorage
   const [dashboardDateStart, setDashboardDateStart] = useState<string>(() => localStorage.getItem('app_date_start') || '');
@@ -515,13 +519,38 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const cm = getCalculatedMerch();
     const filter = (d: string) => (!startDate || d >= startDate) && (!endDate || d <= endDate);
     
-    const fcg = cg.filter(i => filter(i.date_created)); 
-    const fcs = cs.filter(i => filter(i.date_created));
-    const fcm = cm.filter(i => filter(i.created_at.split('T')[0]));
+    let fcg = cg.filter(i => filter(i.date_created)); 
+    let fcs = cs.filter(i => filter(i.date_created));
+    let fcm = cm.filter(i => filter(i.created_at.split('T')[0]));
     const fo = offres.filter(i => filter(i.date));
     const fc = charges.filter(i => filter(i.date));
     const fms = marketingSpends.filter(i => filter(i.date_start));
-    const fm = getCalculatedMarketing().filter(i => filter(i.date));
+    let fm = getCalculatedMarketing().filter(i => filter(i.date));
+
+    if (globalStatusFilter !== GlobalStatus.ALL) {
+      if (globalStatusFilter === GlobalStatus.EN_PRODUCTION) {
+        fcg = fcg.filter(i => i.status === GrosStatus.EN_PRODUCTION);
+        fcs = []; fcm = []; fm = [];
+      } else if (globalStatusFilter === GlobalStatus.EN_LIVRAISON) {
+        fcg = fcg.filter(i => i.status === GrosStatus.EN_LIVRAISON);
+        fcs = fcs.filter(i => i.status === SitewebStatus.EN_LIVRAISON);
+        fcm = fcm.filter(i => i.status === MerchStatus.EN_LIVRAISON);
+        fm = [];
+      } else if (globalStatusFilter === GlobalStatus.LIVREE) {
+        fcg = fcg.filter(i => [GrosStatus.LIVREE_ENCAISSE, GrosStatus.LIVREE_NON_ENCAISSE].includes(i.status));
+        fcs = fcs.filter(i => [SitewebStatus.LIVREE, SitewebStatus.LIVREE_NON_ENCAISSEE].includes(i.status));
+        fcm = fcm.filter(i => [MerchStatus.LIVREE, MerchStatus.LIVREE_NON_ENCAISSEE].includes(i.status));
+        fm = fm.filter(i => i.status === MarketingStatusEnum.TERMINE);
+      } else if (globalStatusFilter === GlobalStatus.RETOUR) {
+        fcg = fcg.filter(i => i.status === GrosStatus.RETOUR);
+        fcs = fcs.filter(i => i.status === SitewebStatus.RETOUR);
+        fcm = fcm.filter(i => i.status === MerchStatus.RETOUR);
+        fm = fm.filter(i => i.status === MarketingStatusEnum.ANNULE);
+      } else if (globalStatusFilter === GlobalStatus.EN_COURS) {
+        fcg = []; fcs = []; fcm = [];
+        fm = fm.filter(i => i.status === MarketingStatusEnum.EN_COURS);
+      }
+    }
 
     const encaisse_gros = fcg.reduce((a, c) => a + c.profit_encaisse, 0);
     const attendu_gros = fcg.reduce((a, c) => a + c.profit_attendu, 0);
@@ -561,6 +590,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const value: AppState = {
     gros, siteweb, merch, offres, inventory, charges, marketingServices, marketingSpends, retours, payouts, credits, fournisseurLedger,
     dashboardDateStart, dashboardDateEnd, isAuthenticated, isSyncing, isCloudActive, lastSynced, chatHistory,
+    globalStatusFilter, setGlobalStatusFilter,
     addChatMessage, clearChat, login, logout, setDashboardDateRange,
     updateGros, addGros, deleteGros, importGros,
     updateSiteweb, addSiteweb, duplicateSiteweb, deleteSiteweb, importSiteweb,

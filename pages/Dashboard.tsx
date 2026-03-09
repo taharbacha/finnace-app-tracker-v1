@@ -33,8 +33,9 @@ import {
   ShieldCheck,
   Fuel
 } from 'lucide-react';
-import { OffreType, MarketingSpendSource, GrosStatus, SitewebStatus, MerchStatus } from '../types.ts';
+import { OffreType, MarketingSpendSource, GrosStatus, SitewebStatus, MerchStatus, GlobalStatus } from '../types.ts';
 import ExportDashboardPDF from '../components/ExportDashboardPDF.tsx';
+import { LayoutList } from 'lucide-react';
 
 const formatCurrency = (val: number) => Math.round(val).toLocaleString('fr-DZ') + ' DA';
 
@@ -82,7 +83,9 @@ const Dashboard: React.FC = () => {
     offres,
     dashboardDateStart,
     dashboardDateEnd,
-    setDashboardDateRange
+    setDashboardDateRange,
+    globalStatusFilter,
+    setGlobalStatusFilter
   } = useAppStore();
 
   const [tempStart, setTempStart] = useState(dashboardDateStart);
@@ -228,6 +231,22 @@ const Dashboard: React.FC = () => {
         </div>
         
         <div className="flex items-center gap-4 bg-white p-4 rounded-3xl border border-slate-100 shadow-sm">
+          <div className="flex items-center gap-2 border-r border-slate-100 pr-4 mr-2">
+            <LayoutList size={16} className="text-slate-400" />
+            <select 
+              value={globalStatusFilter}
+              onChange={(e) => setGlobalStatusFilter(e.target.value as GlobalStatus)}
+              className="text-xs font-black uppercase tracking-widest border-none bg-transparent outline-none cursor-pointer text-slate-700"
+            >
+              <option value={GlobalStatus.ALL}>Tous les Status</option>
+              <option value={GlobalStatus.EN_PRODUCTION}>En Production</option>
+              <option value={GlobalStatus.EN_LIVRAISON}>En Livraison</option>
+              <option value={GlobalStatus.LIVREE}>Livrée (OK)</option>
+              <option value={GlobalStatus.RETOUR}>Retour</option>
+              <option value={GlobalStatus.EN_COURS}>En Cours</option>
+            </select>
+          </div>
+
           <div className="flex items-center gap-2">
             <Calendar size={16} className="text-slate-400" />
             <input type="date" value={tempStart} onChange={e => setTempStart(e.target.value)} className="text-xs font-bold border-none bg-slate-50 rounded-lg p-2 outline-none" />

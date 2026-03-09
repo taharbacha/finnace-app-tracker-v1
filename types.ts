@@ -213,6 +213,15 @@ export interface ChatMessage {
 
 // --- Fournisseurs Module Types ---
 
+export enum GlobalStatus {
+  ALL = 'all',
+  EN_PRODUCTION = 'en_production',
+  EN_LIVRAISON = 'en_livraison',
+  LIVREE = 'livree',
+  RETOUR = 'retour',
+  EN_COURS = 'en_cours'
+}
+
 export enum FournisseurName {
   YASSIN = 'Yassin',
   CSS = 'CSS',
