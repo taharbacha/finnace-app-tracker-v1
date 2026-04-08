@@ -24,7 +24,8 @@ import {
   XCircle,
   ArrowLeft,
   Save,
-  Printer
+  Printer,
+  Truck
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
