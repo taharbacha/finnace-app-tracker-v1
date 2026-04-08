@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { HashRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import Sidebar from './components/Sidebar.tsx';
 import Dashboard from './pages/Dashboard.tsx';
@@ -26,9 +26,11 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isSidebarHidden, setIsSidebarHidden] = useState(false);
   const location = useLocation();
 
-  useEffect(() => {
+  const [prevPathname, setPrevPathname] = useState(location.pathname);
+  if (location.pathname !== prevPathname) {
+    setPrevPathname(location.pathname);
     setIsMobileMenuOpen(false);
-  }, [location.pathname]);
+  }
 
   return (
     <div className="flex min-h-screen bg-[#F8FAFC]">

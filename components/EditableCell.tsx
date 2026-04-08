@@ -20,9 +20,11 @@ const EditableCell: React.FC<EditableCellProps> = ({
   const [localValue, setLocalValue] = useState<string>(String(value ?? ''));
   const inputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
+  const [prevValue, setPrevValue] = useState(value);
+  if (value !== prevValue) {
+    setPrevValue(value);
     setLocalValue(String(value ?? ''));
-  }, [value]);
+  }
 
   useEffect(() => {
     if (isEditing && inputRef.current) {

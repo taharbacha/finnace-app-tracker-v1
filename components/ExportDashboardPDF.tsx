@@ -1,6 +1,6 @@
 
 import React, { useRef } from 'react';
-import { FileText, Loader2, ShieldCheck, AlertCircle, TrendingUp, Wallet } from 'lucide-react';
+import { FileText, Loader2, ShieldCheck, AlertCircle, TrendingUp } from 'lucide-react';
 
 interface ExportDashboardPDFProps {
   data: any;
@@ -17,6 +17,25 @@ interface ExportDashboardPDFProps {
 }
 
 const formatCurrency = (val: number) => val.toLocaleString('fr-DZ') + ' DA';
+
+const SectionHeader = ({ title, subtitle }: { title: string, subtitle?: string }) => (
+  <div className="border-b-2 border-slate-900 pb-2 mb-4 mt-8">
+    <h2 className="text-sm font-black uppercase tracking-[0.2em] text-slate-900">{title}</h2>
+    {subtitle && <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">{subtitle}</p>}
+  </div>
+);
+
+const DenseTableRow = ({ label, value, subLabel, isNegative = false, isBold = false }: any) => (
+  <div className={`flex justify-between py-1.5 border-b border-slate-100 ${isBold ? 'font-black' : ''}`}>
+    <div className="flex flex-col">
+      <span className="text-[10px] text-slate-600 uppercase tracking-tight">{label}</span>
+      {subLabel && <span className="text-[8px] text-slate-400 italic">{subLabel}</span>}
+    </div>
+    <span className={`text-[11px] font-mono ${isNegative && value !== 0 ? 'text-red-600' : 'text-slate-900'}`}>
+      {isNegative && value !== 0 ? '-' : ''}{typeof value === 'number' ? formatCurrency(Math.abs(value)) : value}
+    </span>
+  </div>
+);
 
 const ExportDashboardPDF: React.FC<ExportDashboardPDFProps> = ({ data, globalKPIs, pillars, dateRange, counts, rawLists }) => {
   const reportRef = useRef<HTMLDivElement>(null);
@@ -36,30 +55,11 @@ const ExportDashboardPDF: React.FC<ExportDashboardPDFProps> = ({ data, globalKPI
       pagebreak: { mode: ['css', 'legacy'] }
     };
 
-    // @ts-ignore
+    // @ts-expect-error html2pdf is globally available
     window.html2pdf().from(element).set(opt).save().then(() => {
       setIsGenerating(false);
     });
   };
-
-  const SectionHeader = ({ title, subtitle }: { title: string, subtitle?: string }) => (
-    <div className="border-b-2 border-slate-900 pb-2 mb-4 mt-8">
-      <h2 className="text-sm font-black uppercase tracking-[0.2em] text-slate-900">{title}</h2>
-      {subtitle && <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">{subtitle}</p>}
-    </div>
-  );
-
-  const DenseTableRow = ({ label, value, subLabel, isNegative = false, isBold = false }: any) => (
-    <div className={`flex justify-between py-1.5 border-b border-slate-100 ${isBold ? 'font-black' : ''}`}>
-      <div className="flex flex-col">
-        <span className="text-[10px] text-slate-600 uppercase tracking-tight">{label}</span>
-        {subLabel && <span className="text-[8px] text-slate-400 italic">{subLabel}</span>}
-      </div>
-      <span className={`text-[11px] font-mono ${isNegative && value !== 0 ? 'text-red-600' : 'text-slate-900'}`}>
-        {isNegative && value !== 0 ? '-' : ''}{typeof value === 'number' ? formatCurrency(Math.abs(value)) : value}
-      </span>
-    </div>
-  );
 
   return (
     <>
@@ -135,6 +135,15 @@ const ExportDashboardPDF: React.FC<ExportDashboardPDFProps> = ({ data, globalKPI
                  <DenseTableRow label="Pertes de Retours (Stock Perdu)" value={globalKPIs.retLoss} isNegative />
                  <DenseTableRow label="Impact Net des Offres" value={data.net_offres} />
               </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-8 mb-12">
+               <div className="space-y-4">
+                  <h3 className="text-[10px] font-black uppercase text-indigo-600 bg-indigo-50 px-2 py-1 inline-block">Facturation & Documents</h3>
+                  <DenseTableRow label="Total Facturé (TTC)" value={data.total_facture || 0} />
+                  <DenseTableRow label="Total Encaissé" value={data.total_encaisse_facture || 0} />
+                  <DenseTableRow label="Reste à Recouvrer" value={(data.total_facture || 0) - (data.total_encaisse_facture || 0)} isNegative />
+               </div>
             </div>
 
             <div className="bg-slate-900 text-white p-10 rounded-[2.5rem] flex justify-between items-center shadow-xl">

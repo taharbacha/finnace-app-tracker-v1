@@ -1,5 +1,5 @@
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useCallback } from 'react';
 import { useAppStore } from '../store.tsx';
 import { 
   GrosStatus, 
@@ -142,13 +142,13 @@ const Stats: React.FC = () => {
     dashboardDateEnd
   } = useAppStore();
 
-  const filterByDate = (dateStr: string) => {
+  const filterByDate = useCallback((dateStr: string) => {
     if (!dateStr) return true;
     const cleanDate = dateStr.split('T')[0];
     if (dashboardDateStart && cleanDate < dashboardDateStart) return false;
     if (dashboardDateEnd && cleanDate > dashboardDateEnd) return false;
     return true;
-  };
+  }, [dashboardDateStart, dashboardDateEnd]);
 
   const pillarData = useMemo(() => {
     const cg = getCalculatedGros().filter(i => filterByDate(i.date_created));
@@ -198,7 +198,7 @@ const Stats: React.FC = () => {
       finalNet: totalPillarProfit - totalFixedCosts + totalOffres,
       totalVentes: grosVentes + vendVentes + merchVentes
     };
-  }, [getCalculatedGros, getCalculatedSiteweb, getCalculatedMerch, marketingSpends, charges, offres, dashboardDateStart, dashboardDateEnd]);
+  }, [getCalculatedGros, getCalculatedSiteweb, getCalculatedMerch, marketingSpends, charges, offres, dashboardDateStart, dashboardDateEnd, filterByDate]);
 
   return (
     <div className="space-y-16 animate-in fade-in duration-700 pb-24">

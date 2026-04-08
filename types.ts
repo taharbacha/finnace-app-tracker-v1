@@ -203,6 +203,8 @@ export interface DashboardData {
   total_charges: number;
   total_marketing_spend: number;
   profit_net_final: number;
+  total_facture?: number;
+  total_encaisse_facture?: number;
 }
 
 export interface ChatMessage {

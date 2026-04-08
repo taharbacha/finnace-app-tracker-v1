@@ -119,6 +119,7 @@ interface AppState {
   getCalculatedSiteweb: () => CalculatedSiteweb[];
   getCalculatedMerch: () => CalculatedMerch[];
   getCalculatedMarketing: () => CalculatedMarketing[];
+  getCalculatedDocuments: () => Document[];
   getDashboardData: (startDate?: string, endDate?: string) => DashboardData;
   syncData: () => Promise<void>;
   updateOffre: (id: string, field: keyof Offre, value: any) => Promise<void>;
@@ -546,7 +547,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     } else {
       const id = crypto.randomUUID();
-      setDocuments(p => [{ ...baseRecord, id, reference: 'TEMP-' + Date.now(), total_ht: 0, tva_amount: 0, total_ttc: 0, created_at: new Date().toISOString(), updated_at: new Date().toISOString() } as Document, ...p]);
+      const refPrefix = type === DocumentType.FACTURE ? 'F' : type === DocumentType.PROFORMA ? 'P' : 'B';
+      const ref = refPrefix + String(documents.length + 1).padStart(7, '0');
+      setDocuments(p => [{ ...baseRecord, id, reference: ref, total_ht: 0, tva_amount: 0, total_ttc: 0, created_at: new Date().toISOString(), updated_at: new Date().toISOString() } as Document, ...p]);
       return id;
     }
   }, []);
@@ -586,6 +589,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const updateDocumentItem = useCallback(async (id: string, updates: Partial<DocumentItem>) => {
     setDocumentItems(prev => prev.map(i => String(i.id) === String(id) ? { ...i, ...updates, total_ligne: (updates.quantite ?? i.quantite) * (updates.prix_unitaire ?? i.prix_unitaire) } : i));
+    
+    // If not using Supabase, we need to trigger a re-render of documents to update totals
+    // In this architecture, getCalculatedDocuments handles it via dependency on documentItems
+    
     if (supabase) {
       const { error } = await supabase.from('document_items').update(updates).eq('id', id);
       if (error) console.error("Supabase Update Error (Document Items):", error.message);
@@ -607,6 +614,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const getCalculatedSiteweb = useCallback((): CalculatedSiteweb[] => siteweb.map(i => ({ ...i, profit_net: computeSitewebCalculatedFields(i).benefice_net })), [siteweb]);
   const getCalculatedMerch = useCallback((): CalculatedMerch[] => merch.map(computeMerchCalculatedFields), [merch]);
   const getCalculatedMarketing = useCallback((): CalculatedMarketing[] => marketingServices.map(i => { const calc = computeMarketingCalculatedFields(i); return { ...i, net_profit: i.status === MarketingStatusEnum.TERMINE ? calc.benefice_net : 0 }; }), [marketingServices]);
+  
+  const getCalculatedDocuments = useCallback((): Document[] => {
+    return documents.map(doc => {
+      const items = documentItems.filter(item => item.document_id === doc.id);
+      const total_ht = items.reduce((acc, curr) => acc + (Number(curr.quantite) * Number(curr.prix_unitaire)), 0);
+      const tva_amount = total_ht * (Number(doc.tva_percent || 0) / 100);
+      const total_ttc = total_ht + tva_amount + Number(doc.shipping || 0) + Number(doc.timbre || 0) - Number(doc.versement || 0);
+      return { ...doc, total_ht, tva_amount, total_ttc };
+    });
+  }, [documents, documentItems]);
 
   const getDashboardData = useCallback((startDate?: string, endDate?: string): DashboardData => {
     const cg = getCalculatedGros(); 
@@ -665,6 +682,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const total_charges = fc.reduce((a, c) => a + Number(c.montant), 0);
     const total_marketing_spend = fms.reduce((a, c) => a + Number(c.amount), 0);
 
+    const fdocs = getCalculatedDocuments().filter(i => filter(i.date));
+    const total_facture = fdocs.filter(i => i.type === DocumentType.FACTURE && i.status !== DocumentStatus.CANCELED).reduce((a, c) => a + c.total_ttc, 0);
+    const total_encaisse_facture = fdocs.filter(i => i.type === DocumentType.FACTURE && i.status === DocumentStatus.PAID).reduce((a, c) => a + c.total_ttc, 0);
+
     const encaisse_reel = encaisse_gros + encaisse_sw + encaisse_merch + encaisse_marketing;
     const profit_attendu = attendu_gros + attendu_sw + attendu_merch;
     const pertes = pertes_gros + pertes_sw + pertes_merch;
@@ -678,9 +699,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       net_offres,
       total_charges,
       total_marketing_spend,
-      profit_net_final
+      profit_net_final,
+      total_facture,
+      total_encaisse_facture
     };
-  }, [getCalculatedGros, getCalculatedSiteweb, getCalculatedMerch, getCalculatedMarketing, offres, charges, marketingSpends]);
+  }, [getCalculatedGros, getCalculatedSiteweb, getCalculatedMerch, getCalculatedMarketing, getCalculatedDocuments, offres, charges, marketingSpends]);
 
   const value: AppState = {
     gros, siteweb, merch, offres, inventory, charges, marketingServices, marketingSpends, retours, payouts, credits, fournisseurLedger,
@@ -691,7 +714,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     updateGros, addGros, deleteGros, importGros,
     updateSiteweb, addSiteweb, duplicateSiteweb, deleteSiteweb, importSiteweb,
     updateMerch, addMerch, deleteMerch, importMerch,
-    getCalculatedGros, getCalculatedSiteweb, getCalculatedMerch, getCalculatedMarketing, getDashboardData,
+    getCalculatedGros, getCalculatedSiteweb, getCalculatedMerch, getCalculatedMarketing, getCalculatedDocuments, getDashboardData,
     syncData, updateOffre, addOffre, deleteOffre, importOffres,
     updateInventory, addInventory, deleteInventory, importInventory,
     updateCharge, addCharge, deleteCharge, importCharges,

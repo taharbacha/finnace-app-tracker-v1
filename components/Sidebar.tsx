@@ -9,7 +9,6 @@ import {
   CloudOff,
   RefreshCw,
   CheckCircle2,
-  Package,
   Wallet,
   Globe,
   UserCheck,

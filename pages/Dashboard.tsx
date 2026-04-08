@@ -1,5 +1,5 @@
 
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import { useAppStore } from '../store.tsx';
 import { 
   CartesianGrid, 
@@ -91,20 +91,25 @@ const Dashboard: React.FC = () => {
   const [tempStart, setTempStart] = useState(dashboardDateStart);
   const [tempEnd, setTempEnd] = useState(dashboardDateEnd);
 
-  useEffect(() => {
+  const [prevDashboardDateStart, setPrevDashboardDateStart] = useState(dashboardDateStart);
+  const [prevDashboardDateEnd, setPrevDashboardDateEnd] = useState(dashboardDateEnd);
+
+  if (dashboardDateStart !== prevDashboardDateStart || dashboardDateEnd !== prevDashboardDateEnd) {
+    setPrevDashboardDateStart(dashboardDateStart);
+    setPrevDashboardDateEnd(dashboardDateEnd);
     setTempStart(dashboardDateStart);
     setTempEnd(dashboardDateEnd);
-  }, [dashboardDateStart, dashboardDateEnd]);
+  }
 
   const data = getDashboardData(dashboardDateStart, dashboardDateEnd);
   
-  const filterByDate = (dateStr: string) => {
+  const filterByDate = useCallback((dateStr: string) => {
     if (!dateStr) return true;
     const cleanDate = dateStr.split('T')[0];
     if (dashboardDateStart && cleanDate < dashboardDateStart) return false;
     if (dashboardDateEnd && cleanDate > dashboardDateEnd) return false;
     return true;
-  };
+  }, [dashboardDateStart, dashboardDateEnd]);
 
   const handleApplyFilter = () => {
     setDashboardDateRange(tempStart, tempEnd);
@@ -155,7 +160,7 @@ const Dashboard: React.FC = () => {
                    cm.filter(i => i.status === MerchStatus.RETOUR).reduce((a,c) => a + c.prix_achat, 0);
 
     return { totalProd, totalProfitNet, lneProfit, retLoss };
-  }, [getCalculatedGros, getCalculatedSiteweb, getCalculatedMerch, offres, dashboardDateStart, dashboardDateEnd]);
+  }, [getCalculatedGros, getCalculatedSiteweb, getCalculatedMerch, offres, dashboardDateStart, dashboardDateEnd, filterByDate]);
 
   const pillars = useMemo(() => {
     const cg = getCalculatedGros().filter(i => filterByDate(i.date_created));
@@ -192,7 +197,7 @@ const Dashboard: React.FC = () => {
       merch: { mkt: merchMkt, profitReal: merchProfitReal, prod: merchProd },
       offres: { rev: offresRev, exp: offresExp, net: offresRev - offresExp }
     };
-  }, [getCalculatedGros, getCalculatedSiteweb, getCalculatedMerch, marketingSpends, offres, dashboardDateStart, dashboardDateEnd]);
+  }, [getCalculatedGros, getCalculatedSiteweb, getCalculatedMerch, marketingSpends, offres, dashboardDateStart, dashboardDateEnd, filterByDate]);
 
   const counts = useMemo(() => {
     const cg = getCalculatedGros().filter(i => filterByDate(i.date_created));
@@ -217,7 +222,7 @@ const Dashboard: React.FC = () => {
         ret: cm.filter(i => i.status === MerchStatus.RETOUR).length
       }
     };
-  }, [getCalculatedGros, getCalculatedSiteweb, getCalculatedMerch, dashboardDateStart, dashboardDateEnd]);
+  }, [getCalculatedGros, getCalculatedSiteweb, getCalculatedMerch, dashboardDateStart, dashboardDateEnd, filterByDate]);
 
   return (
     <div className="space-y-12 pb-20 animate-in fade-in duration-700">
@@ -263,6 +268,16 @@ const Dashboard: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
+        <KPICard 
+          title="Facturation" 
+          value={data.total_facture || 0}
+          icon={FileText}
+          colorClass={{ text: 'text-indigo-600', bg: 'bg-indigo-50' }}
+          subValues={[
+            { label: 'Encaissé', val: data.total_encaisse_facture || 0, color: 'text-emerald-600' },
+            { label: 'Reste', val: (data.total_facture || 0) - (data.total_encaisse_facture || 0), color: 'text-amber-600' }
+          ]}
+        />
         <KPICard 
           title="Profit Net Final" 
           value={data.profit_net_final} 
