@@ -224,7 +224,11 @@ const Facturation: React.FC = () => {
     pdf.text(formatDA(doc.versement), totalX, currentTotalY, { align: 'right' });
     
     pdf.setFont('helvetica', 'bold');
-    pdf.setTextColor(doc.total_ttc - doc.versement > 0 ? [200, 0, 0] : [0, 150, 0]);
+    if (doc.total_ttc - doc.versement > 0) {
+      pdf.setTextColor(200, 0, 0);
+    } else {
+      pdf.setTextColor(0, 150, 0);
+    }
     pdf.text(`Reste à payer:`, totalX - 50, currentTotalY + 6);
     pdf.text(formatDA(doc.total_ttc - doc.versement), totalX, currentTotalY + 6, { align: 'right' });
 
