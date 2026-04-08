@@ -10,30 +10,23 @@ import {
 import { 
   Plus, 
   Search, 
-  Filter, 
   FileText, 
   Download, 
   Trash2, 
-  ChevronRight, 
   Calendar,
-  User,
-  MoreVertical,
-  CheckCircle2,
-  Clock,
-  AlertCircle,
-  XCircle,
   ArrowLeft,
   Save,
   Printer,
   Truck
 } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { motion, AnimatePresence } from 'motion/react';
 import StatusBadge from '../components/StatusBadge.tsx';
 import EditableCell from '../components/EditableCell.tsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { COMPANY_CONFIG } from '../constants/companyConfig.ts';
 
 const Facturation: React.FC = () => {
   const { 
@@ -82,92 +75,158 @@ const Facturation: React.FC = () => {
 
   const generatePDF = (doc: Document, items: DocumentItem[]) => {
     const pdf = new jsPDF();
+    const pageWidth = pdf.internal.pageSize.width;
+    const margin = 20;
     
-    // Header Left - Company Info
-    pdf.setFontSize(8);
+    // --- 1. EN-TÊTE ENTREPRISE (GAUCHE) ---
+    pdf.setFontSize(9);
     pdf.setTextColor(40);
     pdf.setFont('helvetica', 'bold');
-    pdf.text('SARL Merch By Dz', 20, 20);
+    pdf.text(COMPANY_CONFIG.name, margin, 20);
     pdf.setFont('helvetica', 'normal');
-    pdf.text('les Orangers, Groupe B, n° 326, Local n° 05', 20, 24);
-    pdf.text('Capital social : 100000,00 DA', 20, 28);
-    pdf.text('N° RC : 25B1053818-00/16', 20, 32);
-    pdf.text('ART IMPOS : 47441512025', 20, 36);
-    pdf.text('NIF : 002516105381802', 20, 40);
-    pdf.text('NIS : 0025161200182255', 20, 44);
-    pdf.text('RIB : 00100649031200025213', 20, 48);
-    pdf.text('Tel / Fax : 044 314 977', 20, 52);
-    pdf.text('N° /4744/5/2025', 20, 56);
-    pdf.text('BPN / 2000421817', 20, 60);
+    pdf.setFontSize(7);
+    const companyInfo = [
+      COMPANY_CONFIG.address,
+      `Capital social : ${COMPANY_CONFIG.capital}`,
+      `RC : ${COMPANY_CONFIG.rc}`,
+      `ART IMPOS : ${COMPANY_CONFIG.artImpos}`,
+      `NIF : ${COMPANY_CONFIG.nif}`,
+      `NIS : ${COMPANY_CONFIG.nis}`,
+      `RIB : ${COMPANY_CONFIG.rib}`,
+      `Tel / Fax : ${COMPANY_CONFIG.telFax}`,
+      COMPANY_CONFIG.reference,
+      `BPN : ${COMPANY_CONFIG.bpn}`
+    ];
+    companyInfo.forEach((line, i) => {
+      pdf.text(line, margin, 25 + (i * 3.5));
+    });
 
-    // Header Right - Document Title
-    pdf.setFontSize(20);
+    // --- 2. TITRE DU DOCUMENT (DROITE) ---
+    pdf.setFontSize(18);
     pdf.setFont('helvetica', 'bold');
     const title = doc.type === DocumentType.FACTURE ? 'FACTURE' : 
                   doc.type === DocumentType.PROFORMA ? 'FACTURE PROFORMA' : 'BON DE LIVRAISON';
-    pdf.text(title, 140, 25);
+    pdf.text(title, pageWidth - margin, 25, { align: 'right' });
 
-    // Reference & Date
+    // RÉFÉRENCE & DATE
     pdf.setFontSize(10);
     pdf.setFont('helvetica', 'normal');
-    pdf.text(`Référence: ${doc.reference}`, 140, 35);
-    pdf.text(`Date: ${format(new Date(doc.date), 'dd/MM/yyyy')}`, 140, 40);
+    pdf.text(`Référence: ${doc.reference}`, pageWidth - margin, 35, { align: 'right' });
+    pdf.text(`Date: ${format(parseISO(doc.date), 'dd/MM/yyyy')}`, pageWidth - margin, 40, { align: 'right' });
 
-    // Client Info
-    pdf.setFontSize(12);
+    // Ligne de séparation
+    pdf.setDrawColor(200);
+    pdf.line(margin, 65, pageWidth - margin, 65);
+
+    // --- 3. BLOC CLIENT (DROITE, ENCADRÉ) ---
+    const clientX = pageWidth / 2 + 10;
+    const clientY = 75;
+    pdf.setFontSize(11);
     pdf.setFont('helvetica', 'bold');
-    pdf.text('CLIENT:', 120, 55);
+    pdf.text('DESTINATAIRE:', clientX, clientY);
+    
     pdf.setFontSize(10);
+    pdf.setFont('helvetica', 'bold');
+    const clientNom = (doc.client_nom || '').trim() || 'N/A';
+    pdf.text(clientNom, clientX, clientY + 7);
+    
     pdf.setFont('helvetica', 'normal');
-    pdf.text(doc.client_nom || 'N/A', 120, 60);
-    pdf.text(doc.client_adresse || 'N/A', 120, 65);
-    if (doc.client_rc) pdf.text(`RC: ${doc.client_rc}`, 120, 70);
-    if (doc.client_nif) pdf.text(`NIF: ${doc.client_nif}`, 120, 75);
+    pdf.setFontSize(9);
+    let currentClientY = clientY + 12;
+    if (doc.client_adresse) {
+      const splitAddress = pdf.splitTextToSize(doc.client_adresse, pageWidth - clientX - margin);
+      pdf.text(splitAddress, clientX, currentClientY);
+      currentClientY += (splitAddress.length * 4);
+    }
+    if (doc.client_rc) {
+      pdf.text(`RC: ${doc.client_rc}`, clientX, currentClientY);
+      currentClientY += 4;
+    }
+    if (doc.client_nif) {
+      pdf.text(`NIF: ${doc.client_nif}`, clientX, currentClientY);
+      currentClientY += 4;
+    }
 
-    // Items Table
+    // --- 4. TABLEAU DES ARTICLES ---
+    const tableStartY = Math.max(currentClientY + 10, 105);
+    
+    const formatDA = (val: number) => val.toLocaleString('fr-DZ', { 
+      minimumFractionDigits: 2, 
+      maximumFractionDigits: 2 
+    }) + ' DA';
+
     autoTable(pdf, {
-      startY: 85,
+      startY: tableStartY,
       head: [['Article', 'Quantité', 'P.U (DA)', 'Total (DA)']],
-      body: items.map(item => [
+      body: items.length > 0 ? items.map(item => [
         item.article,
         item.quantite,
-        item.prix_unitaire.toLocaleString(),
-        item.total_ligne.toLocaleString()
-      ]),
+        formatDA(item.prix_unitaire),
+        formatDA(item.total_ligne)
+      ]) : [['Aucun article', '-', '-', '-']],
       theme: 'grid',
-      headStyles: { fillGray: 240, textColor: 40, fontStyle: 'bold' }
+      headStyles: { fillColor: [40, 40, 40], textColor: 255, fontStyle: 'bold' },
+      styles: { fontSize: 9, cellPadding: 3 },
+      columnStyles: {
+        1: { halign: 'center' },
+        2: { halign: 'right' },
+        3: { halign: 'right' }
+      }
     });
 
-    // Totals
-    const finalY = (pdf as any).lastAutoTable.finalY + 10;
-    pdf.setFontSize(10);
-    pdf.text(`Total HT: ${doc.total_ht.toLocaleString()} DA`, 140, finalY);
+    // --- 5. TOTAUX (DYNAMIQUE) ---
+    let finalY = (pdf as any).lastAutoTable?.finalY || tableStartY + 20;
     
-    let currentY = finalY + 5;
+    // Vérifier s'il reste assez de place sur la page pour les totaux
+    if (finalY > 240) {
+      pdf.addPage();
+      finalY = 20;
+    }
+
+    const totalX = pageWidth - margin;
+    pdf.setFontSize(10);
+    pdf.setFont('helvetica', 'normal');
+    
+    pdf.text(`Total HT:`, totalX - 50, finalY + 10);
+    pdf.text(formatDA(doc.total_ht), totalX, finalY + 10, { align: 'right' });
+    
+    let currentTotalY = finalY + 16;
     if (doc.type !== DocumentType.BON_LIVRAISON) {
-      pdf.text(`TVA (${doc.tva_percent}%): ${doc.tva_amount.toLocaleString()} DA`, 140, currentY);
-      currentY += 5;
+      pdf.text(`TVA (${doc.tva_percent}%):`, totalX - 50, currentTotalY);
+      pdf.text(formatDA(doc.tva_amount), totalX, currentTotalY, { align: 'right' });
+      currentTotalY += 6;
     }
     
     if (doc.shipping > 0) {
-      pdf.text(`Livraison: ${doc.shipping.toLocaleString()} DA`, 140, currentY);
-      currentY += 5;
+      pdf.text(`Livraison:`, totalX - 50, currentTotalY);
+      pdf.text(formatDA(doc.shipping), totalX, currentTotalY, { align: 'right' });
+      currentTotalY += 6;
     }
     
     if (doc.timbre > 0) {
-      pdf.text(`Timbre: ${doc.timbre.toLocaleString()} DA`, 140, currentY);
-      currentY += 5;
+      pdf.text(`Timbre:`, totalX - 50, currentTotalY);
+      pdf.text(formatDA(doc.timbre), totalX, currentTotalY, { align: 'right' });
+      currentTotalY += 6;
     }
 
-    pdf.setFontSize(12);
+    // Encadré Total TTC
+    pdf.setFillColor(245, 245, 245);
+    pdf.rect(totalX - 60, currentTotalY, 60, 10, 'F');
+    pdf.setFontSize(11);
     pdf.setFont('helvetica', 'bold');
-    pdf.text(`TOTAL TTC: ${doc.total_ttc.toLocaleString()} DA`, 140, currentY + 5);
+    pdf.text(`TOTAL TTC:`, totalX - 58, currentTotalY + 6.5);
+    pdf.text(formatDA(doc.total_ttc), totalX - 2, currentTotalY + 6.5, { align: 'right' });
     
+    currentTotalY += 16;
     pdf.setFontSize(10);
     pdf.setFont('helvetica', 'normal');
-    pdf.text(`Versement: ${doc.versement.toLocaleString()} DA`, 140, currentY + 12);
+    pdf.text(`Versement:`, totalX - 50, currentTotalY);
+    pdf.text(formatDA(doc.versement), totalX, currentTotalY, { align: 'right' });
+    
     pdf.setFont('helvetica', 'bold');
-    pdf.text(`Reste à payer: ${(doc.total_ttc - doc.versement).toLocaleString()} DA`, 140, currentY + 19);
+    pdf.setTextColor(doc.total_ttc - doc.versement > 0 ? [200, 0, 0] : [0, 150, 0]);
+    pdf.text(`Reste à payer:`, totalX - 50, currentTotalY + 6);
+    pdf.text(formatDA(doc.total_ttc - doc.versement), totalX, currentTotalY + 6, { align: 'right' });
 
     pdf.save(`${doc.reference}.pdf`);
   };
