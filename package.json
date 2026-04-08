@@ -1,18 +1,21 @@
-
 {
   "name": "merch-by-dz-backoffice",
   "version": "0.1.0",
   "private": true,
   "type": "module",
   "dependencies": {
+    "@supabase/supabase-js": "^2.48.1",
+    "clsx": "^2.1.1",
+    "date-fns": "^4.1.0",
+    "jspdf": "^4.2.1",
+    "jspdf-autotable": "^5.0.7",
+    "lucide-react": "^0.460.0",
+    "motion": "^12.38.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-router-dom": "^7.1.0",
     "recharts": "^2.15.0",
-    "lucide-react": "^0.460.0",
-    "clsx": "^2.1.1",
-    "tailwind-merge": "^2.5.5",
-    "@supabase/supabase-js": "^2.48.1"
+    "tailwind-merge": "^2.5.5"
   },
   "devDependencies": {
     "@types/react": "^19.0.0",

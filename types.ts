@@ -245,3 +245,51 @@ export interface FournisseurLedger {
   notes: string;
   type: 'Owed' | 'Paid';
 }
+
+// --- Facturation Module Types ---
+
+export enum DocumentType {
+  FACTURE = 'facture',
+  PROFORMA = 'proforma',
+  BON_LIVRAISON = 'bon_livraison'
+}
+
+export enum DocumentStatus {
+  DRAFT = 'draft',
+  VALIDATED = 'validated',
+  PAID = 'paid',
+  CANCELED = 'canceled'
+}
+
+export interface Document {
+  id: string;
+  reference: string;
+  type: DocumentType;
+  client_nom: string;
+  client_adresse: string;
+  client_rc: string;
+  client_nif: string;
+  client_nis: string;
+  client_ai: string;
+  client_telephone: string;
+  date: string;
+  status: DocumentStatus;
+  total_ht: number;
+  tva_percent: number;
+  tva_amount: number;
+  shipping: number;
+  timbre: number;
+  versement: number;
+  total_ttc: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DocumentItem {
+  id: string;
+  document_id: string;
+  article: string;
+  quantite: number;
+  prix_unitaire: number;
+  total_ligne: number;
+}

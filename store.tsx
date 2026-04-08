@@ -8,7 +8,8 @@ import {
   GrosStatus, SitewebStatus, MerchStatus, OffreType, OffreCategory, MarketingStatus, MarketingStatus as MarketingStatusEnum, MarketingSpendSource, MarketingSpendType,
   ChatMessage,
   FournisseurLedger, FournisseurName, FournisseurForWho,
-  GlobalStatus
+  GlobalStatus,
+  Document, DocumentItem, DocumentType, DocumentStatus
 } from './types.ts';
 
 /**
@@ -85,6 +86,8 @@ interface AppState {
   payouts: Payout[];
   credits: Credit[];
   fournisseurLedger: FournisseurLedger[];
+  documents: Document[];
+  documentItems: DocumentItem[];
   dashboardDateStart: string;
   dashboardDateEnd: string;
   isAuthenticated: boolean;
@@ -147,6 +150,12 @@ interface AppState {
   addFournisseurLedger: () => Promise<void>;
   updateFournisseurLedger: (id: string, field: keyof FournisseurLedger, value: any) => Promise<void>;
   deleteFournisseurLedger: (id: string) => Promise<void>;
+  addDocument: (type: DocumentType) => Promise<string | undefined>;
+  updateDocument: (id: string, updates: Partial<Document>) => Promise<void>;
+  deleteDocument: (id: string) => Promise<void>;
+  addDocumentItem: (documentId: string) => Promise<void>;
+  updateDocumentItem: (id: string, updates: Partial<DocumentItem>) => Promise<void>;
+  deleteDocumentItem: (id: string) => Promise<void>;
 }
 
 const AppContext = createContext<AppState | undefined>(undefined);
@@ -170,6 +179,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [payouts, setPayouts] = useState<Payout[]>([]);
   const [credits, setCredits] = useState<Credit[]>([]);
   const [fournisseurLedger, setFournisseurLedger] = useState<FournisseurLedger[]>([]);
+  const [documents, setDocuments] = useState<Document[]>([]);
+  const [documentItems, setDocumentItems] = useState<DocumentItem[]>([]);
   
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
   const [globalStatusFilter, setGlobalStatusFilter] = useState<GlobalStatus>(GlobalStatus.ALL);
@@ -187,7 +198,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
     if (!isSilent) setIsSyncing(true);
     try {
-      const [ { data: g }, { data: s }, { data: m_orders }, { data: o }, { data: i }, { data: c }, { data: m }, { data: ms }, { data: r }, { data: p }, { data: cr }, { data: fl } ] = await Promise.all([
+      const [ { data: g }, { data: s }, { data: m_orders }, { data: o }, { data: i }, { data: c }, { data: m }, { data: ms }, { data: r }, { data: p }, { data: cr }, { data: fl }, { data: docs }, { data: items } ] = await Promise.all([
         supabase.from('commandes_gros').select('*'),
         supabase.from('commandes_siteweb').select('*'),
         supabase.from('commandes_merch').select('*'),
@@ -199,7 +210,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         supabase.from('commandes_retours').select('*'),
         supabase.from('payouts').select('*'),
         supabase.from('credits').select('*'),
-        supabase.from('fournisseurs').select('*')
+        supabase.from('fournisseurs').select('*'),
+        supabase.from('documents').select('*'),
+        supabase.from('document_items').select('*')
       ]);
       if (g) setGros(g); 
       if (s) setSiteweb(s); 
@@ -213,6 +226,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (p) setPayouts(p);
       if (cr) setCredits(cr);
       if (fl) setFournisseurLedger(fl);
+      if (docs) setDocuments(docs);
+      if (items) setDocumentItems(items);
       setLastSynced(new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }));
     } catch (e) { 
       console.error("Supabase fetch error:", e); 
@@ -225,7 +240,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     fetchAllData();
     if (!supabase) return;
-    const tables = ['commandes_gros', 'commandes_siteweb', 'commandes_merch', 'offres', 'inventory', 'charges', 'marketing_services', 'marketing_spends', 'commandes_retours', 'payouts', 'credits', 'fournisseurs'];
+    const tables = ['commandes_gros', 'commandes_siteweb', 'commandes_merch', 'offres', 'inventory', 'charges', 'marketing_services', 'marketing_spends', 'commandes_retours', 'payouts', 'credits', 'fournisseurs', 'documents', 'document_items'];
     const channel = supabase.channel('merchdz_realtime');
     tables.forEach(table => {
       channel.on('postgres_changes', { event: '*', schema: 'public', table }, (payload) => {
@@ -502,6 +517,86 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setFournisseurLedger(p => p.filter(i => String(i.id) !== String(id)));
   }, []);
 
+  const addDocument = useCallback(async (type: DocumentType) => {
+    const baseRecord = {
+      type,
+      client_nom: '',
+      client_adresse: '',
+      client_rc: '',
+      client_nif: '',
+      client_nis: '',
+      client_ai: '',
+      client_telephone: '',
+      date: new Date().toISOString().split('T')[0],
+      status: DocumentStatus.DRAFT,
+      tva_percent: 19,
+      shipping: 0,
+      timbre: 0,
+      versement: 0
+    };
+    if (supabase) {
+      const { data, error } = await supabase.from('documents').insert([baseRecord]).select().single();
+      if (error) {
+        console.error("Document Creation Failed:", error.message);
+        return;
+      }
+      if (data) {
+        setDocuments(prev => [data, ...prev]);
+        return data.id;
+      }
+    } else {
+      const id = crypto.randomUUID();
+      setDocuments(p => [{ ...baseRecord, id, reference: 'TEMP-' + Date.now(), total_ht: 0, tva_amount: 0, total_ttc: 0, created_at: new Date().toISOString(), updated_at: new Date().toISOString() } as Document, ...p]);
+      return id;
+    }
+  }, []);
+
+  const updateDocument = useCallback(async (id: string, updates: Partial<Document>) => {
+    setDocuments(prev => prev.map(i => String(i.id) === String(id) ? { ...i, ...updates } : i));
+    if (supabase) {
+      const { error } = await supabase.from('documents').update(updates).eq('id', id);
+      if (error) console.error("Supabase Update Error (Documents):", error.message);
+    }
+  }, []);
+
+  const deleteDocument = useCallback(async (id: string) => {
+    if (supabase) await supabase.from('documents').delete().eq('id', id);
+    setDocuments(p => p.filter(i => String(i.id) !== String(id)));
+    setDocumentItems(p => p.filter(i => String(i.document_id) !== String(id)));
+  }, []);
+
+  const addDocumentItem = useCallback(async (documentId: string) => {
+    const baseRecord = {
+      document_id: documentId,
+      article: '',
+      quantite: 1,
+      prix_unitaire: 0
+    };
+    if (supabase) {
+      const { data, error } = await supabase.from('document_items').insert([baseRecord]).select().single();
+      if (error) {
+        console.error("Document Item Creation Failed:", error.message);
+        return;
+      }
+      if (data) setDocumentItems(prev => [...prev, data]);
+    } else {
+      setDocumentItems(p => [...p, { ...baseRecord, id: crypto.randomUUID(), total_ligne: 0 } as DocumentItem]);
+    }
+  }, []);
+
+  const updateDocumentItem = useCallback(async (id: string, updates: Partial<DocumentItem>) => {
+    setDocumentItems(prev => prev.map(i => String(i.id) === String(id) ? { ...i, ...updates, total_ligne: (updates.quantite ?? i.quantite) * (updates.prix_unitaire ?? i.prix_unitaire) } : i));
+    if (supabase) {
+      const { error } = await supabase.from('document_items').update(updates).eq('id', id);
+      if (error) console.error("Supabase Update Error (Document Items):", error.message);
+    }
+  }, []);
+
+  const deleteDocumentItem = useCallback(async (id: string) => {
+    if (supabase) await supabase.from('document_items').delete().eq('id', id);
+    setDocumentItems(p => p.filter(i => String(i.id) !== String(id)));
+  }, []);
+
   const importGros = useCallback(async (d: any[]) => { if (supabase) { const { data } = await supabase.from('commandes_gros').insert(d.map(computeGrosCalculatedFields)).select(); if (data) { setGros(prev => { const existingIds = new Set(prev.map(item => item.id)); const newItems = data.filter(item => !existingIds.has(item.id)); return [...newItems, ...prev]; }); } } else { setGros(p => [...d.map(i => ({ ...i, id: crypto.randomUUID() })), ...p]); } }, []);
   const importSiteweb = useCallback(async (d: any[]) => { if (supabase) { const { data } = await supabase.from('commandes_siteweb').insert(d.map(computeSitewebCalculatedFields)).select(); if (data) { setSiteweb(prev => { const existingIds = new Set(prev.map(item => item.id)); const newItems = data.filter(item => !existingIds.has(item.id)); return [...newItems, ...prev]; }); } } else { setSiteweb(p => [...d.map(i => ({ ...i, id: crypto.randomUUID() })), ...p]); } }, []);
   const importOffres = useCallback(async (d: any[]) => { if (supabase) { const { data } = await supabase.from('offres').insert(d).select(); if (data) { setOffres(prev => { const existingIds = new Set(prev.map(item => item.id)); const newItems = data.filter(item => !existingIds.has(item.id)); return [...newItems, ...prev]; }); } } else { setOffres(p => [...d.map(i => ({ ...i, id: crypto.randomUUID() })), ...p]); } }, []);
@@ -589,6 +684,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const value: AppState = {
     gros, siteweb, merch, offres, inventory, charges, marketingServices, marketingSpends, retours, payouts, credits, fournisseurLedger,
+    documents, documentItems,
     dashboardDateStart, dashboardDateEnd, isAuthenticated, isSyncing, isCloudActive, lastSynced, chatHistory,
     globalStatusFilter, setGlobalStatusFilter,
     addChatMessage, clearChat, login, logout, setDashboardDateRange,
@@ -604,7 +700,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     addRetour, deleteRetour,
     addPayout, updatePayout, deletePayout,
     addCredit, updateCredit, deleteCredit,
-    addFournisseurLedger, updateFournisseurLedger, deleteFournisseurLedger
+    addFournisseurLedger, updateFournisseurLedger, deleteFournisseurLedger,
+    addDocument, updateDocument, deleteDocument, addDocumentItem, updateDocumentItem, deleteDocumentItem
   };
 
   return (
