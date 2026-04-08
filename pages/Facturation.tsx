@@ -37,15 +37,17 @@ import autoTable from 'jspdf-autotable';
 
 const Facturation: React.FC = () => {
   const { 
-    documents, 
     documentItems, 
     addDocument, 
     updateDocument, 
     deleteDocument,
     addDocumentItem,
     updateDocumentItem,
-    deleteDocumentItem
+    deleteDocumentItem,
+    getCalculatedDocuments
   } = useAppStore();
+
+  const calculatedDocs = useMemo(() => getCalculatedDocuments(), [getCalculatedDocuments]);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState<DocumentType | 'ALL'>('ALL');
@@ -53,7 +55,7 @@ const Facturation: React.FC = () => {
   const [selectedDocId, setSelectedDocId] = useState<string | null>(null);
 
   const filteredDocs = useMemo(() => {
-    return documents.filter(doc => {
+    return calculatedDocs.filter(doc => {
       const matchesSearch = 
         doc.reference.toLowerCase().includes(searchTerm.toLowerCase()) ||
         doc.client_nom.toLowerCase().includes(searchTerm.toLowerCase());
@@ -61,11 +63,11 @@ const Facturation: React.FC = () => {
       const matchesStatus = statusFilter === 'ALL' || doc.status === statusFilter;
       return matchesSearch && matchesType && matchesStatus;
     }).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-  }, [documents, searchTerm, typeFilter, statusFilter]);
+  }, [calculatedDocs, searchTerm, typeFilter, statusFilter]);
 
   const selectedDoc = useMemo(() => 
-    documents.find(d => d.id === selectedDocId), 
-    [documents, selectedDocId]
+    calculatedDocs.find(d => d.id === selectedDocId), 
+    [calculatedDocs, selectedDocId]
   );
 
   const selectedItems = useMemo(() => 
@@ -81,30 +83,50 @@ const Facturation: React.FC = () => {
   const generatePDF = (doc: Document, items: DocumentItem[]) => {
     const pdf = new jsPDF();
     
-    // Header
-    pdf.setFontSize(20);
+    // Header Left - Company Info
+    pdf.setFontSize(8);
     pdf.setTextColor(40);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('SARL Merch By Dz', 20, 20);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text('les Orangers, Groupe B, n° 326, Local n° 05', 20, 24);
+    pdf.text('Capital social : 100000,00 DA', 20, 28);
+    pdf.text('N° RC : 25B1053818-00/16', 20, 32);
+    pdf.text('ART IMPOS : 47441512025', 20, 36);
+    pdf.text('NIF : 002516105381802', 20, 40);
+    pdf.text('NIS : 0025161200182255', 20, 44);
+    pdf.text('RIB : 00100649031200025213', 20, 48);
+    pdf.text('Tel / Fax : 044 314 977', 20, 52);
+    pdf.text('N° /4744/5/2025', 20, 56);
+    pdf.text('BPN / 2000421817', 20, 60);
+
+    // Header Right - Document Title
+    pdf.setFontSize(20);
+    pdf.setFont('helvetica', 'bold');
     const title = doc.type === DocumentType.FACTURE ? 'FACTURE' : 
                   doc.type === DocumentType.PROFORMA ? 'FACTURE PROFORMA' : 'BON DE LIVRAISON';
-    pdf.text(title, 105, 20, { align: 'center' });
+    pdf.text(title, 140, 25);
 
     // Reference & Date
     pdf.setFontSize(10);
-    pdf.text(`Référence: ${doc.reference}`, 20, 40);
-    pdf.text(`Date: ${format(new Date(doc.date), 'dd/MM/yyyy')}`, 20, 45);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(`Référence: ${doc.reference}`, 140, 35);
+    pdf.text(`Date: ${format(new Date(doc.date), 'dd/MM/yyyy')}`, 140, 40);
 
     // Client Info
     pdf.setFontSize(12);
-    pdf.text('CLIENT:', 120, 40);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('CLIENT:', 120, 55);
     pdf.setFontSize(10);
-    pdf.text(doc.client_nom || 'N/A', 120, 45);
-    pdf.text(doc.client_adresse || 'N/A', 120, 50);
-    if (doc.client_rc) pdf.text(`RC: ${doc.client_rc}`, 120, 55);
-    if (doc.client_nif) pdf.text(`NIF: ${doc.client_nif}`, 120, 60);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(doc.client_nom || 'N/A', 120, 60);
+    pdf.text(doc.client_adresse || 'N/A', 120, 65);
+    if (doc.client_rc) pdf.text(`RC: ${doc.client_rc}`, 120, 70);
+    if (doc.client_nif) pdf.text(`NIF: ${doc.client_nif}`, 120, 75);
 
     // Items Table
     autoTable(pdf, {
-      startY: 70,
+      startY: 85,
       head: [['Article', 'Quantité', 'P.U (DA)', 'Total (DA)']],
       body: items.map(item => [
         item.article,
@@ -118,13 +140,34 @@ const Facturation: React.FC = () => {
 
     // Totals
     const finalY = (pdf as any).lastAutoTable.finalY + 10;
+    pdf.setFontSize(10);
     pdf.text(`Total HT: ${doc.total_ht.toLocaleString()} DA`, 140, finalY);
+    
+    let currentY = finalY + 5;
     if (doc.type !== DocumentType.BON_LIVRAISON) {
-      pdf.text(`TVA (${doc.tva_percent}%): ${doc.tva_amount.toLocaleString()} DA`, 140, finalY + 5);
-      pdf.setFontSize(12);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text(`TOTAL TTC: ${doc.total_ttc.toLocaleString()} DA`, 140, finalY + 12);
+      pdf.text(`TVA (${doc.tva_percent}%): ${doc.tva_amount.toLocaleString()} DA`, 140, currentY);
+      currentY += 5;
     }
+    
+    if (doc.shipping > 0) {
+      pdf.text(`Livraison: ${doc.shipping.toLocaleString()} DA`, 140, currentY);
+      currentY += 5;
+    }
+    
+    if (doc.timbre > 0) {
+      pdf.text(`Timbre: ${doc.timbre.toLocaleString()} DA`, 140, currentY);
+      currentY += 5;
+    }
+
+    pdf.setFontSize(12);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text(`TOTAL TTC: ${doc.total_ttc.toLocaleString()} DA`, 140, currentY + 5);
+    
+    pdf.setFontSize(10);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(`Versement: ${doc.versement.toLocaleString()} DA`, 140, currentY + 12);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text(`Reste à payer: ${(doc.total_ttc - doc.versement).toLocaleString()} DA`, 140, currentY + 19);
 
     pdf.save(`${doc.reference}.pdf`);
   };

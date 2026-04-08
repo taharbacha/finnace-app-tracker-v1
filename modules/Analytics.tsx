@@ -1,7 +1,7 @@
 
-import React, { useMemo, useState } from 'react';
+import React from 'react';
 import { useAppStore } from '../store.tsx';
-import { Clock, AlertCircle, TrendingUp, Banknote, Calendar, RotateCcw, Activity } from 'lucide-react';
+import { Clock, AlertCircle, TrendingUp, Banknote, Activity } from 'lucide-react';
 
 const Analytics: React.FC = () => {
   const { getDashboardData } = useAppStore();

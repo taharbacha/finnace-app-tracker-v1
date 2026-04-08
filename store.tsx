@@ -620,7 +620,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const items = documentItems.filter(item => item.document_id === doc.id);
       const total_ht = items.reduce((acc, curr) => acc + (Number(curr.quantite) * Number(curr.prix_unitaire)), 0);
       const tva_amount = total_ht * (Number(doc.tva_percent || 0) / 100);
-      const total_ttc = total_ht + tva_amount + Number(doc.shipping || 0) + Number(doc.timbre || 0) - Number(doc.versement || 0);
+      const total_ttc = total_ht + tva_amount + Number(doc.shipping || 0) + Number(doc.timbre || 0);
       return { ...doc, total_ht, tva_amount, total_ttc };
     });
   }, [documents, documentItems]);

@@ -1,7 +1,7 @@
 
 import React from 'react';
 // Fixed import: ExternStatus does not exist in types.ts
-import { GrosStatus, SitewebStatus } from '../types.ts';
+import { GrosStatus } from '../types.ts';
 
 interface StatusBadgeProps {
   status: string;

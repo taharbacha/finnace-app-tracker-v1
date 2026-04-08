@@ -1,27 +1,11 @@
 
-import React, { useMemo, useState, useEffect, useCallback } from 'react';
+import React, { useMemo, useState, useCallback } from 'react';
 import { useAppStore } from '../store.tsx';
 import { 
-  CartesianGrid, 
-  Tooltip, 
-  ResponsiveContainer, 
-  XAxis, 
-  YAxis, 
-  AreaChart, 
-  Area, 
-  Line, 
-  ComposedChart,
-  Legend,
-  Bar
-} from 'recharts';
-import { 
   Clock, 
-  Banknote, 
   Calendar, 
   TrendingUp, 
   RotateCcw, 
-  BarChart3, 
-  Target,
   Zap,
   Activity,
   Truck,
@@ -29,7 +13,6 @@ import {
   ShoppingBag,
   Check,
   FileText,
-  TrendingDown,
   ShieldCheck,
   Fuel
 } from 'lucide-react';
