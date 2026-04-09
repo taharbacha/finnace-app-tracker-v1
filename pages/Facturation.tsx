@@ -118,8 +118,8 @@ const Facturation: React.FC = () => {
     pdf.setDrawColor(200);
     pdf.line(margin, 65, pageWidth - margin, 65);
 
-    // --- 3. BLOC CLIENT (DROITE, ENCADRÉ) ---
-    const clientX = pageWidth / 2 + 10;
+    // --- 3. BLOC CLIENT (GAUCHE) ---
+    const clientX = margin;
     const clientY = 75;
     pdf.setFontSize(11);
     pdf.setFont('helvetica', 'bold');
@@ -150,7 +150,7 @@ const Facturation: React.FC = () => {
     // --- 4. TABLEAU DES ARTICLES ---
     const tableStartY = Math.max(currentClientY + 10, 105);
     
-    const formatDA = (val: number) => val.toLocaleString('fr-DZ', { 
+    const formatCurrency = (val: number) => val.toLocaleString('fr-FR', { 
       minimumFractionDigits: 2, 
       maximumFractionDigits: 2 
     }) + ' DA';
@@ -161,8 +161,8 @@ const Facturation: React.FC = () => {
       body: items.length > 0 ? items.map(item => [
         item.article,
         item.quantite,
-        formatDA(item.prix_unitaire),
-        formatDA(item.total_ligne)
+        formatCurrency(item.prix_unitaire),
+        formatCurrency(item.total_ligne)
       ]) : [['Aucun article', '-', '-', '-']],
       theme: 'grid',
       headStyles: { fillColor: [40, 40, 40], textColor: 255, fontStyle: 'bold' },
@@ -188,24 +188,24 @@ const Facturation: React.FC = () => {
     pdf.setFont('helvetica', 'normal');
     
     pdf.text(`Total HT:`, totalX - 50, finalY + 10);
-    pdf.text(formatDA(doc.total_ht), totalX, finalY + 10, { align: 'right' });
+    pdf.text(formatCurrency(doc.total_ht), totalX, finalY + 10, { align: 'right' });
     
     let currentTotalY = finalY + 16;
     if (doc.type !== DocumentType.BON_LIVRAISON) {
       pdf.text(`TVA (${doc.tva_percent}%):`, totalX - 50, currentTotalY);
-      pdf.text(formatDA(doc.tva_amount), totalX, currentTotalY, { align: 'right' });
+      pdf.text(formatCurrency(doc.tva_amount), totalX, currentTotalY, { align: 'right' });
       currentTotalY += 6;
     }
     
     if (doc.shipping > 0) {
       pdf.text(`Livraison:`, totalX - 50, currentTotalY);
-      pdf.text(formatDA(doc.shipping), totalX, currentTotalY, { align: 'right' });
+      pdf.text(formatCurrency(doc.shipping), totalX, currentTotalY, { align: 'right' });
       currentTotalY += 6;
     }
     
     if (doc.timbre > 0) {
       pdf.text(`Timbre:`, totalX - 50, currentTotalY);
-      pdf.text(formatDA(doc.timbre), totalX, currentTotalY, { align: 'right' });
+      pdf.text(formatCurrency(doc.timbre), totalX, currentTotalY, { align: 'right' });
       currentTotalY += 6;
     }
 
@@ -215,13 +215,13 @@ const Facturation: React.FC = () => {
     pdf.setFontSize(11);
     pdf.setFont('helvetica', 'bold');
     pdf.text(`TOTAL TTC:`, totalX - 58, currentTotalY + 6.5);
-    pdf.text(formatDA(doc.total_ttc), totalX - 2, currentTotalY + 6.5, { align: 'right' });
+    pdf.text(formatCurrency(doc.total_ttc), totalX - 2, currentTotalY + 6.5, { align: 'right' });
     
     currentTotalY += 16;
     pdf.setFontSize(10);
     pdf.setFont('helvetica', 'normal');
     pdf.text(`Versement:`, totalX - 50, currentTotalY);
-    pdf.text(formatDA(doc.versement), totalX, currentTotalY, { align: 'right' });
+    pdf.text(formatCurrency(doc.versement), totalX, currentTotalY, { align: 'right' });
     
     pdf.setFont('helvetica', 'bold');
     if (doc.total_ttc - doc.versement > 0) {
@@ -230,7 +230,7 @@ const Facturation: React.FC = () => {
       pdf.setTextColor(0, 150, 0);
     }
     pdf.text(`Reste à payer:`, totalX - 50, currentTotalY + 6);
-    pdf.text(formatDA(doc.total_ttc - doc.versement), totalX, currentTotalY + 6, { align: 'right' });
+    pdf.text(formatCurrency(doc.total_ttc - doc.versement), totalX, currentTotalY + 6, { align: 'right' });
 
     pdf.save(`${doc.reference}.pdf`);
   };
@@ -378,7 +378,7 @@ const Facturation: React.FC = () => {
                           />
                         </td>
                         <td className="px-6 py-4 text-right font-bold text-slate-700">
-                          {item.total_ligne.toLocaleString()}
+                          {item.total_ligne.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} DA
                         </td>
                         <td className="px-6 py-4 text-center">
                           <button 
@@ -414,7 +414,7 @@ const Facturation: React.FC = () => {
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
                   <span className="text-slate-400 font-bold text-sm">Total HT</span>
-                  <span className="font-mono font-bold">{selectedDoc.total_ht.toLocaleString()} DA</span>
+                  <span className="font-mono font-bold">{selectedDoc.total_ht.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} DA</span>
                 </div>
                 
                 {selectedDoc.type !== DocumentType.BON_LIVRAISON && (
@@ -430,7 +430,7 @@ const Facturation: React.FC = () => {
                         />
                         <span className="text-slate-500 text-[10px]">%</span>
                       </div>
-                      <span className="font-mono font-bold text-slate-300">+{selectedDoc.tva_amount.toLocaleString()} DA</span>
+                      <span className="font-mono font-bold text-slate-300">+{selectedDoc.tva_amount.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} DA</span>
                     </div>
                   </>
                 )}
@@ -458,7 +458,7 @@ const Facturation: React.FC = () => {
                 <div className="pt-4 border-t border-slate-800">
                   <div className="flex justify-between items-center mb-1">
                     <span className="text-blue-400 font-black uppercase tracking-widest text-xs">Total TTC</span>
-                    <span className="text-2xl font-black text-blue-400">{selectedDoc.total_ttc.toLocaleString()} DA</span>
+                    <span className="text-2xl font-black text-blue-400">{selectedDoc.total_ttc.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} DA</span>
                   </div>
                 </div>
 
@@ -475,7 +475,7 @@ const Facturation: React.FC = () => {
                   <div className="flex justify-between items-center mt-2">
                     <span className="text-slate-400 font-bold text-sm">Reste à payer</span>
                     <span className="font-mono font-bold text-red-400">
-                      {(selectedDoc.total_ttc - selectedDoc.versement).toLocaleString()} DA
+                      {(selectedDoc.total_ttc - selectedDoc.versement).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} DA
                     </span>
                   </div>
                 </div>
@@ -634,7 +634,7 @@ const Facturation: React.FC = () => {
               <div className="flex items-center justify-between pt-4 border-t border-slate-50">
                 <div>
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Total TTC</p>
-                  <p className="text-xl font-black text-slate-900">{doc.total_ttc.toLocaleString()} <span className="text-xs">DA</span></p>
+                  <p className="text-xl font-black text-slate-900">{doc.total_ttc.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-xs">DA</span></p>
                 </div>
                 <div className="flex items-center gap-2">
                   <button 
