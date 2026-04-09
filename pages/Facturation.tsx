@@ -29,8 +29,11 @@ import autoTable from 'jspdf-autotable';
 import { COMPANY_CONFIG } from '../constants/companyConfig.ts';
 
 const Facturation: React.FC = () => {
-  const formatDA = (n: number) =>
-    n.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' DA';
+  const formatDA = (n: number) => {
+    const parts = n.toFixed(2).split('.');
+    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+    return parts.join(',') + ' DA';
+  };
 
   const { 
     documentItems, 
