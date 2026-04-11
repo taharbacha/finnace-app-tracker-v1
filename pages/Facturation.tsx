@@ -144,12 +144,24 @@ const Facturation: React.FC = () => {
       pdf.text(splitAddress, clientX, currentClientY);
       currentClientY += (splitAddress.length * 4);
     }
+    if (doc.client_telephone) {
+      pdf.text(`Tél: ${doc.client_telephone}`, clientX, currentClientY);
+      currentClientY += 4;
+    }
     if (doc.client_rc) {
       pdf.text(`RC: ${doc.client_rc}`, clientX, currentClientY);
       currentClientY += 4;
     }
     if (doc.client_nif) {
       pdf.text(`NIF: ${doc.client_nif}`, clientX, currentClientY);
+      currentClientY += 4;
+    }
+    if (doc.client_nis) {
+      pdf.text(`NIS: ${doc.client_nis}`, clientX, currentClientY);
+      currentClientY += 4;
+    }
+    if (doc.client_ai) {
+      pdf.text(`AI: ${doc.client_ai}`, clientX, currentClientY);
       currentClientY += 4;
     }
 
@@ -318,6 +330,16 @@ const Facturation: React.FC = () => {
                     />
                   </div>
                   <div>
+                    <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Téléphone</label>
+                    <input 
+                      type="text"
+                      placeholder="N° de téléphone"
+                      value={selectedDoc.client_telephone || ''}
+                      onChange={(e) => updateDocument(selectedDoc.id, { client_telephone: e.target.value })}
+                      className="w-full p-3 bg-slate-50 rounded-xl font-bold text-slate-700 border-none focus:ring-2 focus:ring-blue-500/20"
+                    />
+                  </div>
+                  <div>
                     <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Adresse</label>
                     <textarea 
                       rows={3}
@@ -405,6 +427,49 @@ const Facturation: React.FC = () => {
           </div>
 
           <div className="space-y-6">
+            {/* Client Details (Extra) */}
+            <div className="bg-white rounded-3xl p-8 border border-slate-100 shadow-sm">
+              <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest mb-6">Informations Fiscales</h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">RC</label>
+                  <input 
+                    type="text"
+                    value={selectedDoc.client_rc}
+                    onChange={(e) => updateDocument(selectedDoc.id, { client_rc: e.target.value })}
+                    className="w-full p-2 bg-slate-50 rounded-lg font-bold text-slate-700 border-none text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">NIF</label>
+                  <input 
+                    type="text"
+                    value={selectedDoc.client_nif}
+                    onChange={(e) => updateDocument(selectedDoc.id, { client_nif: e.target.value })}
+                    className="w-full p-2 bg-slate-50 rounded-lg font-bold text-slate-700 border-none text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">NIS</label>
+                  <input 
+                    type="text"
+                    value={selectedDoc.client_nis}
+                    onChange={(e) => updateDocument(selectedDoc.id, { client_nis: e.target.value })}
+                    className="w-full p-2 bg-slate-50 rounded-lg font-bold text-slate-700 border-none text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">AI</label>
+                  <input 
+                    type="text"
+                    value={selectedDoc.client_ai}
+                    onChange={(e) => updateDocument(selectedDoc.id, { client_ai: e.target.value })}
+                    className="w-full p-2 bg-slate-50 rounded-lg font-bold text-slate-700 border-none text-xs"
+                  />
+                </div>
+              </div>
+            </div>
+
             {/* Financial Summary */}
             <div className="bg-slate-900 rounded-3xl p-8 text-white shadow-xl shadow-slate-900/20">
               <h3 className="text-lg font-black mb-6 flex items-center gap-2">
@@ -479,49 +544,6 @@ const Facturation: React.FC = () => {
                       {formatDA(selectedDoc.total_ttc - selectedDoc.versement)}
                     </span>
                   </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Client Details (Extra) */}
-            <div className="bg-white rounded-3xl p-8 border border-slate-100 shadow-sm">
-              <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest mb-6">Informations Fiscales</h3>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">RC</label>
-                  <input 
-                    type="text"
-                    value={selectedDoc.client_rc}
-                    onChange={(e) => updateDocument(selectedDoc.id, { client_rc: e.target.value })}
-                    className="w-full p-2 bg-slate-50 rounded-lg font-bold text-slate-700 border-none text-xs"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">NIF</label>
-                  <input 
-                    type="text"
-                    value={selectedDoc.client_nif}
-                    onChange={(e) => updateDocument(selectedDoc.id, { client_nif: e.target.value })}
-                    className="w-full p-2 bg-slate-50 rounded-lg font-bold text-slate-700 border-none text-xs"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">NIS</label>
-                  <input 
-                    type="text"
-                    value={selectedDoc.client_nis}
-                    onChange={(e) => updateDocument(selectedDoc.id, { client_nis: e.target.value })}
-                    className="w-full p-2 bg-slate-50 rounded-lg font-bold text-slate-700 border-none text-xs"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">AI</label>
-                  <input 
-                    type="text"
-                    value={selectedDoc.client_ai}
-                    onChange={(e) => updateDocument(selectedDoc.id, { client_ai: e.target.value })}
-                    className="w-full p-2 bg-slate-50 rounded-lg font-bold text-slate-700 border-none text-xs"
-                  />
                 </div>
               </div>
             </div>
