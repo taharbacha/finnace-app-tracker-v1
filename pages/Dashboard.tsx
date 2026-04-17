@@ -16,9 +16,9 @@ import {
   ShieldCheck,
   Fuel
 } from 'lucide-react';
-import { OffreType, MarketingSpendSource, GrosStatus, SitewebStatus, MerchStatus, GlobalStatus } from '../types.ts';
+import { OffreType, MarketingSpendSource, GrosStatus, MerchStatus, GlobalStatus, ClientComptoirStatus } from '../types.ts';
 import ExportDashboardPDF from '../components/ExportDashboardPDF.tsx';
-import { LayoutList } from 'lucide-react';
+import { LayoutList, UserCheck } from 'lucide-react';
 
 const formatCurrency = (val: number) => Math.round(val).toLocaleString('fr-DZ') + ' DA';
 
@@ -57,8 +57,8 @@ const Dashboard: React.FC = () => {
   const { 
     getDashboardData, 
     getCalculatedGros, 
-    getCalculatedSiteweb, 
     getCalculatedMerch,
+    getCalculatedClientComptoir,
     marketingSpends,
     charges,
     payouts,
@@ -106,13 +106,13 @@ const Dashboard: React.FC = () => {
 
   const globalKPIs = useMemo(() => {
     const cg = getCalculatedGros().filter(i => filterByDate(i.date_created));
-    const cs = getCalculatedSiteweb().filter(i => filterByDate(i.date_created));
     const cm = getCalculatedMerch().filter(i => filterByDate(i.created_at));
+    const cc = getCalculatedClientComptoir().filter(i => filterByDate(i.created_at));
     const fo = offres.filter(i => filterByDate(i.date));
 
     const totalProd = cg.reduce((a,c) => a + c.cost, 0) + 
-                    cs.reduce((a,c) => a + (c.cout_article + c.cout_impression), 0) + 
-                    cm.reduce((a,c) => a + c.prix_achat, 0);
+                    cm.reduce((a,c) => a + c.prix_achat, 0) +
+                    cc.reduce((a,c) => a + Number(c.charge), 0);
 
     const soldeOffres = fo.reduce((a, c) => a + (c.type === OffreType.REVENUE ? Number(c.montant) : -Number(c.montant)), 0);
 
@@ -122,33 +122,31 @@ const Dashboard: React.FC = () => {
         if (c.status === GrosStatus.RETOUR) return a - c.cost;
         return a;
       }, 0) +
-      cs.reduce((a, c) => {
-        if ([SitewebStatus.LIVREE, SitewebStatus.LIVREE_NON_ENCAISSEE].includes(c.status)) return a + c.profit_net;
-        if (c.status === SitewebStatus.RETOUR) return a - (c.cout_article + c.cout_impression);
-        return a;
-      }, 0) +
       cm.reduce((a, c) => {
         if ([MerchStatus.LIVREE, MerchStatus.LIVREE_NON_ENCAISSEE].includes(c.status)) return a + (c.prix_vente - c.prix_achat);
         if (c.status === MerchStatus.RETOUR) return a - c.impact_perte;
         return a;
       }, 0) +
+      cc.reduce((a, c) => {
+        if ([ClientComptoirStatus.PAYEE, ClientComptoirStatus.NON_PAYEE].includes(c.status)) return a + Number(c.benefice_net);
+        return a;
+      }, 0) +
       soldeOffres;
 
     const lneProfit = cg.filter(i => i.status === GrosStatus.LIVREE_NON_ENCAISSE).reduce((a,c) => a + (c.prix_vente - c.cost), 0) + 
-                     cs.filter(i => i.status === SitewebStatus.LIVREE_NON_ENCAISSEE).reduce((a,c) => a + c.profit_net, 0) + 
-                     cm.filter(i => i.status === MerchStatus.LIVREE_NON_ENCAISSEE).reduce((a,c) => a + (c.prix_vente - c.prix_achat), 0);
+                     cm.filter(i => i.status === MerchStatus.LIVREE_NON_ENCAISSEE).reduce((a,c) => a + (c.prix_vente - c.prix_achat), 0) +
+                     cc.filter(i => i.status === ClientComptoirStatus.NON_PAYEE).reduce((a,c) => a + Number(c.benefice_net), 0);
 
     const retLoss = cg.filter(i => i.status === GrosStatus.RETOUR).reduce((a,c) => a + c.cost, 0) + 
-                   cs.filter(i => i.status === SitewebStatus.RETOUR).reduce((a,c) => a + (c.cout_article + c.cout_impression), 0) + 
                    cm.filter(i => i.status === MerchStatus.RETOUR).reduce((a,c) => a + c.prix_achat, 0);
 
     return { totalProd, totalProfitNet, lneProfit, retLoss };
-  }, [getCalculatedGros, getCalculatedSiteweb, getCalculatedMerch, offres, dashboardDateStart, dashboardDateEnd, filterByDate]);
+  }, [getCalculatedGros, getCalculatedMerch, getCalculatedClientComptoir, offres, dashboardDateStart, dashboardDateEnd, filterByDate]);
 
   const pillars = useMemo(() => {
     const cg = getCalculatedGros().filter(i => filterByDate(i.date_created));
-    const cs = getCalculatedSiteweb().filter(i => filterByDate(i.date_created));
     const cm = getCalculatedMerch().filter(i => filterByDate(i.created_at));
+    const cc = getCalculatedClientComptoir().filter(i => filterByDate(i.created_at));
     const fo = offres.filter(i => filterByDate(i.date));
 
     const getPillarMkt = (src: MarketingSpendSource) => 
@@ -160,12 +158,6 @@ const Dashboard: React.FC = () => {
     const grosProfitPot = cg.filter(i => [GrosStatus.EN_LIVRAISON, GrosStatus.EN_PRODUCTION].includes(i.status))
                           .reduce((a, c) => a + (c.prix_vente - c.cost), 0);
 
-    const vendMkt = getPillarMkt(MarketingSpendSource.SITEWEB);
-    const vendProfitReal = cs.filter(i => [SitewebStatus.LIVREE, SitewebStatus.LIVREE_NON_ENCAISSEE].includes(i.status))
-                           .reduce((a, c) => a + c.profit_net, 0);
-    const vendBenef = cs.filter(i => [SitewebStatus.LIVREE, SitewebStatus.LIVREE_NON_ENCAISSEE].includes(i.status))
-                        .reduce((a, c) => a + Number(c.vendeur_benefice), 0);
-
     const merchMkt = getPillarMkt(MarketingSpendSource.MERCH);
     const merchProfitReal = cm.filter(i => [MerchStatus.LIVREE, MerchStatus.LIVREE_NON_ENCAISSEE].includes(i.status))
                             .reduce((a, c) => a + (Number(c.prix_vente) - Number(c.prix_achat)), 0);
@@ -174,18 +166,22 @@ const Dashboard: React.FC = () => {
     const offresRev = fo.filter(o => o.type === OffreType.REVENUE).reduce((a, c) => a + Number(c.montant), 0);
     const offresExp = fo.filter(o => o.type === OffreType.EXPENSE).reduce((a, c) => a + Number(c.montant), 0);
 
+    const ccProfitReal = cc.filter(i => i.status === ClientComptoirStatus.PAYEE).reduce((a, c) => a + Number(c.benefice_net), 0);
+    const ccProfitPot = cc.filter(i => [ClientComptoirStatus.NON_PAYEE, ClientComptoirStatus.EN_LIVRAISON, ClientComptoirStatus.EN_PRODUCTION].includes(i.status)).reduce((a, c) => a + Number(c.benefice_net), 0);
+    const ccCharge = cc.reduce((a, c) => a + Number(c.charge), 0);
+
     return {
       gros: { mkt: grosMkt, profitReal: grosProfitReal, profitPot: grosProfitPot },
-      vendeurs: { mkt: vendMkt, profitReal: vendProfitReal, benefice: vendBenef },
       merch: { mkt: merchMkt, profitReal: merchProfitReal, prod: merchProd },
-      offres: { rev: offresRev, exp: offresExp, net: offresRev - offresExp }
+      offres: { rev: offresRev, exp: offresExp, net: offresRev - offresExp },
+      cc: { profitReal: ccProfitReal, profitPot: ccProfitPot, charge: ccCharge }
     };
-  }, [getCalculatedGros, getCalculatedSiteweb, getCalculatedMerch, marketingSpends, offres, dashboardDateStart, dashboardDateEnd, filterByDate]);
+  }, [getCalculatedGros, getCalculatedMerch, getCalculatedClientComptoir, marketingSpends, offres, dashboardDateStart, dashboardDateEnd, filterByDate]);
 
   const counts = useMemo(() => {
     const cg = getCalculatedGros().filter(i => filterByDate(i.date_created));
-    const cs = getCalculatedSiteweb().filter(i => filterByDate(i.date_created));
     const cm = getCalculatedMerch().filter(i => filterByDate(i.created_at));
+    const cc = getCalculatedClientComptoir().filter(i => filterByDate(i.created_at));
 
     return {
       gros: {
@@ -194,18 +190,19 @@ const Dashboard: React.FC = () => {
         ok: cg.filter(i => [GrosStatus.LIVREE_ENCAISSE, GrosStatus.LIVREE_NON_ENCAISSE].includes(i.status)).length,
         ret: cg.filter(i => i.status === GrosStatus.RETOUR).length
       },
-      vendeurs: {
-        liv: cs.filter(i => i.status === SitewebStatus.EN_LIVRAISON).length,
-        ok: cs.filter(i => [SitewebStatus.LIVREE, SitewebStatus.LIVREE_NON_ENCAISSEE].includes(i.status)).length,
-        ret: cs.filter(i => i.status === SitewebStatus.RETOUR).length
-      },
       merch: {
         liv: cm.filter(i => i.status === MerchStatus.EN_LIVRAISON).length,
         ok: cm.filter(i => [MerchStatus.LIVREE, MerchStatus.LIVREE_NON_ENCAISSEE].includes(i.status)).length,
         ret: cm.filter(i => i.status === MerchStatus.RETOUR).length
+      },
+      cc: {
+        prod: cc.filter(i => i.status === ClientComptoirStatus.EN_PRODUCTION).length,
+        liv: cc.filter(i => i.status === ClientComptoirStatus.EN_LIVRAISON).length,
+        ok: cc.filter(i => i.status === ClientComptoirStatus.PAYEE).length,
+        ret: 0 // ClientComptoir doesn't have a clear "Retour" status currently
       }
     };
-  }, [getCalculatedGros, getCalculatedSiteweb, getCalculatedMerch, dashboardDateStart, dashboardDateEnd, filterByDate]);
+  }, [getCalculatedGros, getCalculatedMerch, getCalculatedClientComptoir, dashboardDateStart, dashboardDateEnd, filterByDate]);
 
   return (
     <div className="space-y-12 pb-20 animate-in fade-in duration-700">
@@ -310,7 +307,7 @@ const Dashboard: React.FC = () => {
         />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-8">
          {/* Wholesale Pillar */}
          <div className="bg-white p-8 rounded-[3rem] border border-slate-100 shadow-sm flex flex-col justify-between group hover:shadow-xl transition-all">
             <div className="space-y-8">
@@ -331,26 +328,6 @@ const Dashboard: React.FC = () => {
             </div>
          </div>
 
-         {/* Retail Pillar */}
-         <div className="bg-white p-8 rounded-[3rem] border border-slate-100 shadow-sm flex flex-col justify-between group hover:shadow-xl transition-all">
-            <div className="space-y-8">
-              <div className="flex items-center gap-3">
-                <div className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl group-hover:scale-110 transition-transform"><Globe size={20}/></div>
-                <h4 className="font-black text-xs uppercase tracking-widest text-slate-400">Pillier Vendeurs</h4>
-              </div>
-              <div className="space-y-4">
-                 <div className="flex justify-between items-end border-b border-slate-50 pb-4">
-                    <p className="text-[10px] font-black text-slate-400 uppercase">Profit Net Entreprise</p>
-                    <p className="text-xl font-black text-slate-900">{formatCurrency(pillars.vendeurs.profitReal)}</p>
-                 </div>
-                 <div className="flex justify-between items-end">
-                    <p className="text-[10px] font-black text-slate-400 uppercase">Commissions Payées</p>
-                    <p className="font-bold text-purple-500">{formatCurrency(pillars.vendeurs.benefice)}</p>
-                 </div>
-              </div>
-            </div>
-         </div>
-
          {/* Merch Pillar */}
          <div className="bg-white p-8 rounded-[3rem] border border-slate-100 shadow-sm flex flex-col justify-between group hover:shadow-xl transition-all">
             <div className="space-y-8">
@@ -366,6 +343,26 @@ const Dashboard: React.FC = () => {
                  <div className="flex justify-between items-end">
                     <p className="text-[10px] font-black text-slate-400 uppercase">Coût Production</p>
                     <p className="font-bold text-slate-600">{formatCurrency(pillars.merch.prod)}</p>
+                 </div>
+              </div>
+            </div>
+         </div>
+
+         {/* Client Comptoir Pillar */}
+         <div className="bg-white p-8 rounded-[3rem] border border-slate-100 shadow-sm flex flex-col justify-between group hover:shadow-xl transition-all">
+            <div className="space-y-8">
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-fuchsia-50 text-fuchsia-600 rounded-2xl group-hover:scale-110 transition-transform"><UserCheck size={20}/></div>
+                <h4 className="font-black text-xs uppercase tracking-widest text-slate-400">Client Comptoir</h4>
+              </div>
+              <div className="space-y-4">
+                 <div className="flex justify-between items-end border-b border-slate-50 pb-4">
+                    <p className="text-[10px] font-black text-slate-400 uppercase">Profit Payé</p>
+                    <p className="text-xl font-black text-slate-900">{formatCurrency(pillars.cc.profitReal)}</p>
+                 </div>
+                 <div className="flex justify-between items-end">
+                    <p className="text-[10px] font-black text-slate-400 uppercase">Profit Potentiel</p>
+                    <p className="font-bold text-slate-600">{formatCurrency(pillars.cc.profitPot)}</p>
                  </div>
               </div>
             </div>

@@ -103,3 +103,15 @@ DROP TRIGGER IF EXISTS trigger_generate_document_reference ON documents;
 CREATE TRIGGER trigger_generate_document_reference
 BEFORE INSERT ON documents
 FOR EACH ROW EXECUTE FUNCTION generate_document_reference();
+
+-- Create Client Comptoir Table
+CREATE TABLE IF NOT EXISTS client_comptoir (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    reference TEXT UNIQUE NOT NULL,
+    client_name TEXT,
+    produit TEXT,
+    charge NUMERIC DEFAULT 0,
+    vente NUMERIC DEFAULT 0,
+    status TEXT DEFAULT 'En Production',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);

@@ -3,7 +3,6 @@ import React, { useMemo, useCallback } from 'react';
 import { useAppStore } from '../store.tsx';
 import { 
   GrosStatus, 
-  SitewebStatus, 
   MerchStatus, 
   MarketingSpendSource 
 } from '../types.ts';
@@ -133,7 +132,6 @@ const PillarStatsCard = ({
 const Stats: React.FC = () => {
   const { 
     getCalculatedGros, 
-    getCalculatedSiteweb, 
     getCalculatedMerch, 
     marketingSpends,
     charges,
@@ -160,18 +158,6 @@ const Stats: React.FC = () => {
     const grosAds = marketingSpends.filter(s => s.source === MarketingSpendSource.GROS && filterByDate(s.date_start))
                                   .reduce((a, c) => a + Number(c.amount), 0);
 
-    const cs = getCalculatedSiteweb().filter(i => filterByDate(i.date_created));
-    const vendVentes = cs.filter(i => [SitewebStatus.LIVREE, SitewebStatus.LIVREE_NON_ENCAISSEE].includes(i.status))
-                         .reduce((a, c) => a + Number(c.prix_vente), 0);
-    const vendProd = cs.filter(i => [SitewebStatus.LIVREE, SitewebStatus.LIVREE_NON_ENCAISSEE].includes(i.status))
-                       .reduce((a, c) => a + (Number(c.cout_article) + Number(c.cout_impression)), 0);
-    const vendComm = cs.filter(i => [SitewebStatus.LIVREE, SitewebStatus.LIVREE_NON_ENCAISSEE].includes(i.status))
-                       .reduce((a, c) => a + Number(c.vendeur_benefice), 0);
-    const vendRetours = cs.filter(i => i.status === SitewebStatus.RETOUR)
-                          .reduce((a, c) => a + (Number(c.cout_article) + Number(c.cout_impression)), 0);
-    const vendAds = marketingSpends.filter(s => s.source === MarketingSpendSource.SITEWEB && filterByDate(s.date_start))
-                                  .reduce((a, c) => a + Number(c.amount), 0);
-
     const cm = getCalculatedMerch().filter(i => filterByDate(i.created_at));
     const merchVentes = cm.filter(i => [MerchStatus.LIVREE, MerchStatus.LIVREE_NON_ENCAISSEE].includes(i.status))
                           .reduce((a, c) => a + Number(c.prix_vente), 0);
@@ -182,7 +168,6 @@ const Stats: React.FC = () => {
                                    .reduce((a, c) => a + Number(c.amount), 0);
 
     const totalPillarProfit = (grosVentes - grosProd - grosRetours - grosAds) + 
-                              (vendVentes - vendProd - vendRetours - vendAds - vendComm) + 
                               (merchVentes - merchProd - merchRetours - merchAds);
 
     const totalFixedCosts = charges.filter(c => filterByDate(c.date)).reduce((a, c) => a + Number(c.montant), 0);
@@ -190,15 +175,14 @@ const Stats: React.FC = () => {
 
     return {
       gros: { ventes: grosVentes, prod: grosProd, retours: grosRetours, ads: grosAds },
-      vendeurs: { ventes: vendVentes, prod: vendProd, comm: vendComm, retours: vendRetours, ads: vendAds },
       merch: { ventes: merchVentes, prod: merchProd, retours: merchRetours, ads: merchAds },
       totalPillarProfit,
       totalFixedCosts,
       totalOffres,
       finalNet: totalPillarProfit - totalFixedCosts + totalOffres,
-      totalVentes: grosVentes + vendVentes + merchVentes
+      totalVentes: grosVentes + merchVentes
     };
-  }, [getCalculatedGros, getCalculatedSiteweb, getCalculatedMerch, marketingSpends, charges, offres, dashboardDateStart, dashboardDateEnd, filterByDate]);
+  }, [getCalculatedGros, getCalculatedMerch, marketingSpends, charges, offres, dashboardDateStart, dashboardDateEnd, filterByDate]);
 
   return (
     <div className="space-y-16 animate-in fade-in duration-700 pb-24">
@@ -248,7 +232,7 @@ const Stats: React.FC = () => {
       </div>
 
       {/* Main Pillars Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
         <PillarStatsCard 
           title="Wholesale" 
           subtitle="B2B Supply Chain"
@@ -258,17 +242,6 @@ const Stats: React.FC = () => {
           retours={pillarData.gros.retours}
           ads={pillarData.gros.ads}
           colorClass={{bg: 'bg-blue-50/30', text: 'text-blue-600'}}
-        />
-        <PillarStatsCard 
-          title="Network Retail" 
-          subtitle="Vendeurs Externes"
-          icon={Globe}
-          ventes={pillarData.vendeurs.ventes}
-          production={pillarData.vendeurs.prod}
-          commissions={pillarData.vendeurs.comm}
-          retours={pillarData.vendeurs.retours}
-          ads={pillarData.vendeurs.ads}
-          colorClass={{bg: 'bg-indigo-50/30', text: 'text-indigo-600'}}
         />
         <PillarStatsCard 
           title="Direct Sales" 
@@ -344,7 +317,7 @@ const Stats: React.FC = () => {
                     <AlertCircle size={18} />
                     <span className="text-[10px] font-black uppercase tracking-widest">Operational Risk</span>
                   </div>
-                  <p className="text-2xl font-black">{formatCurrency(pillarData.gros.retours + pillarData.vendeurs.retours + pillarData.merch.retours)}</p>
+                  <p className="text-2xl font-black">{formatCurrency(pillarData.gros.retours + pillarData.merch.retours)}</p>
                   <p className="text-[9px] text-slate-500 uppercase font-black tracking-tighter mt-1">Total Returns Impact</p>
                 </div>
                 <div className="p-8 bg-white/5 border border-white/10 rounded-[2rem]">
@@ -352,7 +325,7 @@ const Stats: React.FC = () => {
                     <Receipt size={18} />
                     <span className="text-[10px] font-black uppercase tracking-widest">AdSpend Focus</span>
                   </div>
-                  <p className="text-2xl font-black">{formatCurrency(pillarData.gros.ads + pillarData.vendeurs.ads + pillarData.merch.ads)}</p>
+                  <p className="text-2xl font-black">{formatCurrency(pillarData.gros.ads + pillarData.merch.ads)}</p>
                   <p className="text-[9px] text-slate-500 uppercase font-black tracking-tighter mt-1">Total Marketing Budget</p>
                 </div>
               </div>

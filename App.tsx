@@ -4,10 +4,9 @@ import { HashRouter as Router, Routes, Route, Navigate, useLocation } from 'reac
 import Sidebar from './components/Sidebar.tsx';
 import Dashboard from './pages/Dashboard.tsx';
 import CommandesGros from './pages/CommandesGros.tsx';
-import CommandesDetail from './pages/CommandesDetail.tsx';
 import CommandeMerch from './pages/CommandeMerch.tsx';
-import MarketingClient from './pages/MarketingClient.tsx';
 import MarketingSpend from './pages/MarketingSpend.tsx';
+import ClientComptoir from './pages/ClientComptoir.tsx';
 import Inventory from './pages/Inventory.tsx';
 import Offres from './pages/Offres.tsx';
 import Charges from './pages/Charges.tsx';
@@ -92,9 +91,8 @@ const AppRoutes: React.FC = () => {
       <Route path="/" element={<AppLayout><Dashboard /></AppLayout>} />
       <Route path="/stats" element={<AppLayout><Stats /></AppLayout>} />
       <Route path="/gros" element={<AppLayout><CommandesGros /></AppLayout>} />
-      <Route path="/detail" element={<AppLayout><CommandesDetail /></AppLayout>} />
       <Route path="/merch" element={<AppLayout><CommandeMerch /></AppLayout>} />
-      <Route path="/marketing" element={<AppLayout><MarketingClient /></AppLayout>} />
+      <Route path="/client-comptoir" element={<AppLayout><ClientComptoir /></AppLayout>} />
       <Route path="/marketing-spend" element={<AppLayout><MarketingSpend /></AppLayout>} />
       <Route path="/inventory" element={<AppLayout><Inventory /></AppLayout>} />
       <Route path="/charges" element={<AppLayout><Charges /></AppLayout>} />

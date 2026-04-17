@@ -196,20 +196,20 @@ const ExportDashboardPDF: React.FC<ExportDashboardPDFProps> = ({ data, globalKPI
                 </div>
               </div>
 
-              {/* VENDEURS */}
+              {/* CLIENT COMPTOIR */}
               <div className="border border-slate-100 rounded-3xl p-6 bg-slate-50/30">
                 <div className="flex justify-between items-center mb-4">
-                  <h4 className="font-black uppercase text-indigo-600 text-xs">Pillar II: Commandes Retail (VENDEURS)</h4>
-                  <span className="text-[10px] font-bold text-slate-400 font-mono tracking-tighter">Net = Profit Net Entreprise - (Commissions + Ads)</span>
+                  <h4 className="font-black uppercase text-fuchsia-600 text-xs">Pillar II: Client Comptoir (CC)</h4>
+                  <span className="text-[10px] font-bold text-slate-400 font-mono tracking-tighter">Net Final = Profit Payé</span>
                 </div>
                 <div className="grid grid-cols-2 gap-10">
                    <div className="space-y-1">
-                      <DenseTableRow label="Profit Net Entreprise" value={pillars.vendeurs.profitReal} />
-                      <DenseTableRow label="Commissions Vendeurs" value={pillars.vendeurs.benefice} isNegative subLabel="Charge variable déduite" />
+                      <DenseTableRow label="Profit Payé" value={pillars.cc?.profitReal || 0} />
+                      <DenseTableRow label="Coût/Charges (COGS)" value={pillars.cc?.charge || 0} isNegative />
                    </div>
                    <div className="space-y-1">
-                      <DenseTableRow label="Marketing Scoped (Siteweb)" value={pillars.vendeurs.mkt} isNegative />
-                      <DenseTableRow label="Net Final Pilier" value={pillars.vendeurs.profitReal - pillars.vendeurs.mkt} isBold />
+                      <DenseTableRow label="Profit Potentiel (Attendu)" value={pillars.cc?.profitPot || 0} />
+                      <DenseTableRow label="Net Final Pilier" value={pillars.cc?.profitReal || 0} isBold />
                    </div>
                 </div>
               </div>
@@ -239,9 +239,9 @@ const ExportDashboardPDF: React.FC<ExportDashboardPDFProps> = ({ data, globalKPI
             <SectionHeader title="03. Operational Status Distribution" subtitle="Friction Index & Volume Segmentation" />
             
             <div className="grid grid-cols-1 gap-12">
-               {['GROS', 'VENDEURS', 'MERCH'].map((pName, idx) => {
-                  const pKey = pName.toLowerCase();
-                  const pCounts = counts[pKey === 'gros' ? 'gros' : pKey === 'vendeurs' ? 'vendeurs' : 'merch'];
+               {['GROS', 'CLIENT COMPTOIR', 'MERCH'].map((pName, idx) => {
+                  const pKey = pName === 'GROS' ? 'gros' : pName === 'MERCH' ? 'merch' : 'cc';
+                  const pCounts = counts[pKey];
                   const total = Object.values(pCounts).reduce((a: any, b: any) => a + b, 0) as number;
 
                   return (

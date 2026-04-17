@@ -7,13 +7,6 @@ export enum GrosStatus {
   RETOUR = 'retour'
 }
 
-export enum SitewebStatus {
-  LIVREE = 'livrée',
-  LIVREE_NON_ENCAISSEE = 'livrée_non_encaissée',
-  EN_LIVRAISON = 'en_livraison',
-  RETOUR = 'retour'
-}
-
 export enum MerchStatus {
   EN_LIVRAISON = 'en_livraison',
   LIVREE_NON_ENCAISSEE = 'livree_non_encaissee',
@@ -21,10 +14,26 @@ export enum MerchStatus {
   RETOUR = 'retour'
 }
 
-export enum MarketingStatus {
-  EN_COURS = 'en_cours',
-  TERMINE = 'termine',
-  ANNULE = 'annule'
+export enum ClientComptoirStatus {
+  EN_PRODUCTION = 'en_production',
+  EN_LIVRAISON = 'en_livraison',
+  PAYEE = 'payee',
+  NON_PAYEE = 'non_payee'
+}
+
+export interface ClientComptoir {
+  id: string;
+  reference: string;
+  client_name: string;
+  produit: string;
+  charge: number;
+  vente: number;
+  status: ClientComptoirStatus;
+  created_at: string;
+}
+
+export interface CalculatedClientComptoir extends ClientComptoir {
+  benefice_net: number;
 }
 
 export enum OffreType {
@@ -42,8 +51,7 @@ export enum MarketingSpendSource {
   GROS = 'gros',
   SITEWEB = 'siteweb',
   MERCH = 'merch',
-  OFFRES = 'offres',
-  MARKETING_CLIENT = 'marketing_client'
+  OFFRES = 'offres'
 }
 
 export enum MarketingSpendType {
@@ -95,20 +103,6 @@ export interface CommandeGros {
   processed: boolean;
 }
 
-export interface CommandeSiteweb {
-  id: string;
-  reference: string;
-  date_created: string;
-  cout_article: number;
-  cout_impression: number;
-  prix_vente: number;
-  status: SitewebStatus;
-  stock_note: string;
-  vendeur_name: string;
-  vendeur_benefice: number;
-  processed: boolean;
-}
-
 export interface CommandeMerch {
   id: string;
   reference: string;
@@ -118,16 +112,6 @@ export interface CommandeMerch {
   prix_vente: number;
   status: MerchStatus;
   created_at: string;
-}
-
-export interface MarketingService {
-  id: string;
-  client_name: string;
-  service_description: string;
-  date: string;
-  revenue: number;
-  client_charges: number;
-  status: MarketingStatus;
 }
 
 export interface Offre {
@@ -180,19 +164,11 @@ export interface CalculatedGros extends CommandeGros {
   perte: number;
 }
 
-export interface CalculatedSiteweb extends CommandeSiteweb {
-  profit_net: number;
-}
-
 export interface CalculatedMerch extends CommandeMerch {
   profit: number;
   impact_encaisse: number;
   impact_attendu: number;
   impact_perte: number;
-}
-
-export interface CalculatedMarketing extends MarketingService {
-  net_profit: number;
 }
 
 export interface DashboardData {

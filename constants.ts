@@ -1,5 +1,5 @@
 
-import { GrosStatus, SitewebStatus, MerchStatus, OffreType, OffreCategory, MarketingSpendSource, MarketingSpendType, CommandeGros, CommandeSiteweb, Offre } from './types.ts';
+import { GrosStatus, MerchStatus, OffreType, OffreCategory, MarketingSpendSource, MarketingSpendType, CommandeGros, Offre } from './types.ts';
 
 export const INITIAL_GROS: CommandeGros[] = [
   {
@@ -19,23 +19,6 @@ export const INITIAL_GROS: CommandeGros[] = [
   }
 ];
 
-export const INITIAL_EXTERN: CommandeSiteweb[] = [
-  {
-    id: 'e1',
-    reference: '101',
-    date_created: '2023-10-10',
-    cout_article: 1500,
-    cout_impression: 300,
-    prix_vente: 3500,
-    status: SitewebStatus.LIVREE,
-    stock_note: '',
-    vendeur_name: 'V-X',
-    vendeur_benefice: 500,
-    // Fix: Added missing processed property
-    processed: true
-  }
-];
-
 export const INITIAL_OFFRES: Offre[] = [
   {
     id: 'o1',
@@ -48,7 +31,6 @@ export const INITIAL_OFFRES: Offre[] = [
 ];
 
 export const GROS_STATUS_OPTIONS = Object.values(GrosStatus);
-export const EXTERN_STATUS_OPTIONS = Object.values(SitewebStatus) as string[];
 export const MERCH_STATUS_OPTIONS = Object.values(MerchStatus);
 export const OFFRE_TYPE_OPTIONS = Object.values(OffreType);
 export const OFFRE_CATEGORY_OPTIONS = Object.values(OffreCategory);
