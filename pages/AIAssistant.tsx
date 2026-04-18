@@ -9,7 +9,7 @@ interface ChatMessage {
 }
 
 const AIAssistant: React.FC = () => {
-  const { getDashboardData, inventory, gros, siteweb } = useAppStore();
+  const { getDashboardData, inventory, gros } = useAppStore();
   
   const [messages, setMessages] = useState<ChatMessage[]>(() => {
     const saved = localStorage.getItem('merchdz_advisor_chat');
@@ -36,9 +36,8 @@ const AIAssistant: React.FC = () => {
     
     Inventory Alerts: ${lowStock || 'None'}
     Recent Wholesale Activity: ${recentGros}
-    Total Retail Orders: ${siteweb.length}
     `.trim();
-  }, [getDashboardData, inventory, gros, siteweb]);
+  }, [getDashboardData, inventory, gros]);
 
   useEffect(() => {
     if (scrollRef.current) {

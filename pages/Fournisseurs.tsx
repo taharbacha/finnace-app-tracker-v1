@@ -60,8 +60,7 @@ const Fournisseurs: React.FC = () => {
     updateFournisseurLedger, 
     deleteFournisseurLedger,
     gros,
-    merch,
-    siteweb
+    merch
   } = useAppStore();
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -71,10 +70,10 @@ const Fournisseurs: React.FC = () => {
     const grosArticle = gros.reduce((acc, curr) => acc + Number(curr.prix_achat_article || 0), 0);
     const grosImpression = gros.reduce((acc, curr) => acc + Number(curr.prix_impression || 0), 0);
     const merchAchat = merch.reduce((acc, curr) => acc + Number(curr.prix_achat || 0), 0);
-    const vendeursTotal = siteweb.reduce((acc, curr) => acc + (Number(curr.cout_article || 0) + Number(curr.cout_impression || 0)), 0);
+    const vendeursTotal = 0; // Deprecated module
 
     return { grosArticle, grosImpression, merchAchat, vendeursTotal };
-  }, [gros, merch, siteweb]);
+  }, [gros, merch]);
 
   // 2. Calculate Payments from Ledger
   const payments = useMemo(() => {
