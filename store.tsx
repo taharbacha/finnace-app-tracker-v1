@@ -512,7 +512,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     } else {
       const id = crypto.randomUUID();
-      const refPrefix = type === DocumentType.FACTURE ? 'F' : type === DocumentType.PROFORMA ? 'P' : 'B';
+      const refPrefix = type === DocumentType.FACTURE ? 'F' : type === DocumentType.FACTURE_REAL ? 'FR' : type === DocumentType.PROFORMA ? 'P' : 'B';
       const ref = refPrefix + String(documents.length + 1).padStart(7, '0');
       setDocuments(p => [{ ...baseRecord, id, reference: ref, total_ht: 0, tva_amount: 0, total_ttc: 0, created_at: new Date().toISOString(), updated_at: new Date().toISOString() } as Document, ...p]);
       return id;
@@ -630,8 +630,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const total_marketing_spend = fms.reduce((a, c) => a + Number(c.amount), 0);
 
     const fdocs = getCalculatedDocuments().filter(i => filter(i.date));
-    const total_facture = fdocs.filter(i => i.type === DocumentType.FACTURE && i.status !== DocumentStatus.CANCELED).reduce((a, c) => a + c.total_ttc, 0);
-    const total_encaisse_facture = fdocs.filter(i => i.type === DocumentType.FACTURE && i.status === DocumentStatus.PAID).reduce((a, c) => a + c.total_ttc, 0);
+    const total_facture = fdocs.filter(i => (i.type === DocumentType.FACTURE || i.type === DocumentType.FACTURE_REAL) && i.status !== DocumentStatus.CANCELED).reduce((a, c) => a + c.total_ttc, 0);
+    const total_encaisse_facture = fdocs.filter(i => (i.type === DocumentType.FACTURE || i.type === DocumentType.FACTURE_REAL) && i.status === DocumentStatus.PAID).reduce((a, c) => a + c.total_ttc, 0);
 
     const encaisse_reel = encaisse_gros + encaisse_merch;
     const profit_attendu = attendu_gros + attendu_merch;

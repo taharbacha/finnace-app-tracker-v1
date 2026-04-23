@@ -228,6 +228,7 @@ export interface FournisseurLedger {
 
 export enum DocumentType {
   FACTURE = 'facture',
+  FACTURE_REAL = 'facture_real',
   PROFORMA = 'proforma',
   BON_LIVRAISON = 'bon_livraison'
 }

@@ -110,7 +110,7 @@ const Facturation: React.FC = () => {
     // --- 2. TITRE DU DOCUMENT (DROITE) ---
     pdf.setFontSize(18);
     pdf.setFont('helvetica', 'bold');
-    const title = doc.type === DocumentType.FACTURE ? 'FACTURE' : 
+    const title = (doc.type === DocumentType.FACTURE || doc.type === DocumentType.FACTURE_REAL) ? 'FACTURE' : 
                   doc.type === DocumentType.PROFORMA ? 'FACTURE PROFORMA' : 'BON DE LIVRAISON';
     pdf.text(title, pageWidth - margin, 25, { align: 'right' });
 
@@ -303,6 +303,7 @@ const Facturation: React.FC = () => {
                       className="w-full p-3 bg-slate-50 rounded-xl font-bold text-slate-700 border-none focus:ring-2 focus:ring-blue-500/20"
                     >
                       <option value={DocumentType.FACTURE}>Facture</option>
+                      <option value={DocumentType.FACTURE_REAL}>Facture REAL</option>
                       <option value={DocumentType.PROFORMA}>Proforma</option>
                       <option value={DocumentType.BON_LIVRAISON}>Bon de Livraison</option>
                     </select>
@@ -571,6 +572,9 @@ const Facturation: React.FC = () => {
               <button onClick={() => handleCreate(DocumentType.FACTURE)} className="w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-50 rounded-xl transition-colors font-bold text-slate-700">
                 <FileText size={18} className="text-blue-600" /> Facture
               </button>
+              <button onClick={() => handleCreate(DocumentType.FACTURE_REAL)} className="w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-50 rounded-xl transition-colors font-bold text-slate-700">
+                <FileText size={18} className="text-indigo-600" /> Facture REAL
+              </button>
               <button onClick={() => handleCreate(DocumentType.PROFORMA)} className="w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-50 rounded-xl transition-colors font-bold text-slate-700">
                 <FileText size={18} className="text-amber-500" /> Proforma
               </button>
@@ -602,6 +606,7 @@ const Facturation: React.FC = () => {
           >
             <option value="ALL">Tous les types</option>
             <option value={DocumentType.FACTURE}>Factures</option>
+            <option value={DocumentType.FACTURE_REAL}>Factures REAL</option>
             <option value={DocumentType.PROFORMA}>Proformas</option>
             <option value={DocumentType.BON_LIVRAISON}>Bons de Livraison</option>
           </select>
@@ -635,6 +640,7 @@ const Facturation: React.FC = () => {
               <div className="flex justify-between items-start mb-4">
                 <div className={`p-3 rounded-2xl ${
                   doc.type === DocumentType.FACTURE ? 'bg-blue-50 text-blue-600' :
+                  doc.type === DocumentType.FACTURE_REAL ? 'bg-indigo-50 text-indigo-600' :
                   doc.type === DocumentType.PROFORMA ? 'bg-amber-50 text-amber-600' :
                   'bg-emerald-50 text-emerald-600'
                 }`}>
