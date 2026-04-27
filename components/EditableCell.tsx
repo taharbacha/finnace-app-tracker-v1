@@ -17,13 +17,14 @@ const EditableCell: React.FC<EditableCellProps> = ({
   className = '' 
 }) => {
   const [isEditing, setIsEditing] = useState(false);
-  const [localValue, setLocalValue] = useState<string>(String(value ?? ''));
+  const formattedValue = type === 'date' && value ? String(value).split('T')[0] : String(value ?? '');
+  const [localValue, setLocalValue] = useState<string>(formattedValue);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const [prevValue, setPrevValue] = useState(value);
   if (value !== prevValue) {
     setPrevValue(value);
-    setLocalValue(String(value ?? ''));
+    setLocalValue(type === 'date' && value ? String(value).split('T')[0] : String(value ?? ''));
   }
 
   useEffect(() => {
@@ -69,7 +70,7 @@ const EditableCell: React.FC<EditableCellProps> = ({
       onClick={() => setIsEditing(true)}
       className={`p-2 cursor-pointer hover:bg-slate-50 rounded transition-colors min-h-[36px] flex items-center text-slate-700 ${className}`}
     >
-      {prefix}{value}
+      {prefix}{type === 'date' && value ? String(value).split('T')[0] : value}
     </div>
   );
 };
