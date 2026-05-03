@@ -294,12 +294,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, []);
 
   const addGros = useCallback(async () => {
-    const baseRecord = { reference: `G${Date.now()}`, client_name: '', client_phone: '', date_created: new Date().toISOString().split('T')[0], prix_achat_article: 0, impression: false, prix_impression: 0, prix_vente: 0, status: GrosStatus.EN_PRODUCTION, stock_note: '', processed: false };
+    const maxNum = gros.reduce((max, item) => {
+      if (item.reference?.startsWith('G') && item.reference.length === 7) {
+        const num = parseInt(item.reference.substring(1), 10);
+        return !isNaN(num) && num > max ? num : max;
+      }
+      return max;
+    }, 0);
+    const ref = `G${String(maxNum + 1).padStart(6, '0')}`;
+
+    const baseRecord = { reference: ref, client_name: '', client_phone: '', date_created: new Date().toISOString().split('T')[0], prix_achat_article: 0, impression: false, prix_impression: 0, prix_vente: 0, status: GrosStatus.EN_PRODUCTION, stock_note: '', processed: false };
     if (supabase) {
       const { data } = await supabase.from('commandes_gros').insert([computeGrosCalculatedFields(baseRecord as CommandeGros)]).select();
       if (data) setGros(p => p.some(o => o.id === data[0].id) ? p : [data[0], ...p]);
     } else { setGros(p => [{ ...baseRecord, id: crypto.randomUUID() } as CommandeGros, ...p]); }
-  }, []);
+  }, [gros]);
 
   const updateMerch = useCallback(async (id: string, field: keyof CommandeMerch, value: any) => {
     let item: CommandeMerch | undefined;
@@ -311,12 +320,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, []);
 
   const addMerch = useCallback(async () => {
-    const baseRecord = { reference: `M${Date.now()}`, client_name: '', produit: '', prix_achat: 0, prix_vente: 0, status: MerchStatus.EN_LIVRAISON, created_at: new Date().toISOString() };
+    const maxNum = merch.reduce((max, item) => {
+      if (item.reference?.startsWith('M') && item.reference.length === 7) {
+        const num = parseInt(item.reference.substring(1), 10);
+        return !isNaN(num) && num > max ? num : max;
+      }
+      return max;
+    }, 0);
+    const ref = `M${String(maxNum + 1).padStart(6, '0')}`;
+    const baseRecord = { reference: ref, client_name: '', produit: '', prix_achat: 0, prix_vente: 0, status: MerchStatus.EN_LIVRAISON, created_at: new Date().toISOString() };
     if (supabase) {
       const { data } = await supabase.from('commandes_merch').insert([baseRecord]).select();
       if (data) setMerch(prev => prev.some(o => o.id === data[0].id) ? prev : [data[0], ...prev]);
     } else { setMerch(p => [{ ...baseRecord, id: crypto.randomUUID() } as CommandeMerch, ...p]); }
-  }, []);
+  }, [merch]);
 
   const deleteMerch = useCallback(async (id: string) => { if (supabase) await supabase.from('commandes_merch').delete().eq('id', id); setMerch(p => p.filter(i => String(i.id) !== String(id))); }, []);
   const importMerch = useCallback(async (d: any[]) => {

@@ -310,6 +310,7 @@ const CommandesGros: React.FC = () => {
                 </th>
                 <th className="p-4 font-bold text-slate-500 uppercase tracking-tighter text-[10px]">Ref</th>
                 <th className="p-4 font-bold text-slate-500 uppercase tracking-tighter text-[10px]">Client</th>
+                <th className="p-4 font-bold text-slate-500 uppercase tracking-tighter text-[10px]">Téléphone</th>
                 <th className="p-4 font-bold text-slate-500 uppercase tracking-tighter text-[10px]">Date</th>
                 <th className="p-4 font-bold text-slate-500 uppercase tracking-tighter text-[10px] text-right">Production (A+I)</th>
                 <th className="p-4 font-bold text-slate-500 uppercase tracking-tighter text-[10px] text-right">Vente</th>
@@ -331,6 +332,9 @@ const CommandesGros: React.FC = () => {
                   </td>
                   <td className="p-2">
                     <EditableCell value={item.client_name} onSave={(v) => updateGros(item.id, { client_name: v })} className="font-bold text-slate-800 text-sm min-w-[120px]" />
+                  </td>
+                  <td className="p-2">
+                    <EditableCell value={item.client_phone} onSave={(v) => updateGros(item.id, { client_phone: v })} className="font-medium text-slate-600 text-[12px] min-w-[100px]" />
                   </td>
                   <td className="p-2">
                     <EditableCell type="date" value={item.date_created} onSave={(v) => updateGros(item.id, { date_created: v })} className="text-[10px] text-slate-400 font-bold" />
