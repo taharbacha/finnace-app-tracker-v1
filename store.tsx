@@ -308,7 +308,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const { data, error } = await supabase.from('commandes_gros').insert([computeGrosCalculatedFields(baseRecord as CommandeGros)]).select();
       if (error) {
         console.error("Error adding Commandes Gros:", error);
-        alert(`Failed to add row: ${error.message} \n\nDid you forget to add the 'client_phone' column to Supabase? Check the add_client_phone_gros.sql file!`);
+        alert(`Failed to add row: ${error.message} \n\nIf you see 'net.http_post', it means you have a Webhook/Trigger in Supabase (like a Google Sheets sync) but the 'pg_net' extension is NOT enabled! Go to Supabase -> Database -> Extensions and enable "pg_net".`);
       }
       if (data) setGros(p => p.some(o => o.id === data[0].id) ? p : [data[0], ...p]);
     } else { setGros(p => [{ ...baseRecord, id: crypto.randomUUID() } as CommandeGros, ...p]); }
