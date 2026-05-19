@@ -328,7 +328,7 @@ const CommandesGros: React.FC = () => {
                     </button>
                   </td>
                   <td className="p-2">
-                    <EditableCell value={item.reference} onSave={(v) => updateGros(item.id, { reference: v })} className="font-mono text-[10px] font-black text-blue-600 min-w-[60px]" />
+                    <div className="font-mono text-[10px] font-black text-blue-600 min-w-[60px] pl-1">{item.reference}</div>
                   </td>
                   <td className="p-2">
                     <EditableCell value={item.client_name} onSave={(v) => updateGros(item.id, { client_name: v })} className="font-bold text-slate-800 text-sm min-w-[120px]" />

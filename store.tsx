@@ -294,14 +294,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, []);
 
   const addGros = useCallback(async () => {
-    const maxNum = gros.reduce((max, item) => {
-      if (item.reference?.startsWith('G') && item.reference.length === 7) {
-        const num = parseInt(item.reference.substring(1), 10);
-        return !isNaN(num) && num > max ? num : max;
-      }
-      return max;
-    }, 0);
-    const ref = `G${String(maxNum + 1).padStart(6, '0')}`;
+    const existingNums = gros
+      .map(item => {
+        if (item.reference?.startsWith('GR')) {
+          const num = parseInt(item.reference.substring(2), 10);
+          return isNaN(num) ? null : num;
+        }
+        return null;
+      })
+      .filter((n): n is number => n !== null);
+    
+    let nextNum = 1;
+    while (existingNums.includes(nextNum)) {
+      nextNum++;
+    }
+    const ref = `GR${nextNum}`;
 
     const baseRecord = { id: crypto.randomUUID(), reference: ref, client_name: '', client_phone: '', date_created: new Date().toISOString().split('T')[0], prix_achat_article: 0, impression: false, prix_impression: 0, prix_vente: 0, status: GrosStatus.EN_PRODUCTION, stock_note: '', processed: false };
     if (supabase) {
