@@ -10,16 +10,10 @@ import {
   RefreshCw,
   CheckCircle2,
   Wallet,
-  Globe,
-  UserCheck,
   Megaphone,
   Cloud,
-  Bot,
-  RotateCcw,
   X,
-  Store,
   PanelLeftClose,
-  Banknote,
   CreditCard,
   FileBarChart,
   Users,
@@ -108,8 +102,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen, onClose, isHidden, onTo
 
         {renderNavLink({ to: '/stats', label: 'Analytique Forensic', icon: FileBarChart })}
         {renderNavLink({ to: '/gros', label: 'Commandes Gros', icon: Truck })}
-        {renderNavLink({ to: '/merch', label: 'Commandes Merch', icon: Store })}
-        {renderNavLink({ to: '/client-comptoir', label: 'Client Comptoir', icon: UserCheck })}
         
         <div className="my-6 border-t border-slate-800/30 mx-4" />
 
@@ -119,15 +111,9 @@ const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen, onClose, isHidden, onTo
 
         <div className="my-6 border-t border-slate-800/30 mx-4" />
 
-        {renderNavLink({ to: '/retour', label: 'Retours', icon: RotateCcw })}
         {renderNavLink({ to: '/facturation', label: 'Facturation', icon: FileText })}
         {renderNavLink({ to: '/fournisseurs', label: 'Fournisseurs', icon: Users })}
-        {renderNavLink({ to: '/payout', label: 'Payout', icon: Banknote })}
         {renderNavLink({ to: '/credit', label: 'Crédit', icon: CreditCard })}
-
-        <div className="my-6 border-t border-slate-800/30 mx-4" />
-
-        {renderNavLink({ to: '/ai', label: 'AI Assistant', icon: Bot })}
       </nav>
 
       <div className="px-6 py-4 border-t border-slate-800/50 bg-slate-900/50 pb-[calc(1rem+env(safe-area-inset-bottom))]">

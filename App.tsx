@@ -4,15 +4,10 @@ import { HashRouter as Router, Routes, Route, Navigate, useLocation } from 'reac
 import Sidebar from './components/Sidebar.tsx';
 import Dashboard from './pages/Dashboard.tsx';
 import CommandesGros from './pages/CommandesGros.tsx';
-import CommandeMerch from './pages/CommandeMerch.tsx';
 import MarketingSpend from './pages/MarketingSpend.tsx';
-import ClientComptoir from './pages/ClientComptoir.tsx';
 import Inventory from './pages/Inventory.tsx';
 import Offres from './pages/Offres.tsx';
 import Charges from './pages/Charges.tsx';
-import AIAssistant from './pages/AIAssistant.tsx';
-import Retour from './pages/Retour.tsx';
-import Payout from './pages/Payout.tsx';
 import Credit from './pages/Credit.tsx';
 import Stats from './pages/Stats.tsx';
 import Fournisseurs from './pages/Fournisseurs.tsx';
@@ -91,17 +86,12 @@ const AppRoutes: React.FC = () => {
       <Route path="/" element={<AppLayout><Dashboard /></AppLayout>} />
       <Route path="/stats" element={<AppLayout><Stats /></AppLayout>} />
       <Route path="/gros" element={<AppLayout><CommandesGros /></AppLayout>} />
-      <Route path="/merch" element={<AppLayout><CommandeMerch /></AppLayout>} />
-      <Route path="/client-comptoir" element={<AppLayout><ClientComptoir /></AppLayout>} />
       <Route path="/marketing-spend" element={<AppLayout><MarketingSpend /></AppLayout>} />
       <Route path="/inventory" element={<AppLayout><Inventory /></AppLayout>} />
       <Route path="/charges" element={<AppLayout><Charges /></AppLayout>} />
       <Route path="/offres" element={<AppLayout><Offres /></AppLayout>} />
-      <Route path="/ai" element={<AppLayout><AIAssistant /></AppLayout>} />
-      <Route path="/retour" element={<AppLayout><Retour /></AppLayout>} />
       <Route path="/fournisseurs" element={<AppLayout><Fournisseurs /></AppLayout>} />
       <Route path="/facturation" element={<AppLayout><Facturation /></AppLayout>} />
-      <Route path="/payout" element={<AppLayout><Payout /></AppLayout>} />
       <Route path="/credit" element={<AppLayout><Credit /></AppLayout>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
