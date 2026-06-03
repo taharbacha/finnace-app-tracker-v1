@@ -34,7 +34,6 @@ const MustGiveCard = ({ name, mustGiveValue, icon: Icon, colorClass }: any) => {
             <Icon size={24} />
           </div>
           <div className="text-right">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Partenaire</p>
             <h3 className="text-xl font-black text-slate-900 tracking-tight">{name}</h3>
           </div>
         </div>
@@ -70,27 +69,24 @@ const Fournisseurs: React.FC = () => {
     const grosArticle = gros.reduce((acc, curr) => acc + Number(curr.prix_achat_article || 0), 0);
     const grosImpression = gros.reduce((acc, curr) => acc + Number(curr.prix_impression || 0), 0);
     const merchAchat = merch.reduce((acc, curr) => acc + Number(curr.prix_achat || 0), 0);
-    const vendeursTotal = 0; // Deprecated module
 
-    return { grosArticle, grosImpression, merchAchat, vendeursTotal };
+    return { grosArticle, grosImpression, merchAchat };
   }, [gros, merch]);
 
   // 2. Calculate Payments from Ledger
   const payments = useMemo(() => {
     const yassin = fournisseurLedger.filter(l => l.fournisseur === FournisseurName.YASSIN).reduce((a, c) => a + Number(c.amount || 0), 0);
     const css = fournisseurLedger.filter(l => l.fournisseur === FournisseurName.CSS).reduce((a, c) => a + Number(c.amount || 0), 0);
-    const emprinte = fournisseurLedger.filter(l => l.fournisseur === FournisseurName.EMPRINTE).reduce((a, c) => a + Number(c.amount || 0), 0);
     const bivalent = fournisseurLedger.filter(l => l.fournisseur === FournisseurName.BIVALENT).reduce((a, c) => a + Number(c.amount || 0), 0);
 
-    return { yassin, css, emprinte, bivalent };
+    return { yassin, css, bivalent };
   }, [fournisseurLedger]);
 
   // 3. Compute Final "Must Give" Balances
   const mustGive = useMemo(() => {
     return {
       yassin: (productionTotals.grosArticle + productionTotals.merchAchat) - (payments.yassin + payments.bivalent),
-      css: productionTotals.grosImpression - payments.css,
-      emprinte: productionTotals.vendeursTotal - payments.emprinte
+      css: productionTotals.grosImpression - payments.css
     };
   }, [productionTotals, payments]);
 
@@ -110,8 +106,6 @@ const Fournisseurs: React.FC = () => {
         return [FournisseurName.YASSIN, FournisseurName.BIVALENT];
       case FournisseurForWho.GROS_IMPRESSION:
         return [FournisseurName.CSS];
-      case FournisseurForWho.VENDEURS:
-        return [FournisseurName.EMPRINTE];
       default:
         return Object.values(FournisseurName);
     }
@@ -152,7 +146,7 @@ const Fournisseurs: React.FC = () => {
       </div>
 
       {/* Summary Cards - Must Give Balances */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         <MustGiveCard 
           name={FournisseurName.YASSIN} 
           mustGiveValue={mustGive.yassin} 
@@ -164,12 +158,6 @@ const Fournisseurs: React.FC = () => {
           mustGiveValue={mustGive.css} 
           icon={Printer} 
           colorClass={{bg: 'bg-blue-600', text: 'text-white'}} 
-        />
-        <MustGiveCard 
-          name={FournisseurName.EMPRINTE} 
-          mustGiveValue={mustGive.emprinte} 
-          icon={Layers} 
-          colorClass={{bg: 'bg-indigo-600', text: 'text-white'}} 
         />
       </div>
 
@@ -190,10 +178,6 @@ const Fournisseurs: React.FC = () => {
          <div className="text-center">
             <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">MERCH Prod.</p>
             <p className="text-xs font-black text-slate-700">{formatCurrency(productionTotals.merchAchat)}</p>
-         </div>
-         <div className="text-center">
-            <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">VENDEURS Prod.</p>
-            <p className="text-xs font-black text-slate-700">{formatCurrency(productionTotals.vendeursTotal)}</p>
          </div>
       </div>
 

@@ -203,15 +203,13 @@ export enum GlobalStatus {
 export enum FournisseurName {
   YASSIN = 'Yassin',
   CSS = 'CSS',
-  EMPRINTE = 'Emprinte',
   BIVALENT = 'Bivalent'
 }
 
 export enum FournisseurForWho {
   GROS_ARTICLE = 'GROS Article',
   GROS_IMPRESSION = 'GROS Impression',
-  MERCH = 'MERCH',
-  VENDEURS = 'VENDEURS'
+  MERCH = 'MERCH'
 }
 
 export interface FournisseurLedger {
