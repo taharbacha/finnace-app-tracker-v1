@@ -262,6 +262,31 @@ export interface Document {
   updated_at: string;
 }
 
+export interface CaisseTransaction {
+  id: string;
+  created_at: string;
+  date: string;
+  somme: number;
+  description: string;
+  agent: string;
+}
+
+export interface Employe {
+  id: string;
+  created_at: string;
+  nom: string;
+  salaire_base: number;
+}
+
+export interface SalairePayment {
+  id: string;
+  created_at: string;
+  employe_id: string;
+  date: string;
+  amount: number;
+  description: string;
+}
+
 export interface DocumentItem {
   id: string;
   document_id: string;

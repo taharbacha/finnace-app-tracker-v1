@@ -114,6 +114,11 @@ const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen, onClose, isHidden, onTo
         {renderNavLink({ to: '/facturation', label: 'Facturation', icon: FileText })}
         {renderNavLink({ to: '/fournisseurs', label: 'Fournisseurs', icon: Users })}
         {renderNavLink({ to: '/credit', label: 'Crédit', icon: CreditCard })}
+
+        <div className="my-6 border-t border-slate-800/30 mx-4" />
+        
+        {renderNavLink({ to: '/caisse', label: 'Caisse', icon: Wallet })}
+        {renderNavLink({ to: '/salaire', label: 'Salaires', icon: Users })}
       </nav>
 
       <div className="px-6 py-4 border-t border-slate-800/50 bg-slate-900/50 pb-[calc(1rem+env(safe-area-inset-bottom))]">
