@@ -11,84 +11,20 @@ import {
   Users, 
   Search, 
   Trash2, 
-  Layers, 
-  ArrowRightLeft,
-  Info,
-  Package,
-  Printer,
   History
 } from 'lucide-react';
 
 const formatCurrency = (val: number) => Math.round(val).toLocaleString('fr-DZ') + ' DA';
-
-const MustGiveCard = ({ name, mustGiveValue, icon: Icon, colorClass }: any) => {
-  const isPositive = mustGiveValue > 0;
-  
-  return (
-    <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-col justify-between hover:shadow-xl transition-all group relative overflow-hidden h-full">
-      <div className="absolute top-0 right-0 w-24 h-24 bg-blue-50/50 rounded-bl-[3rem] -mr-8 -mt-8 transition-transform group-hover:scale-110" />
-      
-      <div className="relative z-10">
-        <div className="flex justify-between items-start mb-6">
-          <div className={`p-4 rounded-2xl shadow-lg ${colorClass.bg} text-white`}>
-            <Icon size={24} />
-          </div>
-          <div className="text-right">
-            <h3 className="text-xl font-black text-slate-900 tracking-tight">{name}</h3>
-          </div>
-        </div>
-
-        <div className="mt-8">
-           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Solde "Must Give"</p>
-           <h4 className={`text-3xl font-black tabular-nums tracking-tighter ${isPositive ? 'text-rose-600' : 'text-emerald-600'}`}>
-             {formatCurrency(mustGiveValue)}
-           </h4>
-           <p className="text-[9px] text-slate-400 font-bold uppercase mt-2 tracking-tighter">
-             {isPositive ? 'Dette à régulariser' : 'Compte équilibré / Crédit'}
-           </p>
-        </div>
-      </div>
-    </div>
-  );
-};
 
 const Fournisseurs: React.FC = () => {
   const { 
     fournisseurLedger, 
     addFournisseurLedger, 
     updateFournisseurLedger, 
-    deleteFournisseurLedger,
-    gros,
-    merch
+    deleteFournisseurLedger
   } = useAppStore();
 
   const [searchTerm, setSearchTerm] = useState('');
-
-  // 1. Calculate Read-Only Values from other modules
-  const productionTotals = useMemo(() => {
-    const grosArticle = gros.reduce((acc, curr) => acc + Number(curr.prix_achat_article || 0), 0);
-    const grosImpression = gros.reduce((acc, curr) => acc + Number(curr.prix_impression || 0), 0);
-    const merchAchat = merch.reduce((acc, curr) => acc + Number(curr.prix_achat || 0), 0);
-
-    return { grosArticle, grosImpression, merchAchat };
-  }, [gros, merch]);
-
-  // 2. Calculate Payments from Ledger
-  const payments = useMemo(() => {
-    const yassin = fournisseurLedger.filter(l => l.fournisseur === FournisseurName.YASSIN).reduce((a, c) => a + Number(c.amount || 0), 0);
-    const css = fournisseurLedger.filter(l => l.fournisseur === FournisseurName.CSS).reduce((a, c) => a + Number(c.amount || 0), 0);
-    const bivalent = fournisseurLedger.filter(l => l.fournisseur === FournisseurName.BIVALENT).reduce((a, c) => a + Number(c.amount || 0), 0);
-
-    return { yassin, css, bivalent };
-  }, [fournisseurLedger]);
-
-  // 3. Compute Final "Must Give" Balances
-  const mustGive = useMemo(() => {
-    return {
-      yassin: (productionTotals.grosArticle + productionTotals.merchAchat) - (payments.yassin + payments.bivalent),
-      css: productionTotals.grosImpression - payments.css
-    };
-  }, [productionTotals, payments]);
 
   const filteredData = useMemo(() => {
     return fournisseurLedger.filter(item => {
@@ -145,41 +81,7 @@ const Fournisseurs: React.FC = () => {
         </button>
       </div>
 
-      {/* Summary Cards - Must Give Balances */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <MustGiveCard 
-          name={FournisseurName.YASSIN} 
-          mustGiveValue={mustGive.yassin} 
-          icon={Package} 
-          colorClass={{bg: 'bg-slate-900', text: 'text-white'}} 
-        />
-        <MustGiveCard 
-          name={FournisseurName.CSS} 
-          mustGiveValue={mustGive.css} 
-          icon={Printer} 
-          colorClass={{bg: 'bg-blue-600', text: 'text-white'}} 
-        />
-      </div>
-
-      {/* Production Values Trace (Info Only) */}
-      <div className="bg-white p-6 rounded-[2rem] border border-slate-100 flex flex-wrap gap-8 justify-center shadow-sm">
-         <div className="flex items-center gap-3">
-            <Info size={14} className="text-slate-300" />
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Base de calcul :</span>
-         </div>
-         <div className="text-center">
-            <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">GROS Art.</p>
-            <p className="text-xs font-black text-slate-700">{formatCurrency(productionTotals.grosArticle)}</p>
-         </div>
-         <div className="text-center">
-            <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">GROS Imp.</p>
-            <p className="text-xs font-black text-slate-700">{formatCurrency(productionTotals.grosImpression)}</p>
-         </div>
-         <div className="text-center">
-            <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">MERCH Prod.</p>
-            <p className="text-xs font-black text-slate-700">{formatCurrency(productionTotals.merchAchat)}</p>
-         </div>
-      </div>
+      {/* Removed Cards as requested */}
 
       {/* Main Ledger Table */}
       <div className="bg-white border border-slate-100 rounded-[3rem] shadow-sm overflow-hidden min-h-[600px]">

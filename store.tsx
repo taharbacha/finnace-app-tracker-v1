@@ -496,7 +496,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const addFournisseurLedger = useCallback(async () => {
     const baseRecord = { 
-      id: crypto.randomUUID(),
       date: new Date().toISOString().split('T')[0], 
       amount: 0, 
       fournisseur: FournisseurName.YASSIN, 
