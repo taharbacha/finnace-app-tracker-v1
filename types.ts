@@ -295,6 +295,15 @@ export interface BankTransaction {
   note: string;
 }
 
+export interface BankArchive {
+  id: string;
+  created_at: string;
+  date: string;
+  somme: number;
+  tva: number;
+  description: string;
+}
+
 export interface DocumentItem {
   id: string;
   document_id: string;
