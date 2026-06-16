@@ -304,6 +304,12 @@ export interface BankArchive {
   description: string;
 }
 
+export interface BankArchiveNote {
+  id: string;
+  created_at: string;
+  content: string;
+}
+
 export interface DocumentItem {
   id: string;
   document_id: string;

@@ -12,7 +12,9 @@ const Banque = () => {
     bankArchives,
     addBankArchive,
     updateBankArchive,
-    deleteBankArchive
+    deleteBankArchive,
+    bankArchiveNotes,
+    updateBankArchiveNote
   } = useAppStore();
 
   const [activeTab, setActiveTab] = useState<'actif' | 'archive'>('actif');
@@ -130,9 +132,21 @@ const Banque = () => {
       )}
 
       {activeTab === 'archive' && (
-        <div className="bg-white shadow-sm border border-slate-200 rounded-2xl overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left">
+        <div className="space-y-6">
+          <div className="bg-white shadow-sm border border-slate-200 rounded-2xl p-6">
+            <h2 className="text-sm font-bold text-slate-800 mb-3 uppercase tracking-wider">Notes d'Archive</h2>
+            <textarea
+              className="w-full text-slate-700 bg-slate-50 border border-slate-200 rounded-xl p-4 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white resize-none transition-all"
+              rows={4}
+              placeholder="Ajouter des notes globales ici..."
+              value={bankArchiveNotes[0]?.content || ''}
+              onChange={(e) => updateBankArchiveNote(e.target.value)}
+            />
+          </div>
+
+          <div className="bg-white shadow-sm border border-slate-200 rounded-2xl overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm text-left">
               <thead className="bg-slate-50 text-slate-500 font-bold uppercase text-[10px] tracking-wider">
                 <tr>
                   <th className="px-6 py-4">Date</th>
@@ -194,6 +208,7 @@ const Banque = () => {
               </tbody>
             </table>
           </div>
+        </div>
         </div>
       )}
 

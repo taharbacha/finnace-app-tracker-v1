@@ -10,7 +10,7 @@ import {
   FournisseurLedger, FournisseurName, FournisseurForWho,
   GlobalStatus,
   Document, DocumentItem, DocumentType, DocumentStatus,
-  CaisseTransaction, Employe, SalairePayment, BankTransaction, BankArchive
+  CaisseTransaction, Employe, SalairePayment, BankTransaction, BankArchive, BankArchiveNote
 } from './types.ts';
 
 /**
@@ -85,6 +85,7 @@ interface AppState {
   salairePayments: SalairePayment[];
   bankTransactions: BankTransaction[];
   bankArchives: BankArchive[];
+  bankArchiveNotes: BankArchiveNote[];
   dashboardDateStart: string;
   dashboardDateEnd: string;
   isAuthenticated: boolean;
@@ -171,6 +172,7 @@ interface AppState {
   addBankArchive: () => Promise<void>;
   updateBankArchive: (id: string, field: keyof BankArchive, value: any) => Promise<void>;
   deleteBankArchive: (id: string) => Promise<void>;
+  updateBankArchiveNote: (content: string) => Promise<void>;
 }
 
 const AppContext = createContext<AppState | undefined>(undefined);
@@ -200,6 +202,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [salairePayments, setSalairePayments] = useState<SalairePayment[]>([]);
   const [bankTransactions, setBankTransactions] = useState<BankTransaction[]>([]);
   const [bankArchives, setBankArchives] = useState<BankArchive[]>([]);
+  const [bankArchiveNotes, setBankArchiveNotes] = useState<BankArchiveNote[]>([]);
   
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
   const [globalStatusFilter, setGlobalStatusFilter] = useState<GlobalStatus>(GlobalStatus.ALL);
@@ -217,7 +220,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
     if (!isSilent) setIsSyncing(true);
     try {
-      const [ { data: g }, { data: m_orders }, { data: cc }, { data: o }, { data: i }, { data: c }, { data: ms }, { data: r }, { data: p }, { data: cr }, { data: fl }, { data: docs }, { data: items }, { data: c_caisse }, { data: e_employes }, { data: s_salaire }, { data: b_bank }, { data: ba_bank } ] = await Promise.all([
+      const [ { data: g }, { data: m_orders }, { data: cc }, { data: o }, { data: i }, { data: c }, { data: ms }, { data: r }, { data: p }, { data: cr }, { data: fl }, { data: docs }, { data: items }, { data: c_caisse }, { data: e_employes }, { data: s_salaire }, { data: b_bank }, { data: ba_bank }, { data: ba_note } ] = await Promise.all([
         supabase.from('commandes_gros').select('*'),
         supabase.from('commandes_merch').select('*'),
         supabase.from('client_comptoir').select('*'),
@@ -235,7 +238,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         supabase.from('employes').select('*'),
         supabase.from('salaire_payments').select('*'),
         supabase.from('bank_transactions').select('*'),
-        supabase.from('bank_archives').select('*')
+        supabase.from('bank_archives').select('*'),
+        supabase.from('bank_archive_notes').select('*')
       ]);
       if (g) setGros(g); 
       if (m_orders) setMerch(m_orders);
@@ -255,6 +259,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (s_salaire) setSalairePayments(s_salaire);
       if (b_bank) setBankTransactions(b_bank);
       if (ba_bank) setBankArchives(ba_bank);
+      if (ba_note) setBankArchiveNotes(ba_note);
       setLastSynced(new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }));
     } catch (e) { 
       console.error("Supabase fetch error:", e); 
@@ -267,7 +272,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     fetchAllData();
     if (!supabase) return;
-    const tables = ['commandes_gros', 'commandes_merch', 'offres', 'inventory', 'charges', 'marketing_spends', 'commandes_retours', 'payouts', 'credits', 'fournisseurs', 'documents', 'document_items', 'caisse', 'employes', 'salaire_payments', 'bank_transactions', 'bank_archives'];
+    const tables = ['commandes_gros', 'commandes_merch', 'offres', 'inventory', 'charges', 'marketing_spends', 'commandes_retours', 'payouts', 'credits', 'fournisseurs', 'documents', 'document_items', 'caisse', 'employes', 'salaire_payments', 'bank_transactions', 'bank_archives', 'bank_archive_notes'];
     const channel = supabase.channel('merchdz_realtime');
     tables.forEach(table => {
       channel.on('postgres_changes', { event: '*', schema: 'public', table }, (payload) => {
@@ -728,6 +733,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (supabase) await supabase.from('bank_archives').delete().eq('id', id);
   }, []);
 
+  const updateBankArchiveNote = useCallback(async (content: string) => {
+    const existing = bankArchiveNotes[0];
+    if (existing) {
+      setBankArchiveNotes([{ ...existing, content }]);
+      if (supabase) await supabase.from('bank_archive_notes').update({ content }).eq('id', existing.id);
+    } else {
+      const newNote = { content };
+      if (supabase) {
+        const { data } = await supabase.from('bank_archive_notes').insert([newNote]).select().single();
+        if (data) setBankArchiveNotes([data]);
+      } else {
+        setBankArchiveNotes([{ id: crypto.randomUUID(), content, created_at: new Date().toISOString() }]);
+      }
+    }
+  }, [bankArchiveNotes]);
+
   const importGros = useCallback(async (d: any[]) => { if (supabase) { const { data } = await supabase.from('commandes_gros').insert(d.map(computeGrosCalculatedFields)).select(); if (data) { setGros(prev => { const existingIds = new Set(prev.map(item => item.id)); const newItems = data.filter(item => !existingIds.has(item.id)); return [...newItems, ...prev]; }); } } else { setGros(p => [...d.map(i => ({ ...i, id: crypto.randomUUID() })), ...p]); } }, []);
   const importOffres = useCallback(async (d: any[]) => { if (supabase) { const { data } = await supabase.from('offres').insert(d).select(); if (data) { setOffres(prev => { const existingIds = new Set(prev.map(item => item.id)); const newItems = data.filter(item => !existingIds.has(item.id)); return [...newItems, ...prev]; }); } } else { setOffres(p => [...d.map(i => ({ ...i, id: crypto.randomUUID() })), ...p]); } }, []);
   const importInventory = useCallback(async (d: any[]) => { if (supabase) { const { data } = await supabase.from('inventory').insert(d.map(computeInventoryCalculatedFields)).select(); if (data) { setInventory(prev => { const existingIds = new Set(prev.map(item => item.id)); const newItems = data.filter(item => !existingIds.has(item.id)); return [...newItems, ...prev]; }); } } else { setInventory(p => [...d.map(i => ({ ...i, id: crypto.randomUUID() })), ...p]); } }, []);
@@ -813,7 +834,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const value: AppState = {
     gros, merch, clientComptoir, offres, inventory, charges, marketingSpends, retours, payouts, credits, fournisseurLedger,
-    documents, documentItems, caisse, employes, salairePayments, bankTransactions, bankArchives,
+    documents, documentItems, caisse, employes, salairePayments, bankTransactions, bankArchives, bankArchiveNotes,
     dashboardDateStart, dashboardDateEnd, isAuthenticated, isSyncing, isCloudActive, lastSynced, chatHistory,
     globalStatusFilter, setGlobalStatusFilter,
     addChatMessage, clearChat, login, logout, setDashboardDateRange,
@@ -834,7 +855,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     addEmploye, updateEmploye, deleteEmploye,
     addSalairePayment, updateSalairePayment, deleteSalairePayment,
     addBankTransaction, updateBankTransaction, deleteBankTransaction,
-    addBankArchive, updateBankArchive, deleteBankArchive
+    addBankArchive, updateBankArchive, deleteBankArchive, updateBankArchiveNote
   };
 
   return (
