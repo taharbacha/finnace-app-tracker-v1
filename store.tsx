@@ -10,7 +10,7 @@ import {
   FournisseurLedger, FournisseurName, FournisseurForWho,
   GlobalStatus,
   Document, DocumentItem, DocumentType, DocumentStatus,
-  CaisseTransaction, Employe, SalairePayment
+  CaisseTransaction, Employe, SalairePayment, BankTransaction
 } from './types.ts';
 
 /**
@@ -83,6 +83,7 @@ interface AppState {
   caisse: CaisseTransaction[];
   employes: Employe[];
   salairePayments: SalairePayment[];
+  bankTransactions: BankTransaction[];
   dashboardDateStart: string;
   dashboardDateEnd: string;
   isAuthenticated: boolean;
@@ -161,6 +162,10 @@ interface AppState {
   addSalairePayment: (employe_id: string) => Promise<void>;
   updateSalairePayment: (id: string, field: keyof SalairePayment, value: any) => Promise<void>;
   deleteSalairePayment: (id: string) => Promise<void>;
+  // Bank
+  addBankTransaction: () => Promise<void>;
+  updateBankTransaction: (id: string, field: keyof BankTransaction, value: any) => Promise<void>;
+  deleteBankTransaction: (id: string) => Promise<void>;
 }
 
 const AppContext = createContext<AppState | undefined>(undefined);
@@ -188,6 +193,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [caisse, setCaisse] = useState<CaisseTransaction[]>([]);
   const [employes, setEmployes] = useState<Employe[]>([]);
   const [salairePayments, setSalairePayments] = useState<SalairePayment[]>([]);
+  const [bankTransactions, setBankTransactions] = useState<BankTransaction[]>([]);
   
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
   const [globalStatusFilter, setGlobalStatusFilter] = useState<GlobalStatus>(GlobalStatus.ALL);
@@ -205,7 +211,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
     if (!isSilent) setIsSyncing(true);
     try {
-      const [ { data: g }, { data: m_orders }, { data: cc }, { data: o }, { data: i }, { data: c }, { data: ms }, { data: r }, { data: p }, { data: cr }, { data: fl }, { data: docs }, { data: items }, { data: c_caisse }, { data: e_employes }, { data: s_salaire } ] = await Promise.all([
+      const [ { data: g }, { data: m_orders }, { data: cc }, { data: o }, { data: i }, { data: c }, { data: ms }, { data: r }, { data: p }, { data: cr }, { data: fl }, { data: docs }, { data: items }, { data: c_caisse }, { data: e_employes }, { data: s_salaire }, { data: b_bank } ] = await Promise.all([
         supabase.from('commandes_gros').select('*'),
         supabase.from('commandes_merch').select('*'),
         supabase.from('client_comptoir').select('*'),
@@ -221,7 +227,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         supabase.from('document_items').select('*'),
         supabase.from('caisse').select('*'),
         supabase.from('employes').select('*'),
-        supabase.from('salaire_payments').select('*')
+        supabase.from('salaire_payments').select('*'),
+        supabase.from('bank_transactions').select('*')
       ]);
       if (g) setGros(g); 
       if (m_orders) setMerch(m_orders);
@@ -239,6 +246,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (c_caisse) setCaisse(c_caisse);
       if (e_employes) setEmployes(e_employes);
       if (s_salaire) setSalairePayments(s_salaire);
+      if (b_bank) setBankTransactions(b_bank);
       setLastSynced(new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }));
     } catch (e) { 
       console.error("Supabase fetch error:", e); 
@@ -251,7 +259,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     fetchAllData();
     if (!supabase) return;
-    const tables = ['commandes_gros', 'commandes_merch', 'offres', 'inventory', 'charges', 'marketing_spends', 'commandes_retours', 'payouts', 'credits', 'fournisseurs', 'documents', 'document_items', 'caisse', 'employes', 'salaire_payments'];
+    const tables = ['commandes_gros', 'commandes_merch', 'offres', 'inventory', 'charges', 'marketing_spends', 'commandes_retours', 'payouts', 'credits', 'fournisseurs', 'documents', 'document_items', 'caisse', 'employes', 'salaire_payments', 'bank_transactions'];
     const channel = supabase.channel('merchdz_realtime');
     tables.forEach(table => {
       channel.on('postgres_changes', { event: '*', schema: 'public', table }, (payload) => {
@@ -678,6 +686,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (supabase) await supabase.from('salaire_payments').delete().eq('id', id);
   }, []);
 
+  // Bank
+  const addBankTransaction = useCallback(async () => {
+    const baseRecord = { date: new Date().toISOString().split('T')[0], somme: 0, note: '' };
+    if (supabase) {
+      const { data } = await supabase.from('bank_transactions').insert([baseRecord]).select().single();
+      if (data) setBankTransactions(p => [data, ...p]);
+    } else { setBankTransactions(p => [{ ...baseRecord, id: crypto.randomUUID(), created_at: new Date().toISOString() }, ...p]); }
+  }, []);
+  const updateBankTransaction = useCallback(async (id: string, field: keyof BankTransaction, value: any) => {
+    setBankTransactions(p => p.map(i => String(i.id) === String(id) ? { ...i, [field]: value } : i));
+    if (supabase) await supabase.from('bank_transactions').update({ [field]: value }).eq('id', id);
+  }, []);
+  const deleteBankTransaction = useCallback(async (id: string) => {
+    setBankTransactions(p => p.filter(i => String(i.id) !== String(id)));
+    if (supabase) await supabase.from('bank_transactions').delete().eq('id', id);
+  }, []);
+
   const importGros = useCallback(async (d: any[]) => { if (supabase) { const { data } = await supabase.from('commandes_gros').insert(d.map(computeGrosCalculatedFields)).select(); if (data) { setGros(prev => { const existingIds = new Set(prev.map(item => item.id)); const newItems = data.filter(item => !existingIds.has(item.id)); return [...newItems, ...prev]; }); } } else { setGros(p => [...d.map(i => ({ ...i, id: crypto.randomUUID() })), ...p]); } }, []);
   const importOffres = useCallback(async (d: any[]) => { if (supabase) { const { data } = await supabase.from('offres').insert(d).select(); if (data) { setOffres(prev => { const existingIds = new Set(prev.map(item => item.id)); const newItems = data.filter(item => !existingIds.has(item.id)); return [...newItems, ...prev]; }); } } else { setOffres(p => [...d.map(i => ({ ...i, id: crypto.randomUUID() })), ...p]); } }, []);
   const importInventory = useCallback(async (d: any[]) => { if (supabase) { const { data } = await supabase.from('inventory').insert(d.map(computeInventoryCalculatedFields)).select(); if (data) { setInventory(prev => { const existingIds = new Set(prev.map(item => item.id)); const newItems = data.filter(item => !existingIds.has(item.id)); return [...newItems, ...prev]; }); } } else { setInventory(p => [...d.map(i => ({ ...i, id: crypto.randomUUID() })), ...p]); } }, []);
@@ -763,7 +788,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const value: AppState = {
     gros, merch, clientComptoir, offres, inventory, charges, marketingSpends, retours, payouts, credits, fournisseurLedger,
-    documents, documentItems, caisse, employes, salairePayments,
+    documents, documentItems, caisse, employes, salairePayments, bankTransactions,
     dashboardDateStart, dashboardDateEnd, isAuthenticated, isSyncing, isCloudActive, lastSynced, chatHistory,
     globalStatusFilter, setGlobalStatusFilter,
     addChatMessage, clearChat, login, logout, setDashboardDateRange,
@@ -782,7 +807,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     addDocument, updateDocument, deleteDocument, addDocumentItem, updateDocumentItem, deleteDocumentItem,
     addCaisseTransaction, updateCaisseTransaction, deleteCaisseTransaction,
     addEmploye, updateEmploye, deleteEmploye,
-    addSalairePayment, updateSalairePayment, deleteSalairePayment
+    addSalairePayment, updateSalairePayment, deleteSalairePayment,
+    addBankTransaction, updateBankTransaction, deleteBankTransaction
   };
 
   return (

@@ -287,6 +287,14 @@ export interface SalairePayment {
   description: string;
 }
 
+export interface BankTransaction {
+  id: string;
+  created_at: string;
+  date: string;
+  somme: number;
+  note: string;
+}
+
 export interface DocumentItem {
   id: string;
   document_id: string;

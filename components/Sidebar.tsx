@@ -17,7 +17,8 @@ import {
   CreditCard,
   FileBarChart,
   Users,
-  FileText
+  FileText,
+  Building
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -118,6 +119,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen, onClose, isHidden, onTo
         <div className="my-6 border-t border-slate-800/30 mx-4" />
         
         {renderNavLink({ to: '/caisse', label: 'Caisse', icon: Wallet })}
+        {renderNavLink({ to: '/banque', label: 'Banque', icon: Building })}
         {renderNavLink({ to: '/salaire', label: 'Salaires', icon: Users })}
       </nav>
 
