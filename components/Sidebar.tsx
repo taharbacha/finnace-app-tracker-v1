@@ -18,7 +18,8 @@ import {
   FileBarChart,
   Users,
   FileText,
-  Building
+  Building,
+  Printer
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -103,6 +104,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen, onClose, isHidden, onTo
 
         {renderNavLink({ to: '/stats', label: 'Analytique Forensic', icon: FileBarChart })}
         {renderNavLink({ to: '/gros', label: 'Commandes Gros', icon: Truck })}
+        {renderNavLink({ to: '/impression', label: 'Impression', icon: Printer })}
         
         <div className="my-6 border-t border-slate-800/30 mx-4" />
 

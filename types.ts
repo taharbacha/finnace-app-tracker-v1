@@ -310,6 +310,19 @@ export interface BankArchiveNote {
   content: string;
 }
 
+export interface CommandeImpression {
+  id: string;
+  created_at: string;
+  ref: string;
+  client_name: string;
+  phone_number: string;
+  cout_article: number;
+  cout_impression: number;
+  prix_vente: number;
+  status: 'en production' | 'en livraison' | 'livree' | 'retour';
+  has_versement: boolean;
+}
+
 export interface DocumentItem {
   id: string;
   document_id: string;
