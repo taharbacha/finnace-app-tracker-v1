@@ -8,6 +8,7 @@ import {
   Plus, Search, Truck, Banknote, Trash2, Upload, Clock, Ban, ChevronUp, ChevronDown, 
   Filter, CheckSquare, Square, ClipboardCheck, LayoutList
 } from 'lucide-react';
+import AdsModule from '../components/AdsModule.tsx';
 
 const CommandesGros: React.FC = () => {
   const { 
@@ -24,6 +25,7 @@ const CommandesGros: React.FC = () => {
   const allData = getCalculatedGros();
   
   // UI-ONLY State
+  const [activeTab, setActiveTab] = useState<'commandes' | 'ads'>('commandes');
   const [searchTerm, setSearchTerm] = useState('');
   const [analysisMode, setAnalysisMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -161,40 +163,67 @@ const CommandesGros: React.FC = () => {
             Commandes GROS
           </h2>
           <p className="text-slate-500 text-sm font-medium">Espace opérationnel & Analyse de rentabilité wholesale.</p>
-        </div>
+        
+    </div>
         <div className="flex flex-wrap items-center gap-3">
-          <button 
-            onClick={() => setAnalysisMode(!analysisMode)}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-black uppercase tracking-widest transition-all
-              ${analysisMode 
-                ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30' 
-                : 'bg-white border border-slate-200 text-slate-400 hover:text-slate-600'}`}
-          >
-            <Filter size={16} />
-            {analysisMode ? 'Analyse Active' : 'Mode Analyse OFF'}
-          </button>
+          <div className="flex bg-slate-100 p-1 rounded-2xl mr-2">
+            <button
+              onClick={() => setActiveTab('commandes')}
+              className={`px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
+                activeTab === 'commandes' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'
+              }`}
+            >
+              Commandes
+            </button>
+            <button
+              onClick={() => setActiveTab('ads')}
+              className={`px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
+                activeTab === 'ads' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'
+              }`}
+            >
+              Ads
+            </button>
           
-          <button 
-            onClick={() => setShowHeaders(!showHeaders)}
-            className="p-2.5 bg-white border border-slate-200 text-slate-400 hover:text-blue-600 rounded-xl transition-all"
-            title={showHeaders ? "Masquer les KPIs" : "Afficher les KPIs"}
-          >
-            {showHeaders ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-          </button>
+    </div>
 
-          <div className="h-8 w-px bg-slate-200 mx-1 hidden md:block" />
-
-          <input type="file" ref={fileInputRef} onChange={handleImportCSV} accept=".csv" className="hidden" />
-          <button onClick={() => fileInputRef.current?.click()} className="p-2.5 text-slate-400 hover:text-slate-600 bg-white border border-slate-200 rounded-xl transition-all">
-            <Upload size={18} />
-          </button>
-          
-          <button type="button" onClick={addGros} className="flex items-center gap-2 px-6 py-3 bg-slate-900 text-white rounded-2xl text-sm font-black hover:bg-slate-800 shadow-xl active:scale-95 transition-all">
-            <Plus size={18} /> Nouvelle Commande
-          </button>
+          {activeTab === 'commandes' && (
+            <>
+              <button 
+                onClick={() => setAnalysisMode(!analysisMode)}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-black uppercase tracking-widest transition-all
+                  ${analysisMode 
+                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30' 
+                    : 'bg-white border border-slate-200 text-slate-400 hover:text-slate-600'}`}
+              >
+                <Filter size={16} />
+                {analysisMode ? 'Analyse Active' : 'Mode Analyse OFF'}
+              </button>
+              
+              <button 
+                onClick={() => setShowHeaders(!showHeaders)}
+                className="p-2.5 bg-white border border-slate-200 text-slate-400 hover:text-blue-600 rounded-xl transition-all"
+                title={showHeaders ? "Masquer les KPIs" : "Afficher les KPIs"}
+              >
+                {showHeaders ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+              </button>
+              
+              <div className="h-8 w-px bg-slate-200 mx-1 hidden md:block" />
+              <input type="file" ref={fileInputRef} onChange={handleImportCSV} accept=".csv" className="hidden" />
+              <button onClick={() => fileInputRef.current?.click()} className="p-2.5 text-slate-400 hover:text-slate-600 bg-white border border-slate-200 rounded-xl transition-all">
+                <Upload size={18} />
+              </button>
+              
+              <button type="button" onClick={addGros} className="flex items-center gap-2 px-6 py-3 bg-slate-900 text-white rounded-2xl text-sm font-black hover:bg-slate-800 shadow-xl active:scale-95 transition-all">
+                <Plus size={18} /> Nouvelle Commande
+              </button>
+            </>
+      )}
         </div>
       </div>
-
+      {activeTab === 'ads' ? (
+        <AdsModule type="gros" />
+      ) : (
+        <>
       {/* KPI Cards Section */}
       {showHeaders && (
         <div className="space-y-6 animate-in fade-in zoom-in-95 duration-300">
@@ -203,64 +232,83 @@ const CommandesGros: React.FC = () => {
               <div>
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Production (Total)</p>
                 <h3 className="text-2xl font-black text-slate-900">{formatPrice(stats.totalProd)}</h3>
-              </div>
+              
+    </div>
               <div className="flex gap-2 mt-4">
                 <div className="flex-1 bg-slate-50 p-3 rounded-2xl border border-slate-100">
                   <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">Article (A)</p>
                   <p className="text-xs font-bold text-slate-700">{formatPrice(stats.totalA)}</p>
-                </div>
+                
+    </div>
                 <div className="flex-1 bg-blue-50/50 p-3 rounded-2xl border border-blue-100/50">
                   <p className="text-[9px] font-black text-blue-400 uppercase tracking-tighter">Impr. (I)</p>
                   <p className="text-xs font-bold text-blue-700">{formatPrice(stats.totalI)}</p>
-                </div>
-              </div>
-            </div>
+                
+    </div>
+              
+    </div>
+            
+    </div>
 
             <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm">
               <div className="w-12 h-12 rounded-2xl bg-emerald-50 flex items-center justify-center mb-6">
                 <Banknote className="text-emerald-600" size={24} />
-              </div>
+              
+    </div>
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Profit Encaissé</p>
               <h3 className="text-2xl font-black text-emerald-600">{formatPrice(stats.profitEncaisse)}</h3>
-            </div>
+            
+    </div>
 
             <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-col justify-between">
               <div>
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Profit Livré (Non Encaissé)</p>
                 <h3 className="text-2xl font-black text-purple-600">{formatPrice(stats.profitNonEncaisse)}</h3>
-              </div>
+              
+    </div>
               <div className="flex gap-2 mt-4">
                 <div className="flex-1 bg-slate-50 p-3 rounded-2xl border border-slate-100">
                   <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">Article (A)</p>
                   <p className="text-xs font-bold text-slate-700">{formatPrice(stats.totalANonEncaisse)}</p>
-                </div>
+                
+    </div>
                 <div className="flex-1 bg-purple-50/50 p-3 rounded-2xl border border-purple-100/50">
                   <p className="text-[9px] font-black text-purple-400 uppercase tracking-tighter">Impr. (I)</p>
                   <p className="text-xs font-bold text-purple-700">{formatPrice(stats.totalINonEncaisse)}</p>
-                </div>
-              </div>
-            </div>
+                
+    </div>
+              
+    </div>
+            
+    </div>
 
             <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-col justify-between">
               <div>
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">En Livraison (Valeur)</p>
                 <h3 className="text-2xl font-black text-blue-600">{formatPrice(stats.enLivraisonValue)}</h3>
-              </div>
+              
+    </div>
               <div className="mt-4 flex items-center gap-2 text-blue-400">
                 <Clock size={14} />
                 <span className="text-xs font-bold">Profit Attendu: {formatPrice(stats.enLivraisonProfit)}</span>
-              </div>
-            </div>
+              
+    </div>
+            
+    </div>
 
             <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm">
               <div className="w-12 h-12 rounded-2xl bg-red-50 flex items-center justify-center mb-6">
                 <Ban className="text-red-600" size={24} />
-              </div>
+              
+    </div>
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Cout Retours (Pertes)</p>
               <h3 className="text-2xl font-black text-red-600">{formatPrice(stats.costRetour)}</h3>
-            </div>
-          </div>
-        </div>
+            
+    </div>
+          
+    </div>
+        
+    </div>
       )}
 
       {/* Main Table Container */}
@@ -275,7 +323,8 @@ const CommandesGros: React.FC = () => {
               onChange={(e) => setSearchTerm(e.target.value)} 
               className="w-full pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-2xl outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all text-sm font-medium" 
             />
-          </div>
+          
+    </div>
 
           <div className="flex items-center gap-2 bg-white border border-slate-200 p-1.5 rounded-2xl">
             <LayoutList size={16} className="ml-2 text-slate-400" />
@@ -290,14 +339,17 @@ const CommandesGros: React.FC = () => {
               <option value={GlobalStatus.LIVREE}>Livrée (OK)</option>
               <option value={GlobalStatus.RETOUR}>Retour</option>
             </select>
-          </div>
+          
+    </div>
 
           {(dashboardDateStart || dashboardDateEnd) && (
             <div className="bg-blue-50 border border-blue-100 px-4 py-2 rounded-2xl flex items-center gap-2">
               <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Filtre Temporel Actif</span>
-            </div>
+            
+    </div>
           )}
-        </div>
+        
+    </div>
         
         <div className="overflow-x-auto">
           <table className="w-full text-sm text-left border-collapse">
@@ -345,6 +397,7 @@ const CommandesGros: React.FC = () => {
                       <span className="text-slate-300 text-[10px] font-bold">+</span>
                       <EditableCell type="number" value={item.prix_impression} onSave={(v) => updateGros(item.id, { prix_impression: v })} prefix="I: " className="text-[10px] h-auto text-slate-500 min-w-[70px]" />
                     </div>
+                    
                   </td>
                   <td className="p-2 text-right font-black text-slate-900">
                     <EditableCell type="number" value={item.prix_vente} onSave={(v) => updateGros(item.id, { prix_vente: v })} className="text-right" />
@@ -395,6 +448,8 @@ const CommandesGros: React.FC = () => {
           </table>
         </div>
       </div>
+    </>
+      )}
     </div>
   );
 };

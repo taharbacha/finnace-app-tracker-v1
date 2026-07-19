@@ -87,29 +87,12 @@ const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen, onClose, isHidden, onTo
       </div>
 
       <nav className="flex-1 px-4 py-4 space-y-1.5 overflow-y-auto">
-        <NavLink
-          to="/"
-          className={({ isActive }) => `
-            flex items-center gap-3 px-4 py-3.5 rounded-2xl transition-all duration-300 group mb-4
-            ${isActive 
-              ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' 
-              : 'text-slate-100 hover:bg-slate-800'}
-          `}
-        >
-          <LayoutDashboard size={20} />
-          <span className="font-black text-sm uppercase tracking-widest">Tableau de Bord</span>
-        </NavLink>
-
-        <div className="my-4 border-t border-slate-800/30 mx-4" />
-
-        {renderNavLink({ to: '/stats', label: 'Analytique Forensic', icon: FileBarChart })}
         {renderNavLink({ to: '/gros', label: 'Commandes Gros', icon: Truck })}
         {renderNavLink({ to: '/impression', label: 'Impression', icon: Printer })}
         
         <div className="my-6 border-t border-slate-800/30 mx-4" />
 
         {renderNavLink({ to: '/offres', label: 'Offres', icon: TrendingUp })}
-        {renderNavLink({ to: '/marketing-spend', label: 'Marketing Spend', icon: Megaphone })}
         {renderNavLink({ to: '/charges', label: 'Les Charges', icon: Wallet })}
 
         <div className="my-6 border-t border-slate-800/30 mx-4" />

@@ -310,6 +310,15 @@ export interface BankArchiveNote {
   content: string;
 }
 
+export interface Ad {
+  id: string;
+  created_at: string;
+  target_type: 'gros' | 'impression';
+  date_from: string;
+  date_to: string;
+  amount: number;
+}
+
 export interface CommandeImpression {
   id: string;
   created_at: string;

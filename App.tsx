@@ -2,14 +2,11 @@
 import React, { useState } from 'react';
 import { HashRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import Sidebar from './components/Sidebar.tsx';
-import Dashboard from './pages/Dashboard.tsx';
 import CommandesGros from './pages/CommandesGros.tsx';
-import MarketingSpend from './pages/MarketingSpend.tsx';
 import Inventory from './pages/Inventory.tsx';
 import Offres from './pages/Offres.tsx';
 import Charges from './pages/Charges.tsx';
 import Credit from './pages/Credit.tsx';
-import Stats from './pages/Stats.tsx';
 import Fournisseurs from './pages/Fournisseurs.tsx';
 import Facturation from './pages/Facturation.tsx';
 import Caisse from './pages/Caisse.tsx';
@@ -87,11 +84,9 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 const AppRoutes: React.FC = () => {
   return (
     <Routes>
-      <Route path="/" element={<AppLayout><Dashboard /></AppLayout>} />
-      <Route path="/stats" element={<AppLayout><Stats /></AppLayout>} />
+      <Route path="/" element={<Navigate to="/gros" replace />} />
       <Route path="/gros" element={<AppLayout><CommandesGros /></AppLayout>} />
       <Route path="/impression" element={<AppLayout><CommandesImpression /></AppLayout>} />
-      <Route path="/marketing-spend" element={<AppLayout><MarketingSpend /></AppLayout>} />
       <Route path="/inventory" element={<AppLayout><Inventory /></AppLayout>} />
       <Route path="/charges" element={<AppLayout><Charges /></AppLayout>} />
       <Route path="/offres" element={<AppLayout><Offres /></AppLayout>} />
