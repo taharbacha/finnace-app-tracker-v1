@@ -8,7 +8,6 @@ import {
   Plus, Search, Truck, Banknote, Trash2, Upload, Clock, Ban, ChevronUp, ChevronDown, 
   Filter, CheckSquare, Square, ClipboardCheck, LayoutList
 } from 'lucide-react';
-import AdsModule from '../components/AdsModule.tsx';
 
 const CommandesGros: React.FC = () => {
   const { 
@@ -25,7 +24,6 @@ const CommandesGros: React.FC = () => {
   const allData = getCalculatedGros();
   
   // UI-ONLY State
-  const [activeTab, setActiveTab] = useState<'commandes' | 'ads'>('commandes');
   const [searchTerm, setSearchTerm] = useState('');
   const [analysisMode, setAnalysisMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -166,64 +164,37 @@ const CommandesGros: React.FC = () => {
         
     </div>
         <div className="flex flex-wrap items-center gap-3">
-          <div className="flex bg-slate-100 p-1 rounded-2xl mr-2">
-            <button
-              onClick={() => setActiveTab('commandes')}
-              className={`px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
-                activeTab === 'commandes' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'
-              }`}
-            >
-              Commandes
-            </button>
-            <button
-              onClick={() => setActiveTab('ads')}
-              className={`px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
-                activeTab === 'ads' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'
-              }`}
-            >
-              Ads
-            </button>
+          <button 
+            onClick={() => setAnalysisMode(!analysisMode)}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-black uppercase tracking-widest transition-all
+              ${analysisMode 
+                ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30' 
+                : 'bg-white border border-slate-200 text-slate-400 hover:text-slate-600'}`}
+          >
+            <Filter size={16} />
+            {analysisMode ? 'Analyse Active' : 'Mode Analyse OFF'}
+          </button>
           
-    </div>
+          <button 
+            onClick={() => setShowHeaders(!showHeaders)}
+            className="p-2.5 bg-white border border-slate-200 text-slate-400 hover:text-blue-600 rounded-xl transition-all"
+            title={showHeaders ? "Masquer les KPIs" : "Afficher les KPIs"}
+          >
+            {showHeaders ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+          </button>
 
-          {activeTab === 'commandes' && (
-            <>
-              <button 
-                onClick={() => setAnalysisMode(!analysisMode)}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-black uppercase tracking-widest transition-all
-                  ${analysisMode 
-                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30' 
-                    : 'bg-white border border-slate-200 text-slate-400 hover:text-slate-600'}`}
-              >
-                <Filter size={16} />
-                {analysisMode ? 'Analyse Active' : 'Mode Analyse OFF'}
-              </button>
-              
-              <button 
-                onClick={() => setShowHeaders(!showHeaders)}
-                className="p-2.5 bg-white border border-slate-200 text-slate-400 hover:text-blue-600 rounded-xl transition-all"
-                title={showHeaders ? "Masquer les KPIs" : "Afficher les KPIs"}
-              >
-                {showHeaders ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-              </button>
-              
-              <div className="h-8 w-px bg-slate-200 mx-1 hidden md:block" />
-              <input type="file" ref={fileInputRef} onChange={handleImportCSV} accept=".csv" className="hidden" />
-              <button onClick={() => fileInputRef.current?.click()} className="p-2.5 text-slate-400 hover:text-slate-600 bg-white border border-slate-200 rounded-xl transition-all">
-                <Upload size={18} />
-              </button>
-              
-              <button type="button" onClick={addGros} className="flex items-center gap-2 px-6 py-3 bg-slate-900 text-white rounded-2xl text-sm font-black hover:bg-slate-800 shadow-xl active:scale-95 transition-all">
-                <Plus size={18} /> Nouvelle Commande
-              </button>
-            </>
-      )}
+          <div className="h-8 w-px bg-slate-200 mx-1 hidden md:block" />
+
+          <input type="file" ref={fileInputRef} onChange={handleImportCSV} accept=".csv" className="hidden" />
+          <button onClick={() => fileInputRef.current?.click()} className="p-2.5 text-slate-400 hover:text-slate-600 bg-white border border-slate-200 rounded-xl transition-all">
+            <Upload size={18} />
+          </button>
+          
+          <button type="button" onClick={addGros} className="flex items-center gap-2 px-6 py-3 bg-slate-900 text-white rounded-2xl text-sm font-black hover:bg-slate-800 shadow-xl active:scale-95 transition-all">
+            <Plus size={18} /> Nouvelle Commande
+          </button>
         </div>
       </div>
-      {activeTab === 'ads' ? (
-        <AdsModule type="gros" />
-      ) : (
-        <>
       {/* KPI Cards Section */}
       {showHeaders && (
         <div className="space-y-6 animate-in fade-in zoom-in-95 duration-300">
@@ -448,8 +419,6 @@ const CommandesGros: React.FC = () => {
           </table>
         </div>
       </div>
-    </>
-      )}
     </div>
   );
 };

@@ -12,6 +12,7 @@ import Facturation from './pages/Facturation.tsx';
 import Caisse from './pages/Caisse.tsx';
 import Salaire from './pages/Salaire.tsx';
 import Banque from './pages/Banque.tsx';
+import Ads from './pages/Ads.tsx';
 import CommandesImpression from './pages/CommandesImpression.tsx';
 import { AppProvider } from './store.tsx';
 import { Menu, PanelLeftOpen } from 'lucide-react';
@@ -95,6 +96,7 @@ const AppRoutes: React.FC = () => {
       <Route path="/credit" element={<AppLayout><Credit /></AppLayout>} />
       <Route path="/caisse" element={<AppLayout><Caisse /></AppLayout>} />
       <Route path="/banque" element={<AppLayout><Banque /></AppLayout>} />
+      <Route path="/ads" element={<AppLayout><Ads /></AppLayout>} />
       <Route path="/salaire" element={<AppLayout><Salaire /></AppLayout>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

@@ -88,6 +88,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen, onClose, isHidden, onTo
 
       <nav className="flex-1 px-4 py-4 space-y-1.5 overflow-y-auto">
         {renderNavLink({ to: '/gros', label: 'Commandes Gros', icon: Truck })}
+        {renderNavLink({ to: '/ads', label: 'Ads', icon: Megaphone })}
         {renderNavLink({ to: '/impression', label: 'Impression', icon: Printer })}
         
         <div className="my-6 border-t border-slate-800/30 mx-4" />

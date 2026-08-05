@@ -1,8 +1,7 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo } from "react";
 import { useAppStore } from '../store.tsx';
 import { Plus, Trash2, CheckCircle, TrendingDown } from 'lucide-react';
 import EditableCell from '../components/EditableCell.tsx';
-import AdsModule from '../components/AdsModule.tsx';
 
 const CommandesImpression = () => {
   const { 
@@ -11,8 +10,6 @@ const CommandesImpression = () => {
     updateCommandeImpression,
     deleteCommandeImpression
   } = useAppStore();
-
-  const [activeTab, setActiveTab] = useState<'commandes' | 'ads'>('commandes');
 
   const sortedImpression = [...commandesImpression].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
@@ -57,41 +54,13 @@ const CommandesImpression = () => {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h1 className="text-2xl font-black text-slate-900 tracking-tight">Commande Impression</h1>
         
-        <div className="flex items-center gap-3">
-          <div className="flex bg-slate-100 p-1 rounded-2xl">
-            <button
-              onClick={() => setActiveTab('commandes')}
-              className={`px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
-                activeTab === 'commandes' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'
-              }`}
-            >
-              Commandes
-            </button>
-            <button
-              onClick={() => setActiveTab('ads')}
-              className={`px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
-                activeTab === 'ads' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'
-              }`}
-            >
-              Ads
-            </button>
-          </div>
-          
-          {activeTab === 'commandes' && (
-            <button 
-              onClick={addCommandeImpression}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-sm font-bold shadow-sm transition-colors flex items-center gap-2"
-            >
-              <Plus size={16} /> Nouvelle Commande
-            </button>
-          )}
-        </div>
+<button 
+          onClick={addCommandeImpression}
+          className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-sm font-bold shadow-sm transition-colors flex items-center gap-2"
+        >
+          <Plus size={16} /> Nouvelle Commande
+        </button>
       </div>
-
-      {activeTab === 'ads' ? (
-        <AdsModule type="impression" />
-      ) : (
-        <>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="bg-emerald-600 rounded-3xl p-6 text-white shadow-xl flex items-center gap-6">
           <div className="bg-white/20 p-4 rounded-2xl">
@@ -215,8 +184,6 @@ const CommandesImpression = () => {
           </table>
         </div>
       </div>
-        </>
-      )}
     </div>
   );
 };
