@@ -787,7 +787,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         cout_impression: 0,
         prix_vente: 0,
         status: 'en production',
-        has_versement: false
+        has_versement: false,
+        description: '',
+        somme_totale: 0,
+        versement: 0,
+        rest: 0,
+        nombre_produit: 0,
+        produits: '',
+        avec_impression: false,
+        frais_impression: 0
       };
       
       if (supabase) {

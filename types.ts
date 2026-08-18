@@ -330,6 +330,14 @@ export interface CommandeImpression {
   prix_vente: number;
   status: 'en production' | 'en livraison' | 'livree' | 'retour';
   has_versement: boolean;
+  description?: string;
+  somme_totale?: number;
+  versement?: number;
+  rest?: number;
+  nombre_produit?: number;
+  produits?: string;
+  avec_impression?: boolean;
+  frais_impression?: number;
 }
 
 export interface DocumentItem {
