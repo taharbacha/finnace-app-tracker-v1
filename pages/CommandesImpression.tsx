@@ -126,6 +126,7 @@ const CommandesImpression = () => {
             <thead className="bg-slate-50 text-slate-500 font-bold uppercase text-[10px] tracking-wider">
               <tr>
                 <th className="px-4 py-4">Ref</th>
+                <th className="px-4 py-4">Date</th>
                 <th className="px-4 py-4">Client</th>
                 <th className="px-4 py-4">Téléphone</th>
                 <th className="px-4 py-4">Coût Article</th>
@@ -146,6 +147,9 @@ const CommandesImpression = () => {
                       <button onClick={() => openPopup(item)} className="hover:underline flex items-center gap-1">
                         <FileText size={14} /> {item.ref}
                       </button>
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-slate-500 font-medium">
+                      {new Date(item.created_at).toLocaleDateString('fr-FR')}
                     </td>
                     <td className="px-4 py-3">
                       <EditableCell 
@@ -214,7 +218,7 @@ const CommandesImpression = () => {
               })}
               {sortedImpression.length === 0 && (
                 <tr>
-                  <td colSpan={10} className="px-4 py-8 text-center text-slate-500 font-medium">
+                  <td colSpan={11} className="px-4 py-8 text-center text-slate-500 font-medium">
                     Aucune commande d'impression
                   </td>
                 </tr>
