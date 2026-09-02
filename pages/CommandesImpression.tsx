@@ -14,6 +14,8 @@ const CommandesImpression = () => {
 
   const [selectedCommande, setSelectedCommande] = useState<CommandeImpression | null>(null);
   const [formData, setFormData] = useState<Partial<CommandeImpression>>({});
+  const [dateStart, setDateStart] = useState<string>('');
+  const [dateEnd, setDateEnd] = useState<string>('');
 
   const openPopup = (item: CommandeImpression) => {
     setSelectedCommande(item);
@@ -48,13 +50,26 @@ const CommandesImpression = () => {
     }
   };
 
-  const sortedImpression = [...commandesImpression].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  const filteredImpression = useMemo(() => {
+    let filtered = commandesImpression;
+    if (dateStart) {
+      filtered = filtered.filter(item => new Date(item.created_at) >= new Date(dateStart));
+    }
+    if (dateEnd) {
+      const end = new Date(dateEnd);
+      end.setHours(23, 59, 59, 999);
+      filtered = filtered.filter(item => new Date(item.created_at) <= end);
+    }
+    return filtered;
+  }, [commandesImpression, dateStart, dateEnd]);
+
+  const sortedImpression = [...filteredImpression].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
   const stats = useMemo(() => {
     let beneficeNetLivree = 0;
     let retourPerte = 0;
 
-    commandesImpression.forEach(item => {
+    filteredImpression.forEach(item => {
       const benefice = Number(item.prix_vente) - (Number(item.cout_article) + Number(item.cout_impression));
       const perte = (Number(item.cout_article) + Number(item.cout_impression));
       
@@ -67,7 +82,7 @@ const CommandesImpression = () => {
     });
 
     return { beneficeNetLivree, retourPerte };
-  }, [commandesImpression]);
+  }, [filteredImpression]);
 
   const handleStatusChange = (id: string, currentStatus: string) => {
     const statuses: ('en production' | 'en livraison' | 'livree' | 'retour')[] = ['en production', 'en livraison', 'livree', 'retour'];
@@ -88,16 +103,44 @@ const CommandesImpression = () => {
 
   return (
     <div className="space-y-6">
+      
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h1 className="text-2xl font-black text-slate-900 tracking-tight">Commande Impression</h1>
         
-<button 
-          onClick={addCommandeImpression}
-          className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-sm font-bold shadow-sm transition-colors flex items-center gap-2"
-        >
-          <Plus size={16} /> Nouvelle Commande
-        </button>
+        <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
+          <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-xl shadow-sm border border-slate-200">
+            <span className="text-sm font-bold text-slate-500">Du</span>
+            <input 
+              type="date" 
+              value={dateStart}
+              onChange={(e) => setDateStart(e.target.value)}
+              className="border-none outline-none text-sm bg-transparent font-bold text-slate-700"
+            />
+            <span className="text-sm font-bold text-slate-500 ml-2">Au</span>
+            <input 
+              type="date" 
+              value={dateEnd}
+              onChange={(e) => setDateEnd(e.target.value)}
+              className="border-none outline-none text-sm bg-transparent font-bold text-slate-700"
+            />
+            {(dateStart || dateEnd) && (
+              <button 
+                onClick={() => { setDateStart(''); setDateEnd(''); }}
+                className="ml-2 text-slate-400 hover:text-red-500 transition-colors"
+              >
+                <X size={16} />
+              </button>
+            )}
+          </div>
+          <button 
+            onClick={addCommandeImpression}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-sm font-bold shadow-sm transition-colors flex items-center gap-2 whitespace-nowrap"
+          >
+            <Plus size={16} /> Nouvelle Commande
+          </button>
+        </div>
       </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="bg-emerald-600 rounded-3xl p-6 text-white shadow-xl flex items-center gap-6">
           <div className="bg-white/20 p-4 rounded-2xl">
@@ -144,12 +187,31 @@ const CommandesImpression = () => {
                 return (
                   <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
                     <td className="px-4 py-3 whitespace-nowrap font-bold text-indigo-600">
-                      <button onClick={() => openPopup(item)} className="hover:underline flex items-center gap-1">
-                        <FileText size={14} /> {item.ref}
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button onClick={() => openPopup(item)} className="text-indigo-600 hover:bg-indigo-50 p-1 rounded transition-colors" title="Détails">
+                          <FileText size={16} />
+                        </button>
+                        <EditableCell 
+                          value={item.ref} 
+                          onSave={(val) => updateCommandeImpression(item.id, 'ref', val)} 
+                          className="font-bold text-indigo-600"
+                        />
+                      </div>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-slate-500 font-medium">
-                      {new Date(item.created_at).toLocaleDateString('fr-FR')}
+                      <EditableCell 
+                        type="date"
+                        value={item.created_at} 
+                        onSave={(val) => {
+                          if (val) {
+                            const newDate = new Date(val);
+                            // Preserve current time if possible
+                            const oldDate = new Date(item.created_at);
+                            newDate.setHours(oldDate.getHours(), oldDate.getMinutes(), oldDate.getSeconds());
+                            updateCommandeImpression(item.id, 'created_at', newDate.toISOString());
+                          }
+                        }}
+                      />
                     </td>
                     <td className="px-4 py-3">
                       <EditableCell 
